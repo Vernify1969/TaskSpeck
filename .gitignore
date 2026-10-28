@@ -1,3 +1,4 @@
 node_modules/
 data/store.json
 data/tasks.json
+data/notifications.log

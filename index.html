@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>TaskSpeck prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@ button.card{text-align:left}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
 .chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14.5px;white-space:nowrap;min-height:40px}
 .chip.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
-textarea,input[type=text],input[type=number],input[type=time],input[type=date],select{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px}
+textarea,input[type=text],input[type=number],input[type=time],input[type=date],input[type=email],input[type=password],input[type=tel],select{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px}
 textarea{min-height:120px;resize:vertical}
 .money input[type=number]{padding-left:34px!important}
 label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
@@ -171,6 +171,10 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .vt button{padding:7px 14px;border-radius:9px;font-weight:700;font-size:14px;min-height:36px;color:var(--muted)}
 .vt button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .map{position:relative;width:100%;aspect-ratio:1/1;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+#jobmap{position:absolute;inset:0;background:var(--surface)}
+.leaflet-pin{background:var(--surface);border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:16px;width:36px!important;height:36px!important;box-shadow:0 2px 6px rgba(0,0,0,.28)}
+.leaflet-container{font:inherit;background:var(--surface)}
+.leaflet-container a{color:var(--brand)}
 .map svg{position:absolute;inset:0;width:100%;height:100%}
 .map .st{stroke:var(--line);stroke-width:.35;fill:none}
 .map .riv{stroke:var(--brand);stroke-opacity:.25;stroke-width:3.4;fill:none;stroke-linecap:round}
@@ -198,6 +202,11 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   <div id="sheetHost"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
+<script type="module">
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+window.L = L;
+</script>
 <script>
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -405,7 +414,7 @@ function evaluate(){
   if(/paint/i.test(p.text))notes.push('Ground-level work only. No work at significant height.');
   return{risk:notes.length?'MEDIUM_RISK':'LOW_RISK',notes};
 }
-const whenLabel=t=>{const d=t.date?fmtDate(t.date):(t.flexible?'Flexible':'Not stated');const tm=t.startMin!=null?fmtTime(t.startMin):'';return tm?`${d}, ${tm}`:d};
+const whenLabel=t=>{let d=t&&t.date;if(d&&!(d instanceof Date))d=new Date(d);const dlabel=d&&!Number.isNaN(d.getTime())?fmtDate(d):(t&&t.flexible?'Flexible':'Not stated');const tm=t&&t.startMin!=null?fmtTime(t.startMin):'';return tm?`${dlabel}, ${tm}`:dlabel};
 /* ---------- state ---------- */
 const BASE_STATUS=['POSTED','OFFERS_RECEIVED','ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED'];
 const SEED_HISTORY=[
@@ -420,23 +429,47 @@ const S={
   task:null,offers:[],sort:'new',offerId:null,events:[],payment:null,agreement:null,dispute:null,change:null,flags:{},thread:null,proof:[],checklist:[],fix:null,agent:false,history:SEED_HISTORY.map(x=>({...x,seed:true})),propSel:null,incidents:[],myStrikes:[],claims:[],tprof:{bio:'',langs:['English'],vehicle:'',areas:'Melbourne CBD',photos:[]},receipts:[],rcptNo:1000,notifs:[],notifSeen:0,qtGst:false,idc:{type:null,front:false,selfie:false,status:'idle',consent:false,police:'idle'},recIdx:0,invIdx:0,profName:null,payouts:[{title:'Assemble a flat-pack bookshelf',date:'Mon 5 Oct',price:80},{title:'Collect a furniture order and deliver it',date:'Tue 6 Oct',price:90}],tk:{abn:false,ins:false,veh:false,safety:false,gst:false,abnNum:'',police:false},
   sent:[],find:{km:5,cat:'all',sort:'closest',view:'list',q:'',pin:null,fopen:false},findId:null,saved:{},verified:false,sheet:null,timers:[],lastKey:'',
   avail:{days:[1,2,3,4,5,6],from:'09:00',to:'17:00',km:3,cats:['furniture','moving','errands','rubbish'],paused:false},
-  notif:{offers:true,messages:true,reminders:true,nearby:false},trusted:{name:'',on:false}
+  notif:{offers:true,messages:true,reminders:true,nearby:false,email:true,sms:false},trusted:{name:'',on:false},
+  user:null,myTasks:[],askThreads:[],ask:null,savedSearches:[],shareUrl:'',shareView:null,shareData:null,authMode:'login',editIdx:0
 };
+const meName=()=>(S.user&&S.user.name)||'You';
 const ev=l=>S.events.push({l,t:clock()});
 /* ---------- backend listing API (Vite middleware on :5173) ---------- */
+async function api(path,opts={}){
+  const headers={'Content-Type':'application/json',...(opts.headers||{})};
+  const body=opts.body==null?undefined:(typeof opts.body==='string'?opts.body:JSON.stringify(opts.body));
+  const r=await fetch(path,{credentials:'same-origin',method:opts.method||'GET',headers,body});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) return {error:data.error||'Request failed',code:r.status};
+  return data;
+}
 const TaskAPI={
-  async draft(text,id){const r=await fetch('/api/tasks/draft',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,id:id??null})});if(!r.ok)throw new Error('Could not save draft');return r.json()},
-  async publish(id,meta){const r=await fetch(`/api/tasks/${id}/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});if(!r.ok)throw new Error('Could not publish listing');return r.json()},
-  async bid(id,fee,taskerName){const r=await fetch(`/api/tasks/${id}/bids`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fee,taskerName})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Bid rejected');return data},
-  async list(){const r=await fetch('/api/tasks');if(!r.ok)throw new Error('Could not load listings');return r.json()},
-  sync(listingId,action,body){if(!listingId)return Promise.resolve();return fetch(`/api/tasks/${listingId}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).catch(()=>{})}
+  async draft(text,id){const data=await api('/api/tasks/draft',{method:'PUT',body:{text,id:id??null}});if(data.error)throw new Error(data.error);return data},
+  async publish(id,meta){const data=await api(`/api/tasks/${id}/publish`,{method:'POST',body:meta});if(data.error)throw new Error(data.error);return data},
+  async bid(id,fee,taskerName,message){return api(`/api/tasks/${id}/bids`,{method:'POST',body:{fee,taskerName,message}})},
+  async acceptBid(id,body){return api(`/api/tasks/${id}/accept-bid`,{method:'POST',body:body||{}})},
+  async list(){const data=await api('/api/tasks');if(data.error)throw new Error(data.error);return data},
+  async sync(listingId,action,body){if(!listingId)return {error:'This task is not saved yet'};return api(`/api/tasks/${listingId}/${action}`,{method:'POST',body:body||{}})},
+  saveSearch(body){return api('/api/me/searches',{method:'POST',body})},
+  patchSearch(id,body){return api('/api/me/searches/'+id,{method:'PATCH',body})},
+  deleteSearch(id){return api('/api/me/searches/'+id,{method:'DELETE'})},
+  saveRecords(records){return api('/api/me/records',{method:'POST',body:{records}})},
+  createShare(recordIds){return api('/api/me/shares',{method:'POST',body:{recordIds}})},
+  settings(body){return api('/api/me/settings',{method:'PATCH',body})}
 };
 let draftSaveT;
-function queueDraftSave(){clearTimeout(draftSaveT);draftSaveT=setTimeout(()=>{TaskAPI.draft(S.draft.text||'',S.draft.listingId).then(d=>{if(d.task&&d.task.id)S.draft.listingId=d.task.id}).catch(()=>{})},450)}
-async function refreshApiListings(){try{const data=await TaskAPI.list();S.apiListings=data.tasks||[];const r=$('#fres');if(r)r.innerHTML=findResults()}catch{/* dev server warming */}}
-function apiToNear(row){const p=parse(row.text||'');const st=row.status||'Open';const off=row.bidCount??(row.bids?row.bids.filter(b=>b.status==='pending').length:0);let cond='Live listing from a local requester';if(st==='Assigned'&&row.bid)cond=`Assigned · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(st==='Started')cond='Tasker has started';else if(st==='Completed')cond='Awaiting requester approval';else if(st==='PaymentReleased')cond='Payment released';return{id:row.id,fromApi:true,listingStatus:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',km:0.35,date:'Flexible',t:'10:00',d:90,budget:'Open to offers',offers:off+(row.bid?1:0),posted:'Just now',suburb:'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:'Alex',r:4.8,n:1}}}
+function queueDraftSave(){clearTimeout(draftSaveT);draftSaveT=setTimeout(()=>{if(!S.user)return;TaskAPI.draft(S.draft.text||'',S.draft.listingId).then(d=>{if(d.task&&d.task.id)S.draft.listingId=d.task.id}).catch(()=>{})},450)}
+async function refreshApiListings(){try{const data=await TaskAPI.list();S.apiListings=data.tasks||[];const r=$('#fres');if(r){r.innerHTML=findResults();if(S.find.view==='map')mountJobMap(findList())}}catch{/* dev server warming */}}
+const SUBURBS={'Melbourne CBD':[-37.8136,144.9631],'Southbank':[-37.8228,144.9643],'Docklands':[-37.8152,144.946],'Carlton':[-37.8001,144.9671],'East Melbourne':[-37.8126,144.9859]};
+function taskPoint(t){if(t&&t.lat!=null&&t.lng!=null)return{lat:+t.lat,lng:+t.lng};const s=SUBURBS[(t&&t.suburb)||'Melbourne CBD']||SUBURBS['Melbourne CBD'];const id=Number(t&&t.id)||1;const j=id%20-10;return{lat:s[0]+j*0.0011,lng:s[1]+((id*3)%20-10)*0.0011}}
+function mePoint(){if(S.user&&S.user.lat!=null)return{lat:+S.user.lat,lng:+S.user.lng};return{lat:SUBURBS['Melbourne CBD'][0],lng:SUBURBS['Melbourne CBD'][1]}}
+function kmBetween(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s))}
+function taskKm(t){return Math.round(kmBetween(mePoint(),taskPoint(t))*10)/10}
+function priceOf(t){if(typeof t==='number')return t;if(t&&t.priceNum!=null&&t.priceNum!==''&&!Number.isNaN(+t.priceNum))return +t.priceNum;const s=typeof t==='string'?t:(t&&t.budget)||'';const m=String(s).match(/\$(\d+)/);return m?+m[1]:1e9}
+function timeAgo(iso){if(!iso)return 'Just now';const m=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/60000));if(m<1)return 'Just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<36)return h+' hr ago';return 'Earlier'}
+function apiToNear(row){const p=parse(row.text||'');const st=row.stage||row.status||'Open';const open=st==='POSTED'||st==='OFFERS_RECEIVED'||row.status==='Open';const budget=row.budgetLabel||(p.budget&&p.budget.label)||'Open to offers';const when=row.startAt?new Date(row.startAt):null;const tstr=row.startMin!=null?hhmm(row.startMin):'10:00';const point=taskPoint(row);let cond='Live listing from a local requester';if(row.bid)cond=`Booked · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(!open)cond=row.status||st;return{id:row.id,fromApi:true,listingStatus:open?'Open':(row.status||st),stage:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',lat:point.lat,lng:point.lng,km:taskKm({...row,...point}),date:when&&!Number.isNaN(when.getTime())?fmtDate(when):(row.date||'Flexible'),t:tstr.length>5?tstr:tstr,d:row.durationMin||p.duration&&p.duration.min||90,budget,priceNum:row.priceNum!=null?row.priceNum:priceOf(budget),offers:row.bidCount||0,posted:timeAgo(row.updatedAt),at:row.updatedAt||null,suburb:row.suburb||'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:row.requesterName||'Requester',r:'New',n:1},photoCount:row.photoCount||0}}
 function allFindTasks(){return [...(S.apiListings||[]).map(apiToNear),...NEAR]}
-function getFindTask(id){return allFindTasks().find(x=>x.id===+id)||null}
+function getFindTask(id){const t=allFindTasks().find(x=>x.id===+id);if(!t)return null;const p=taskPoint(t);return{...t,lat:p.lat,lng:p.lng,km:taskKm(t)}}
 const TERMINAL_STATUS=new Set(['COMPLETED','CANCELLED','NO_SHOW','RESOLVED','EXPIRED']);
 const ACTIVE_ASSIGNMENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','FIX_REQUESTED','FIX_DONE','DISPUTED']);
 const ALLOWED_TRANSITIONS={
@@ -463,6 +496,16 @@ function setStatus(next){
  S.task.status=next;
 }
 function hasLiveTask(){return S.task&&!TERMINAL_STATUS.has(S.task.status)&&S.task.status!=='UNDER_REVIEW'}
+function reviveTask(t){if(t&&t.date&&!(t.date instanceof Date)){const d=new Date(t.date);if(!Number.isNaN(d.getTime()))t.date=d}return t}
+function taskSnapshot(t){if(!t)return null;const copy={...t};delete copy._bundle;if(copy.date instanceof Date)copy.date=copy.date.toISOString();return copy}
+function captureBundle(){return{task:taskSnapshot(S.task),offers:S.offers,offerId:S.offerId,events:S.events,payment:S.payment,agreement:S.agreement,dispute:S.dispute,change:S.change,flags:S.flags,thread:S.thread,proof:S.proof,checklist:S.checklist,fix:S.fix}}
+let bundleT;
+function saveBundleSoon(){if(!S.user||!S.task||!S.task.listingId)return;const id=S.task.listingId,bundle=captureBundle();clearTimeout(bundleT);bundleT=setTimeout(()=>{api('/api/tasks/'+id+'/bundle',{method:'PUT',body:{bundle}}).catch(()=>{})},500)}
+function stashCurrent(){if(!S.task)return;S.task._bundle=captureBundle();S.task._address=S.form.addr||S.task._address||'';const i=S.myTasks.findIndex(t=>t===S.task||(t.listingId&&S.task.listingId&&t.listingId===S.task.listingId));if(i<0)S.myTasks.unshift(S.task);else S.myTasks[i]=S.task;saveBundleSoon()}
+function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bundle||{};S.task=t;S.offers=b.offers||[];S.offerId=b.offerId??null;S.events=b.events||[];S.payment=b.payment??null;S.agreement=b.agreement??null;S.dispute=b.dispute??null;S.change=b.change??null;S.flags=b.flags||{};S.thread=b.thread??null;S.proof=b.proof||[];S.checklist=b.checklist||[];S.fix=b.fix??null;if(t._address)S.form.addr=t._address;if(!S.myTasks.includes(t))S.myTasks.unshift(t)}
+function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);return t}
+function applyWorkspace(data){S.user=data.user;if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
+function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
 function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
 function themeCycle(){const el=document.documentElement,cur=el.dataset.theme||'auto';const next=cur==='auto'?'light':cur==='light'?'dark':'auto';if(next==='auto')delete el.dataset.theme;else el.dataset.theme=next;try{localStorage.setItem('ts-theme',next)}catch(e){}render()}
 themeInit();
@@ -511,14 +554,27 @@ function makeOffers(t){
   ];
 }
 function scheduleOffers(){
-  S.timers.forEach(clearTimeout);S.timers=[];
-  const all=makeOffers(S.task);
-  if(S.task.preferred){all.sort((a,b)=>(b.name===S.task.preferred)-(a.name===S.task.preferred));const pr=all.find(o=>o.name===S.task.preferred);if(pr){pr.prev=true;if(S.task.preferredFee)pr.fee=S.task.preferredFee;pr.msg='Happy to do this again.'}}
-  all.forEach((o,i)=>S.timers.push(setTimeout(()=>{
-    if(!S.task||!['POSTED','OFFERS_RECEIVED'].includes(S.task.status))return;
-    S.offers.push(o);setStatus('OFFERS_RECEIVED');ev(`Offer received from ${o.name}`);
-    notify(`${o.name} has offered ${money(o.fee)} for "${S.task.title}", ${o.when}.`);
-    if(['task','published','home','tasks'].includes(S.stack[S.stack.length-1].n))render();
+  const task=S.task;if(!task)return;
+  (task._timers||[]).forEach(clearTimeout);task._timers=[];
+  const all=makeOffers(task);
+  if(task.preferred){all.sort((a,b)=>(b.name===task.preferred)-(a.name===task.preferred));const pr=all.find(o=>o.name===task.preferred);if(pr){pr.prev=true;if(task.preferredFee)pr.fee=task.preferredFee;pr.msg='Happy to do this again.'}}
+  all.forEach((o,i)=>task._timers.push(setTimeout(()=>{
+    if(!task||!['POSTED','OFFERS_RECEIVED'].includes(task.status))return;
+    let offers;
+    if(S.task===task)offers=S.offers;
+    else{task._bundle=task._bundle||{};task._bundle.offers=task._bundle.offers||[];offers=task._bundle.offers}
+    offers.push(o);
+    if(S.task===task){setStatus('OFFERS_RECEIVED');ev(`Offer received from ${o.name}`)}
+    else task.status='OFFERS_RECEIVED';
+    if(task.listingId){
+      o.pendingReg=TaskAPI.bid(task.listingId,o.fee,o.name,o.msg).then(d=>{
+        if(d&&d.bid)o.bidId=d.bid.id;
+        else if(d&&d.error)o.regError=d.error;
+        return d;
+      }).catch(e=>{o.regError=e.message||'Could not save this offer';return {error:o.regError}});
+    }
+    notify(`${o.name} has offered ${money(o.fee)} for "${task.title}", ${o.when}.`);
+    if(S.task===task&&['task','published','home','tasks'].includes(S.stack[S.stack.length-1].n))render();
   },2200*(i+1))));
 }
 const chosen=()=>S.offers.find(o=>o.id===S.offerId);
@@ -558,7 +614,39 @@ function navHtml(){
   const cur=S.stack[0].n;
   return items.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}${l}</button>`).join('');
 }
+function renderAuth(){
+  $('#nav').style.display='none';
+  $('#sheetHost').innerHTML='';$('#sheetHost').className='';
+  $('#top').innerHTML=`<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span></div>`;
+  const mode=S.authMode||'login';
+  $('#view').innerHTML=`
+    <h1 class="display" style="font-size:30px">${mode==='login'?'Welcome back':'Create your account'}</h1>
+    <p class="muted">One account covers both sides. You can post tasks and make offers.</p>
+    ${mode==='signup'?`<label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="name" autocomplete="name" value="${esc(S.form.name||'')}">`:''}
+    <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="username" value="${esc(S.form.email||'')}">
+    <label class="f" for="pw">Password</label><input id="pw" type="password" data-in="password" autocomplete="${mode==='login'?'current-password':'new-password'}">
+    ${mode==='signup'?`<p class="muted small" style="margin-top:6px">At least 8 characters. We store a hash, not the password itself.</p><label class="f" for="ph">Phone (optional)</label><input id="ph" type="tel" data-in="phone" autocomplete="tel" value="${esc(S.form.phone||'')}">`:''}
+    <button class="btn primary big" style="margin-top:16px" data-a="${mode==='login'?'doLogin':'doSignup'}">${mode==='login'?'Log in':'Create account'}</button>
+    <button class="btn ghost" data-a="authMode" data-v="${mode==='login'?'signup':'login'}">${mode==='login'?'Need an account? Sign up':'Already have an account? Log in'}</button>
+    <p class="muted small" style="margin-top:14px">Google and Apple sign-in can be added later. They stay switched off until those keys are set, so you do not need them now.</p>`;
+}
+function renderShare(){
+  $('#nav').style.display='none';
+  $('#sheetHost').innerHTML='';$('#sheetHost').className='';
+  $('#top').innerHTML=`<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span></div>`;
+  const d=S.shareData||{},rows=d.records||[];
+  if(d.error||!rows){$('#view').innerHTML=`<h1 class="display" style="font-size:28px">Shared record</h1><div class="notice bad"><b>Link not available</b>${esc(d.error||'This share link is not valid.')}</div>`;return}
+  const total=rows.reduce((a,b)=>a+(+b.paid||0),0);
+  $('#view').innerHTML=`<p class="muted small">Shared job record</p><h1 class="display" style="font-size:28px">Jobs</h1>
+    <div class="notice info"><b>Private addresses are not included</b>This link shows the suburb, the work and the amount. It does not show the street or unit.</div>
+    <div class="card" style="margin-top:12px">${rows.map(r=>`<div class="kv"><span>${esc(r.title)}<br><span class="muted small">${esc(r.taskerName||'')} · ${esc(r.date||'')} · ${esc(r.suburb||'')}${r.check?' · Checklist '+esc(r.check):''}</span></span><b>${money(+r.paid||0)}</b></div>`).join('')}<div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div></div>
+    <a class="btn secondary" style="margin-top:12px;text-decoration:none" href="/api/shares/${esc(S.shareView)}.csv">Download CSV</a>
+    <p class="muted small" style="margin-top:8px">The CSV from this link also leaves the address out.</p>`;
+}
 function render(){
+  if(S.shareView){renderShare();return}
+  if(!S.user){renderAuth();return}
+  if(S._map){try{S._map.remove()}catch(e){}S._map=null}
   const cur=S.stack[S.stack.length-1];
   const def=SCREENS[cur.n](cur.a||{});
   const isRoot=S.stack.length===1;
@@ -578,9 +666,10 @@ const closeSheet=()=>{S.sheet=null;render()};
 const STATUS={
  POSTED:['Posted',''],OFFERS_RECEIVED:['Offers received','brand'],ACCEPTED:['Upcoming','ok'],PAYMENT_CONFIRMED:['Upcoming','ok'],UPCOMING:['Upcoming','ok'],
  TASK_STARTED:['In progress','brand'],TASKER_COMPLETED:['Needs your confirmation','warn'],REQUESTER_CONFIRMED:['Completed','ok'],PAYMENT_RELEASED:['Completed','ok'],COMPLETED:['Completed','ok'],
- CANCELLED:['Cancelled','bad'],FIX_REQUESTED:['Fix requested','warn'],FIX_DONE:['Needs your confirmation','warn'],DISPUTED:['Problem reported','bad'],RESOLVED:['Resolved','ok'],NO_SHOW:['No-show reported','bad'],EXPIRED:['Expired',''],UNDER_REVIEW:['Under review','warn']
+ CANCELLED:['Cancelled','bad'],FIX_REQUESTED:['Fix requested','warn'],FIX_DONE:['Needs your confirmation','warn'],DISPUTED:['Problem reported','bad'],RESOLVED:['Resolved','ok'],NO_SHOW:['No-show reported','bad'],EXPIRED:['Expired',''],UNDER_REVIEW:['Under review','warn'],
+ Draft:['Draft',''],Open:['Open','brand'],Assigned:['Upcoming','ok'],Started:['In progress','brand'],NoShow:['No-show reported','bad'],Cancelled:['Cancelled','bad']
 };
-const statusPill=s=>`<span class="pill ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+const statusPill=s=>{const row=STATUS[s]||['In progress',''];return `<span class="pill ${row[1]}">${esc(row[0])}</span>`};
 const verBadge=o=>o.ver?'<span class="pill ok">Identity verified</span>':'<span class="pill">Email and phone verified</span>';
 function taskSummary(t){
   return `<div class="card"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:19px">${esc(t.title)}</h3>${statusPill(t.status)}</div>
@@ -606,7 +695,7 @@ home(){
     <button class="tile" data-a="tab" data-v="msgs">${ic('chat')}Messages</button>
     <button class="tile" data-a="payments">${ic('wallet')}Payments</button>
   </div>
-  ${t?`<h2>Your task</h2><button class="card" data-a="viewTask"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${t.status==='POSTED'||t.status==='OFFERS_RECEIVED'?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`:''}
+  ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
   <h2>What do you need?</h2>
   <div class="cats">${SHORT.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="em">${CATS[k].em}</span><span class="lbl">${CATS[k].name}</span></button>`).join('')}</div>
@@ -692,7 +781,8 @@ tasks(){return S.mode==='requester'?tasksReq():tasksTasker()},
 task(){
   const t=S.task;if(!t)return{title:'Your task',html:empty('📋','No task yet','Post a task and it will show up here.')};
   const st=t.status;
-  if(st==='POSTED'||st==='OFFERS_RECEIVED')return{title:'Your task',html:taskSummary(t)+offersBlock()};
+  if(st==='Draft')return{title:'Your task',html:taskSummary(t)+`<div class="notice" style="margin-top:12px"><b>Not published yet</b>This is still a draft. Run the safety check and publish it when you are ready.</div><button class="btn primary" style="margin-top:12px" data-a="post">Continue posting</button>`};
+  if(st==='POSTED'||st==='OFFERS_RECEIVED'||st==='Open')return{title:'Your task',html:taskSummary(t)+offersBlock()};
   if(st==='UNDER_REVIEW')return{title:'Your task',html:taskSummary(t)+`<div class="notice" style="margin-top:14px"><b>Under review</b>We are checking a few details before this task can be posted.</div>`};
   return{title:'Your task',html:activeBlock()};
 },
@@ -708,7 +798,8 @@ offer(){
   </div>
   <div class="card" style="margin-top:12px">${kv('Account age',o.age)}${kv('Repeat customers',String(o.repeat))}${kv('Response reliability',o.reply)}<div class="kv"><span>Task history</span><b>${o.cats.join(', ')}</b></div></div>
   <div class="notice info" style="margin-top:12px"><b>What verification means</b>${o.ver?'Identity verified means a third-party provider has checked who this person is.':'This person has verified their email and phone number.'} It does not mean they are qualified, licensed or insured, and it is not an endorsement by TaskSpeck.</div>
-  <button class="btn primary big" style="margin-top:16px" data-a="accept">Accept offer</button>
+  <button class="btn secondary" style="margin-top:14px" data-a="askOffer">Ask a question before accepting</button>
+  <button class="btn primary big" style="margin-top:10px" data-a="accept">Accept offer</button>
   <button class="btn ghost" data-a="decline">Decline offer</button>`};
 },
 confirm(){
@@ -733,8 +824,8 @@ agreement(){
   const t=S.task,o=chosen(),g=S.agreement;
   return{title:'Task agreement',html:`
   <div class="row" style="margin-bottom:10px"><span class="pill ok">Version ${g.version}</span><span class="muted small">Both parties can see this</span></div>
-  <div class="card">${kv('Requester','Alex')}${kv('Tasker',esc(o.name))}${kv('Task',esc(t.title))}${kv('Scope',esc(t.desc))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Start time',g.start)}${kv('Duration',g.dur)}${kv('Location',esc(S.form.addr||'Shared privately'))}${kv('Agreed fee',money(g.fee))}${kv('Materials',t.materials||'Not stated')}${kv('Conditions',esc((t.special.concat(t.notes)).join(' ')||'None stated'))}${kv('Payment',S.payment?S.payment.status==='RELEASED'?'Released':S.payment.status==='REFUNDED'?'Refunded':'Paid, awaiting completion':'Pending')}
-  <div class="kv"><span>Confirmed by</span><b>Alex ✓ ${esc(o.name)} ✓</b></div></div>
+  <div class="card">${kv('Requester',esc(meName()))}${kv('Tasker',esc(o.name))}${kv('Task',esc(t.title))}${kv('Scope',esc(t.desc))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Start time',g.start)}${kv('Duration',g.dur)}${kv('Location',esc(S.form.addr||t._address||'Shared privately'))}${kv('Agreed fee',money(g.fee))}${kv('Materials',t.materials||'Not stated')}${kv('Conditions',esc((t.special.concat(t.notes)).join(' ')||'None stated'))}${kv('Payment',S.payment?S.payment.status==='RELEASED'?'Released':S.payment.status==='REFUNDED'?'Refunded':'Paid, awaiting completion':'Pending')}
+  <div class="kv"><span>Confirmed by</span><b>${esc(meName())} ✓ ${esc(o.name)} ✓</b></div></div>
   <h2>Version history</h2><div class="card">${g.history.map(h=>`<div class="kv"><span>v${h.v}</span><b>${esc(h.note)}</b></div>`).join('')}</div>
   <p class="muted small" style="margin-top:8px">Earlier versions are kept and cannot be edited.</p>`};
 },
@@ -764,7 +855,10 @@ turnaround(){
   <div class="card" style="margin-top:10px">${rows.map(r=>`<div class="kv"><span>${esc(r.title)}<br><span class="muted small">${esc(r.tasker)} · ${esc(r.date)}${r.check?' · Checklist '+esc(r.check):''}${r.note?' · '+esc(r.note):''}</span></span><b>${money(r.paid)}</b></div><div style="margin:-2px 0 8px"><button class="chip" data-a="rebook" data-v="${S.history.indexOf(r)}">Book again</button></div>`).join('')}<div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div></div>
   <h3 style="margin:14px 0 6px">Photos</h3>${recPhotos(rows)}${recFixes(rows)}
   <p class="muted small" style="margin-top:12px">Amounts are what the requester paid. Taskers' tax invoices will be available in the real app. Photos and checklists are time-stamped records of the work. This record does not guarantee a bond outcome: the agent and landlord decide that.</p></div>
-  <button class="btn primary" style="margin-top:12px" data-a="recPreview">Preview record</button><button class="btn secondary" data-a="printReport">Print or save as PDF</button><button class="btn secondary" data-a="copyReport">Copy a text summary</button>`};
+  ${S.shareUrl?`<div class="notice ok" style="margin-top:12px"><b>Share link</b>Anyone with this link can see the job list. Street and unit addresses are left out.<br><span class="small">${esc(S.shareUrl)}</span></div>`:''}
+  <button class="btn primary" style="margin-top:12px" data-a="shareRecord">Create a share link</button>
+  <button class="btn secondary" data-a="exportCsv">Download CSV</button>
+  <button class="btn secondary" data-a="recPreview">Preview record</button><button class="btn secondary" data-a="printReport">Print or save as PDF</button><button class="btn secondary" data-a="copyReport">Copy a text summary</button>`};
 },
 recpreview(){
   PHOTO_REG.length=0;
@@ -772,7 +866,7 @@ recpreview(){
   return{title:'Preview',html:`<p class="muted small" style="margin-bottom:8px">This is how your record looks when printed or saved as a PDF.</p>
   <div class="paper report">
    <div class="row" style="align-items:flex-start"><div class="grow"><p class="muted small" style="margin:0">Job record</p><h2 style="margin:2px 0 0">${esc(n)}</h2></div><b style="font-size:13px">TaskSpeck</b></div>
-   <p class="muted small" style="margin:6px 0 10px">Prepared for Alex · ${fmtDate(new Date())}</p>
+   <p class="muted small" style="margin:6px 0 10px">Prepared for ${esc(meName())} · ${fmtDate(new Date())}</p>
    ${rows.map(r=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(r.title)}</b><br><span class="muted small">${esc(r.tasker)} · ${esc(r.date)}${r.check?' · Checklist '+esc(r.check):''}${r.note?' · '+esc(r.note):''}</span></span><b>${money(r.paid)}</b></div>`).join('')}
    <div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div>
    <h3 style="margin:14px 0 6px">Photos</h3>${recPhotos(rows)}${recFixes(rows)}
@@ -835,7 +929,7 @@ receipt(){
   return{title:r.gst?'Tax invoice':'Receipt',html:`<div class="paper report">
   <div class="row" style="align-items:flex-start"><div class="grow"><p class="muted small" style="margin:0">${r.gst?'Tax invoice':'Receipt'}</p><h2 style="margin:2px 0 0">${esc(r.no)}</h2></div><b style="font-size:13px">TaskSpeck</b></div>
   <p class="muted small" style="margin:6px 0 10px">Date ${esc(r.date)}</p>
-  ${kv('Supplier',esc(r.tasker)+(r.gst?' · ABN on file (demo)':''))}${kv('Recipient','Alex')}${r.prop?kv('Property',esc(r.prop)):''}
+  ${kv('Supplier',esc(r.tasker)+(r.gst?' · ABN on file (demo)':''))}${kv('Recipient',esc(meName()))}${r.prop?kv('Property',esc(r.prop)):''}
   <div class="card" style="margin-top:10px">${kv('Task',esc(r.title))}${kv('Price'+(r.gst?' (incl. GST)':''),money(r.price))}${r.gst?kv('GST included (10%)',money(gstOf(r.price))):kv('GST','Not charged')}${kv('Booking fee',money(0))}${r.tip?kv('Tip (100% to the Tasker)',money(r.tip)):''}<div class="kv"><span><b>Total paid</b></span><b style="font-size:19px">${money(r.price+r.tip)}</b></div>${kv('Paid with',esc(r.method))}</div>
   <p class="muted small" style="margin-top:10px">TaskSpeck keeps ${FEE_PCT}% from the Tasker's price. It was not added to your total. ${r.gst?'Tax invoice issued through TaskSpeck for the supplier. Demo only: confirm the format with an accountant.':'This is a receipt, not a tax invoice, because the supplier does not charge GST.'}</p></div>
   <button class="btn primary" style="margin-top:12px" data-a="printReport">Print or save as PDF</button>`};
@@ -855,7 +949,8 @@ invoice(){
 },
 notifs(){
   S.notifSeen=S.notifs.length;
-  return{title:'Notifications',html:`<div class="notice info"><b>Demo</b>This list shows what would be sent as push notifications. Real push notifications need Apple and Google push services in the real app.</div><div class="stack" style="margin-top:10px">${S.notifs.length?S.notifs.map(n=>`<div class="card"><p>${esc(n.m)}</p><p class="muted small">${n.t}</p></div>`).join(''):'<p class="muted">Nothing yet.</p>'}</div>`};
+  api('/api/me/notifications/read',{method:'POST'}).catch(()=>{});
+  return{title:'Notifications',html:`<div class="notice info"><b>In the app, and by email</b>New offers, bookings, the day of the job and payment updates are saved here. Email and SMS are written to the server log until a provider is configured. Your switches under Settings still decide what you receive, and Tasker availability decides who hears about a new task.</div><div class="stack" style="margin-top:10px">${S.notifs.length?S.notifs.map(n=>`<div class="card"><p>${esc(n.m)}</p><p class="muted small">${esc(n.t||'')}${n.kind?' · '+esc(n.kind):''}</p></div>`).join(''):'<p class="muted">Nothing yet.</p>'}</div>`};
 },
 idcheck(){
   const c=S.idc;
@@ -883,26 +978,37 @@ payments(){
   <div style="margin-top:8px">${p.status==='REFUNDED'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.gross)):p.status==='PART_RELEASE'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.partial.refund))+kv('Paid to Tasker after TaskSpeck fee',money(p.partial.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.partial.fee)):p.status==='PART_REFUND'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(Math.round((p.gross-p.callout)*100)/100))+kv('Call-out fee to Tasker',money(p.callout)):kv('Total paid',money(p.gross))+kv('Paid to Tasker after TaskSpeck fee',money(p.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.fee))}</div><p class="muted small" style="margin-top:8px">TaskSpeck's ${FEE_PCT}% comes out of the Tasker's price. You pay no booking fee.</p></div>`};
 },
 msgs(){
-  if(!S.thread)return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+empty('💬','No messages yet','Chat opens as soon as an offer is accepted. Phone numbers stay private.')};
-  const o=chosen(),last=S.thread[S.thread.length-1];
-  return{html:`<h1 class="display" style="font-size:28px">Messages</h1><button class="card" data-a="openThread"><div class="row">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(last.text)}</p></div></div></button>`};
+  const rows=[];
+  if(S.thread&&S.task&&chosen()){const o=chosen(),last=S.thread[S.thread.length-1];rows.push(`<button class="card" data-a="openThread"><div class="row">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">Booked · ${esc(last?last.text:'Message')}</p></div></div></button>`)}
+  (S.askThreads||[]).forEach((th,i)=>{const last=th.messages[th.messages.length-1];rows.push(`<button class="card" data-a="openAsk" data-v="${i}"><div class="row">${avatar(th.withName||'?')}<div class="grow"><b>${esc(th.withName||'Question')}</b><p class="muted small">${esc(th.title||'')} · ${esc(last?last.text:'Ask a question')}</p></div></div></button>`)});
+  return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+(rows.length?`<div class="stack">${rows.join('')}</div><p class="muted small" style="margin-top:10px">You can ask a question before anyone accepts. Please don’t swap phone numbers or pay cash.</p>`:empty('💬','No messages yet','Ask a question from a task, or chat here after you accept an offer. Phone numbers stay in the app.'))};
+},
+ask(){
+  const th=S.ask;if(!th)return{title:'Question',html:empty('💬','No conversation','Open a task and tap Ask a question.')};
+  return{title:th.withName||'Question',html:`
+  <div class="notice"><b>Before anyone accepts</b>Ask about the task here. Please don’t swap phone numbers or arrange to pay cash. TaskSpeck can only protect a job that stays in the app.</div>
+  <p class="muted small" style="margin:8px 0">${esc(th.title||'')}</p>
+  <div id="msgs">${(th.messages||[]).map(m=>`${m.warning?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.</div>`:''}<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Ask ${esc(th.withName||'them')}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="askSend">Send</button></div>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
 },
 thread(){
   const o=chosen();const quick=["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."];
   return{title:o.name,html:`
-  <div id="msgs">${S.thread.map(m=>m.sys?`<div class="notice" style="margin:10px 0"><b>Keep your transaction inside TaskSpeck</b>Payments made outside TaskSpeck may not be covered by platform protections.</div>`:`<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
+  <div class="notice"><b>Keep phone numbers and cash in the app</b>If a message asks to swap numbers or pay outside TaskSpeck, you’ll see a reminder. Jobs paid in the app stay protected.</div>
+  <div id="msgs">${S.thread.map(m=>m.sys?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.</div>`:`<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
   <div class="chips scroll" style="margin-top:12px">${quick.map((q,i)=>`<button class="chip" data-a="quick" data-v="${i}">${esc(q)}</button>`).join('')}</div>
   <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Message ${esc(o.name)}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="send">Send</button></div>
   <div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="report">Report</button><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="block">Block</button></div>
   <p class="muted small" style="margin-top:6px">Try sending “Can I pay cash instead?” to see the off-platform notice.</p>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
 },
 profile(){
+  const u=S.user||{name:meName(),suburb:'Melbourne CBD',email:''};
   return{html:`
-  <div class="row" style="margin-bottom:12px">${avatar('Alex',64)}<div class="grow"><h1 class="display" style="font-size:26px;margin:0">Alex</h1><p class="muted">Melbourne CBD · New member</p></div></div>
+  <div class="row" style="margin-bottom:12px">${avatar(u.name||'You',64)}<div class="grow"><h1 class="display" style="font-size:26px;margin:0">${esc(u.name||'You')}</h1><p class="muted">${esc(u.suburb||'Melbourne CBD')} · ${esc(u.email||'')}</p></div></div>
   <div class="grid2"><div class="stat"><b>0</b><span>Tasks completed</span></div><div class="stat"><b>—</b><span>Rating (no reviews yet)</span></div></div>
   <h2>Verification</h2>
   <div class="card">
-   <div class="kv"><span>Basic</span><b>Email and phone ✓</b></div>
+   <div class="kv"><span>Basic</span><b>${u.phone?'Email and phone ✓':'Email ✓'}</b></div>
    <div class="kv"><span>Identity verified</span><b>${S.verified?'Verified ✓':'Not yet'}</b></div>
    <div class="kv"><span>Enhanced</span><b class="none">Only if a task needs it</b></div>
    ${S.verified?'':`<button class="btn secondary" style="margin-top:10px" data-a="verify">Verify identity</button>`}
@@ -921,6 +1027,8 @@ profile(){
    <button class="card" data-a="sheet" data-v="trusted">Trusted contact</button>
    <button class="card" data-a="sheet" data-v="notif">Notifications</button>
    <button class="card" data-a="sheet" data-v="help">Help and support</button>
+   <button class="card" data-a="account">Edit profile</button>
+   <button class="card" data-a="logout">Log out</button>
   </div>
   <p class="muted small" style="margin-top:16px">TaskSpeck is a marketplace that connects people. Taskers are not employees of TaskSpeck. Legal wording is a placeholder until reviewed by Australian legal counsel.</p>`};
 },
@@ -938,6 +1046,8 @@ find(){
   <p class="muted small" style="margin:12px 0 6px">Category</p>
   <div class="chips scroll">${chip('All',f.cat==='all','data-a="fcat" data-v="all"')}${FINAL.map(k=>chip(CATS[k].name,f.cat===k,`data-a="fcat" data-v="${k}"`)).join('')}</div>`:''}
   <div class="chips scroll" style="margin-top:10px">${SORTS.map(([k,l])=>chip(l,(f.sort||'closest')===k,`data-a="fsort" data-v="${k}"`)).join('')}</div>
+  <button class="btn secondary" style="margin-top:10px" data-a="saveSearch">Save this search and alert me</button>
+  ${(S.savedSearches||[]).length?`<div class="stack" style="margin-top:10px">${S.savedSearches.map(s=>`<div class="card"><b>${esc(s.q||'Any wording')} · ${s.cat&&s.cat!=='all'&&CATS[s.cat]?CATS[s.cat].name:'All categories'} · ${s.km} km</b><p class="muted small">Alerts are ${s.alert?'on':'off'}. A match is sent only if it fits your availability.</p><div class="row" style="margin-top:8px"><button class="chip" data-a="searchAlert" data-v="${s.id}">${s.alert?'Turn alerts off':'Turn alerts on'}</button><button class="chip" data-a="searchDel" data-v="${s.id}">Delete</button></div></div>`).join('')}</div>`:''}
   <div id="fres" style="margin-top:14px">${findResults()}</div>`,after(){refreshApiListings()}};
 },
 findTask(){
@@ -950,8 +1060,8 @@ findTask(){
   <p style="margin:6px 0 10px">${esc(t.desc)}</p>
   ${kv('Date',t.date)}${kv('Time',fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1]))}${kv('Duration',t.d<60?t.d+' minutes':t.d/60+' hour'+(t.d>60?'s':''))}${kv('Budget',t.budget)}${kv('Area',t.suburb+' (approximate)')}${kv('Special conditions',t.cond)}${kv('Posted',t.posted)}${kv('Offers so far',String(t.offers))}${(t.photoCount||0)>0?`<p class="muted small" style="margin:8px 0 2px">Photos from the requester</p>${photoThumbs(Array.from({length:t.photoCount},()=>SAMPLE_ITEM))}`:''}</div>
   <div class="card row" style="margin-top:12px">${avatar(t.req.name)}<div class="grow"><b>${esc(t.req.name)}</b><p class="muted small">★ ${t.req.r} · ${t.req.n} tasks posted</p></div><span class="pill ok">Identity verified</span></div>
-  <p class="muted small" style="margin:10px 2px">Exact address is shared only if your offer is accepted.</p>
-  ${!openOnly&&t.fromApi?`<div class="notice ok"><b>${esc(t.listingStatus)}</b>This listing is no longer open for new bids.</div>`:sent?`<div class="notice ok"><b>Bid sent</b>You offered ${money(sent.fee)}. Waiting for the requester to accept.</div>`:`<button class="btn primary big" data-a="makeOffer">Make an offer</button>`}
+  <p class="muted small" style="margin:10px 2px">Exact address is shared only if your offer is accepted. The map shows the suburb only.</p>
+  ${!openOnly&&t.fromApi?`<div class="notice ok"><b>${esc(t.listingStatus)}</b>This listing is no longer open for new bids.</div>`:sent?`<div class="notice ok"><b>Bid sent</b>You offered ${money(sent.fee)}. Waiting for the requester to accept.</div><button class="btn secondary" data-a="editSentByTask" data-v="${t.id}">Edit offer</button><button class="btn ghost" data-a="withdrawSentByTask" data-v="${t.id}">Withdraw offer</button>`:`<button class="btn secondary" data-a="askAbout">Ask a question</button><button class="btn primary big" data-a="makeOffer">Make an offer</button>`}
   <div class="row" style="margin-top:6px"><button class="btn secondary" data-a="save">${S.saved[t.id]?'Saved ✓':'Save task'}</button><button class="btn secondary" data-a="sheet" data-v="report">Report</button></div>`};
 },
 makeOffer(){
@@ -985,6 +1095,30 @@ avail(){
   <h2>Maximum travel distance</h2><div class="chips">${[1,2,5,10,20].map(k=>chip(k+' km',a.km===k,`data-a="akm" data-v="${k}"`)).join('')}</div>
   <h2>Preferred categories</h2><div class="chips">${FINAL.map(k=>chip(CATS[k].name,a.cats.includes(k),`data-a="acat" data-v="${k}"`)).join('')}</div>
   <button class="btn primary" style="margin-top:18px" data-a="asave">Save availability</button>`};
+},
+account(){
+  const u=S.user||{};
+  return{title:'Your account',html:`
+  <label class="f" for="pn" style="margin-top:0">Name</label><input id="pn" type="text" data-in="profName" value="${esc(S.form.profName!=null?S.form.profName:u.name||'')}">
+  <label class="f" for="pe">Email</label><input id="pe" type="email" value="${esc(u.email||'')}" disabled>
+  <label class="f" for="pp">Phone</label><input id="pp" type="tel" data-in="profPhone" value="${esc(S.form.profPhone!=null?S.form.profPhone:(u.phone||''))}">
+  <label class="f" for="ps">Suburb</label><input id="ps" type="text" data-in="profSuburb" value="${esc(S.form.profSuburb!=null?S.form.profSuburb:(u.suburb||''))}" placeholder="Melbourne CBD">
+  <p class="muted small">Your suburb is used for distance. The street address of a job stays private.</p>
+  <label class="f" for="pb">About you</label><textarea id="pb" data-in="profBio" style="min-height:80px">${esc(S.form.profBio!=null?S.form.profBio:(u.bio||''))}</textarea>
+  <button class="btn primary" style="margin-top:14px" data-a="saveProfile">Save profile</button>
+  <h2>Delete account</h2>
+  <p class="muted small">This signs you out and removes your login. Open tasks are cancelled. Type DELETE to confirm.</p>
+  <input type="text" data-in="deleteConfirm" placeholder="DELETE" aria-label="Type DELETE to confirm">
+  <button class="btn danger" style="margin-top:10px" data-a="deleteAccount">Delete my account</button>`};
+},
+editSent(){
+  const s=S.sent[S.editIdx];if(!s)return{title:'Edit offer',html:empty('✉️','Offer not found','It may already have been withdrawn.')};
+  return{title:'Edit offer',html:`
+  <div class="card"><b>${esc(s.title)}</b><p class="muted small">${s.status==='withdrawn'?'Withdrawn':'Waiting for the requester'}</p></div>
+  ${s.status==='withdrawn'?'':`<label class="f" for="efee">Your fee</label><div class="money"><span class="cur">$</span><input type="number" id="efee" data-in="editFee" min="5" value="${esc(S.form.editFee!=null?S.form.editFee:s.fee)}"></div>
+  <label class="f" for="emsg">Message</label><textarea id="emsg" data-in="editMsg" style="min-height:80px">${esc(S.form.editMsg!=null?S.form.editMsg:(s.message||''))}</textarea>
+  <button class="btn primary" style="margin-top:12px" data-a="saveSent">Save offer</button>
+  <button class="btn danger" data-a="withdrawSent" data-v="${S.editIdx}">Withdraw offer</button>`}`};
 }
 };
 function taskCard(t){
@@ -995,8 +1129,8 @@ function taskCard(t){
   <div class="wrap muted small" style="margin-top:4px"><span>${t.budget.startsWith('$')?'Budget '+t.budget:'Open to offers'}</span><span>${t.offers} offer${t.offers===1?'':'s'}</span><span><b>Posted ${t.posted}</b></span></div></button>`;
 }
 /* ---------- Find Tasks helpers: search, sort, map ---------- */
-const SORTS=[['closest','Closest'],['newest','Newest']];
-const SORT_NOTE={closest:'Nearest first.',newest:'Most recently posted first.'};
+const SORTS=[['closest','Closest'],['newest','Newest'],['price','Lowest price'],['pricehi','Highest price']];
+const SORT_NOTE={closest:'Nearest first.',newest:'Most recently posted first.',price:'Lowest price first.',pricehi:'Highest price first.'};
 const STOP=new Set('the and for with need needs someone please help want who can get have that this from near any some one two out off its you your are was has but not too very just like also into onto over'.split(' '));
 const postedMins=p=>/min/.test(p)?parseInt(p):/hr/.test(p)?parseInt(p)*60:1440;
 function findMatch(t,q){
@@ -1007,10 +1141,12 @@ function findMatch(t,q){
   if(hit)return t.cat===hit[0];
   return words.some(w=>w.length>2&&hay.includes(w));
 }
+function ageMins(t){if(t&&t.at)return Math.max(0,(Date.now()-new Date(t.at).getTime())/60000);return postedMins((t&&t.posted)||'')}
 function findList(){
   const f=S.find;
-  const cmp={closest:(a,b)=>a.km-b.km,newest:(a,b)=>postedMins(a.posted)-postedMins(b.posted)};
-  return allFindTasks().filter(t=>t.km<=f.km&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'')).sort(cmp[f.sort||'closest']);
+  const rows=allFindTasks().map(t=>{const p=taskPoint(t);return {...t,lat:p.lat,lng:p.lng,km:taskKm(t),priceNum:priceOf(t)}});
+  const cmp={closest:(a,b)=>a.km-b.km,newest:(a,b)=>ageMins(a)-ageMins(b),price:(a,b)=>priceOf(a)-priceOf(b),pricehi:(a,b)=>priceOf(b)-priceOf(a)};
+  return rows.filter(t=>t.km<=f.km&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'')).sort(cmp[f.sort||'closest']||cmp.closest);
 }
 function findResults(){
   const f=S.find,q=(f.q||'').trim(),l=findList();
@@ -1026,41 +1162,44 @@ function findResults(){
   return head+(f.view==='map'?mapHtml(l):`<div class="stack">${l.map(taskCard).join('')}</div>`);
 }
 function mapHtml(l){
-  const f=S.find,R=42,scale=Math.max(1,Math.max(...l.map(t=>t.km))*1.2);
-  const DIR={'Southbank':90,'Docklands':195,'Carlton':270,'East Melbourne':330};
-  const pos=t=>{
-    const base=DIR[t.suburb],deg=base==null?(t.id*137.5)%360:base+((t.id*53)%50)-25,a=deg*Math.PI/180,r=Math.max(7,t.km/scale*R);
-    return{x:50+r*Math.cos(a),y:50+r*Math.sin(a)};
-  };
-  const vs=[8,19,31,43,55,67,79,91].map(x=>`<line class="st" x1="${x}" y1="0" x2="${x}" y2="100"/>`).join('');
-  const hs=[9,22,35,47,71,84,95].map(y=>`<line class="st" x1="0" y1="${y}" x2="100" y2="${y}"/>`).join('');
-  const rings=[0.5,1,2,5,10].filter(k=>k<=scale).map(k=>{const r=k/scale*R;return `<circle class="ring" cx="50" cy="50" r="${r.toFixed(1)}"/><text class="lbl" x="50" y="${(50-r-0.8).toFixed(1)}" text-anchor="middle">${k} km</text>`}).join('');
-  const P=l.map(t=>pos(t));
-  for(let it=0;it<60;it++){let moved=false;
-    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
-      let dx=P[j].x-P[i].x,dy=P[j].y-P[i].y,d=Math.hypot(dx,dy);
-      if(d<11){if(d<.01){dx=1;dy=0;d=1}const push=(11-d)/2,ux=dx/d,uy=dy/d;P[i].x-=ux*push;P[i].y-=uy*push;P[j].x+=ux*push;P[j].y+=uy*push;moved=true}
-    }
-    P.forEach(q=>{q.x=Math.min(93,Math.max(7,q.x));q.y=Math.min(93,Math.max(7,q.y))});
-    if(!moved)break}
-  const pins=l.map((t,i)=>{const p=P[i];return `<button class="pin" style="--h:${CATS[t.cat].h};left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%" data-a="fpin" data-v="${t.id}" aria-pressed="${f.pin===t.id}" aria-label="${esc(t.title)}, ${esc(t.budget)}, ${t.km} km away">${CATS[t.cat].em}</button>`}).join('');
-  const sel=l.find(t=>t.id===f.pin);
-  return `<div class="map"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">${vs}${hs}<path class="riv" d="M-2 64 C18 58 30 70 52 63 S86 56 102 60"/>${rings}<text class="lbl" x="50" y="75" text-anchor="middle">Southbank</text><text class="lbl" x="3" y="43">Docklands</text><text class="lbl" x="50" y="8" text-anchor="middle">Carlton</text><circle class="you" cx="50" cy="50" r="2.2"/></svg>${pins}</div>
-  <div class="wrap muted small" style="margin:8px 0 12px"><span><i style="width:10px;height:10px;border-radius:50%;background:var(--brand);display:inline-block;margin-right:6px"></i>You (approximate)</span><span>Pin colour shows the category</span></div>
-  ${sel?taskCard(sel):'<p class="muted small" style="margin-bottom:10px">Tap a pin to preview the task.</p>'}
-  <p class="muted small" style="margin-top:12px">Illustrative map for the prototype. Pins show approximate areas only, and the exact address is shared only if your offer is accepted. The real app uses a live map.</p>`;
+  const f=S.find,sel=l.find(t=>t.id===f.pin);
+  return `<div class="map" role="region" aria-label="Map of tasks"><div id="jobmap"></div></div>
+  <div class="wrap muted small" style="margin:8px 0 12px"><span>You are the dot. Pins are suburbs, not street addresses.</span></div>
+  <div id="mappick">${sel?taskCard(sel):'<p class="muted small" style="margin-bottom:10px">Tap a pin to preview the task.</p>'}</div>
+  <p class="muted small" style="margin-top:8px">Map data © OpenStreetMap contributors. The exact address is shared only if your offer is accepted.</p>`;
+}
+function mountJobMap(list){
+  const el=document.getElementById('jobmap');
+  if(!el)return;
+  if(!window.L){setTimeout(()=>mountJobMap(list),250);return}
+  if(S._map){try{S._map.remove()}catch(e){}S._map=null}
+  const map=window.L.map(el,{scrollWheelZoom:false});
+  window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  const me=mePoint();
+  const bounds=[[me.lat,me.lng]];
+  window.L.circleMarker(me,{radius:7,color:'#0E5A4B',fillColor:'#0E5A4B',fillOpacity:1,weight:2}).addTo(map).bindTooltip('You (approximate)');
+  (list||[]).forEach(t=>{
+    const icon=window.L.divIcon({className:'leaflet-pin',html:(CATS[t.cat]&&CATS[t.cat].em)||'•',iconSize:[36,36],iconAnchor:[18,18]});
+    const marker=window.L.marker([t.lat,t.lng],{icon,title:t.title,keyboard:true}).addTo(map);
+    marker.on('click',()=>{S.find.pin=t.id;const box=document.getElementById('mappick');if(box)box.innerHTML=taskCard(t)});
+    bounds.push([t.lat,t.lng]);
+  });
+  if(bounds.length>1)map.fitBounds(bounds,{padding:[28,28],maxZoom:15});
+  else map.setView(me,14);
+  S._map=map;
+  setTimeout(()=>{try{map.invalidateSize()}catch(e){}},80);
 }
 function tasksReq(){
-  const t=S.task;
-  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(t?`<button class="card" data-a="viewTask"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`:empty('📋','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
+  const list=myTaskList();
+  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(list.length?`<div class="stack">${list.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div><button class="btn primary" style="margin-top:12px" data-a="post">Post another task</button>`:empty('📋','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
 }
 function tasksTasker(){
   return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>
   ${standingBanner()}
-  <div class="grid2"><div class="stat"><b>${money(S.payouts.reduce((a,r)=>a+Math.round((r.price-calcFee(r.price))*100)/100,0))}</b><span>Earnings this week</span></div><div class="stat"><b>${S.sent.length}</b><span>Offers sent</span></div></div>
+  <div class="grid2"><div class="stat"><b>${money(S.payouts.reduce((a,r)=>a+Math.round((r.price-calcFee(r.price))*100)/100,0))}</b><span>Earnings this week</span></div><div class="stat"><b>${S.sent.filter(s=>s.status!=='withdrawn').length}</b><span>Offers waiting</span></div></div>
   <button class="card" style="margin-top:12px" data-a="earnings"><b>Earnings and payouts</b><p class="muted small">See what TaskSpeck keeps (${FEE_PCT}%) and what you receive</p></button>
-  <h2>Offers sent</h2>${S.sent.length?S.sent.map(s=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><h3>${esc(s.title)}</h3><p class="muted small">${esc(s.date)}, ${esc(s.time)}</p></div><div class="fee" style="font-size:20px">${money(s.fee)}</div></div><p class="muted small" style="margin-top:6px">You receive ${money(Math.round((s.fee-calcFee(s.fee))*100)/100)} after TaskSpeck keeps ${FEE_PCT}%</p><span class="pill" style="margin-top:8px">Waiting for the requester</span></div>`).join(''):`<p class="muted">Nothing yet. Find a task nearby and make an offer.</p><button class="btn secondary" style="margin-top:10px" data-a="tab" data-v="find">Find tasks</button>`}
-  <h2>Active and upcoming</h2><p class="muted">No active tasks.</p>`};
+  <h2>Offers sent</h2>${S.sent.length?S.sent.map((s,i)=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><h3>${esc(s.title)}</h3><p class="muted small">${esc(s.date)}${s.time?', '+esc(s.time):''}</p></div><div class="fee" style="font-size:20px">${money(s.fee)}</div></div><p class="muted small" style="margin-top:6px">${s.status==='withdrawn'?'This offer was withdrawn.':`You receive ${money(Math.round((s.fee-calcFee(s.fee))*100)/100)} after TaskSpeck keeps ${FEE_PCT}%`}</p><span class="pill ${s.status==='withdrawn'?'':'warn'}" style="margin-top:8px">${s.status==='withdrawn'?'Withdrawn':'Waiting for the requester'}</span>${s.status==='withdrawn'?'':`<div class="row" style="margin-top:8px"><button class="chip" data-a="editSent" data-v="${i}">Edit offer</button><button class="chip" data-a="withdrawSent" data-v="${i}">Withdraw</button></div>`}</div>`).join(''):`<p class="muted">Nothing yet. Find a task nearby and make an offer.</p><button class="btn secondary" style="margin-top:10px" data-a="tab" data-v="find">Find tasks</button>`}
+  <h2>Active and upcoming</h2><p class="muted">Accepted jobs show here once a requester books you. Finish them from the requester’s task only if you are testing both sides on this phone.</p>`};
 }
 function offersBlock(){
   const t=S.task;let list=[...S.offers];
@@ -1077,7 +1216,8 @@ function offersBlock(){
 }
 const STEPS=[['Accepted and paid',['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING']],['Started',['TASK_STARTED']],['Marked complete',['TASKER_COMPLETED']],['Payment released',['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED']]];
 function activeBlock(){
-  const t=S.task,o=chosen(),st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
+  const t=S.task,o=chosen();if(!o)return taskSummary(t)+`<div class="notice" style="margin-top:12px">The accepted offer is not on this screen yet. Open the task again in a moment.</div>`;
+  const st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
   let h=taskSummary(t);
   h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
   if(idx>=0)h+=`<div class="steps" aria-label="Progress" style="margin-top:14px">${STEPS.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div><p class="small"><b>${STEPS[idx][0]}</b>${f.onway&&st==='UPCOMING'&&!f.arrived?' · '+esc(o.name)+' is on the way':''}</p>`;
@@ -1247,26 +1387,39 @@ const INP={
    if(s)s.innerHTML=v>0?`<div class="card">${kv('Task price (the requester pays this)',money(v))}${S.tk.gst?kv('Includes GST (you pay this to the ATO)',money(gstOf(v))):''}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(v)))}${S.qtGst?kv('GST included in TaskSpeck’s fee',money(gstOf(calcFee(v)))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(Math.round((v-calcFee(v))*100)/100)}</b></div></div><p class="muted small" style="margin:6px 2px 0">The requester pays no booking fee. Nothing else is deducted.</p>`:`<div class="notice info">TaskSpeck keeps ${FEE_PCT}% of your price. Enter your price to see what you receive. The requester pays no booking fee.</div>`;
  },
  ok(){INP.fee()},
- fq(){const r=$('#fres');if(r)r.innerHTML=findResults()}
+ fq(){const r=$('#fres');if(r){r.innerHTML=findResults();if(S.find.view==='map')mountJobMap(findList())}}
 };
+function startFrom(t){if(!t||!t.date)return null;const d=new Date(t.date);if(Number.isNaN(d.getTime()))return null;const m=t.startMin!=null?t.startMin:540;d.setHours(Math.floor(m/60),m%60,0,0);return d}
 async function publishTask(){
   const check=evaluate(),built=buildTask();
   if(check.risk==='PROHIBITED'||check.risk==='HIGH_RISK'){notify('This task cannot be published. Edit it and run the safety check again.');go('result');return}
-  if(hasLiveTask()){notify('Your previous task was replaced. Finish or cancel it first in a full app — prototype allows one live task.');}
-  const t={...built,risk:check.risk,notes:check.notes||[]};S.pending=t;
-  const listingId=S.draft.listingId;
-  if(listingId){try{await TaskAPI.publish(listingId,{text:built.desc,title:built.title,cat:built.cat});await refreshApiListings()}catch(e){console.warn('[listing]',e)}}
+  const previous=S.task;
+  stashCurrent();
+  const when=startFrom(built);
+  const priceNum=built.budget&&built.budget.type==='SET'?built.budget.amount:built.budget&&built.budget.type==='RANGE'?built.budget.min:null;
+  let listingId=S.draft.listingId;
+  try{
+    if(!listingId){const d=await TaskAPI.draft(built.desc||built.text||'',null);listingId=d.task&&d.task.id}
+    const pub=await TaskAPI.publish(listingId,{text:built.desc,title:built.title,cat:built.cat,budgetLabel:built.budget&&built.budget.label,priceNum,startAt:when?when.toISOString():null,startMin:built.startMin,durationMin:built.duration&&built.duration.min,suburb:'Melbourne CBD',address:S.form.addr||'',prop:built.prop||'',photoCount:(built.photos||[]).length,notes:built.notes||[],special:built.special||[],answers:S.draft.answers||{}});
+    if(!pub.task)throw new Error('Could not publish listing');
+    listingId=pub.task.id;
+  }catch(e){
+    if(previous)activateTask(previous);
+    notify(e.message||'Could not publish this task.');
+    return;
+  }
   S.draft.photos=[];S.draft.preferred=null;S.draft.budgetMode='open';S.draft.budgetAmt='';S.draft.budgetTouched=false;S.draft.dateValue='';S.draft.timeValue='';S.draft.showTimes=false;S.draft.showDates=false;S.draft.calY=null;S.draft.calM=null;S.draft.listingId=null;
-  S.task={...t,id:'T-'+Math.floor(1000+Math.random()*9000),status:'POSTED',listingId};
+  const t={...built,risk:check.risk,notes:check.notes||[],id:'T-'+listingId,status:'POSTED',listingId,_address:S.form.addr||''};
   S.offers=[];S.offerId=null;S.events=[];S.payment=null;S.agreement=null;S.dispute=null;S.change=null;S.flags={};S.thread=null;S.proof=[];S.checklist=[];S.fix=null;
+  S.task=t;if(!S.myTasks.includes(t))S.myTasks.unshift(t);
   ev('Task posted');ev('Safety check: '+t.risk.replace('_',' ').toLowerCase());
-  S.stack=[{n:'home'},{n:'published'}];scheduleOffers();render();
+  S.stack=[{n:'home'},{n:'published'}];scheduleOffers();saveBundleSoon();refreshApiListings();render();
 }
 const A={
  tab(v){root(v);if(v==='find')refreshApiListings()},back,close:closeSheet,
  mode(v){S.mode=v;root(v==='tasker'?'find':'home');if(v==='tasker')refreshApiListings()},
  home(){root('home')},
- post(v){if(v&&!S.draft.text)S.draft.answers={};S.stack.push({n:'post',a:{cat:v||null}});render()},
+ post(v){if(S.task&&S.task.status==='Draft'&&!S.draft.text){S.draft.text=S.task.desc||S.task.text||'';if(S.task.listingId)S.draft.listingId=S.task.listingId}if(v&&!S.draft.text)S.draft.answers={};S.stack.push({n:'post',a:{cat:v||null}});render()},
  ex(v){const[i,c]=v.split('|');S.draft.text=EX[c][+i];queueDraftSave();render()},
  bmode(v){S.draft.budgetMode=v;S.draft.budgetTouched=true;render()},
  analyse(){
@@ -1300,7 +1453,7 @@ const A={
  },
  toPreview(){go('preview')},
  publish(){publishTask();S.draft={text:'',answers:{}}},
- viewTask(){if(S.mode!=='requester')S.mode='requester';S.stack=[{n:'home'},{n:'task'}];render()},
+ viewTask(v){if(S.mode!=='requester')S.mode='requester';if(v){stashCurrent();const t=S.myTasks.find(x=>String(x.listingId)===String(v)||String(x.id)===String(v));if(t)activateTask(t)}S.stack=[{n:'home'},{n:'task'}];render()},
  sort(v){S.sort=v;render()},
  offer(v){const o=S.offers.find(x=>x.id===+v);if(!o||o.declined){notify('That offer is no longer available.');return}S.offerId=+v;go('offer')},
  decline(){const o=chosen();o.declined=true;S.offerId=null;back();notify(`Offer from ${o.name} declined.`)},
@@ -1311,16 +1464,23 @@ const A={
    if(!o||o.declined||!t||!['POSTED','OFFERS_RECEIVED'].includes(t.status)){notify('This offer cannot be paid right now.');render();return}
    if(S.payment&&['AUTHORISED','RELEASED'].includes(S.payment.status)){notify('Payment was already taken for this task.');return}
    const b=$('#paybtn');if(!b)return;b.disabled=true;b.textContent='Processing…';
-   setTimeout(()=>{
-     const f=calcFee(o.fee);
-     S.payment={gross:o.fee,fee:f,tasker:Math.round((o.fee-f)*100)/100,status:'AUTHORISED'};
-     S.agreement={version:1,fee:o.fee,start:fmtTime(o.start),dur:S.task.duration?S.task.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};
-     S.offers.forEach(x=>{if(x.id!==o.id)x.declined=true});
-     S.thread=[{from:'them',text:`Hi Alex, thanks for choosing me. See you ${o.when.split(',')[0]}.`}];
-     setStatus('ACCEPTED');ev(`Offer from ${o.name} accepted`);setStatus('PAYMENT_CONFIRMED');ev(`Payment of ${money(S.payment.gross)} confirmed`);
-     setStatus('UPCOMING');ev('Agreement created (v1)');ev('Address shared with '+o.name);
-     if(t.listingId)TaskAPI.sync(t.listingId,'accept-bid',{fee:o.fee,taskerName:o.name});
-     S.stack=[{n:'home'},{n:'task'}];render();notify(`Payment confirmed. ${o.name} has been notified.`);
+   setTimeout(async()=>{
+     const restore=()=>{if(b){b.disabled=false;b.textContent='Pay '+money(o.fee)}};
+     try{
+       if(!t.listingId){restore();notify('This task is not saved yet, so the offer cannot be accepted.');return}
+       if(o.pendingReg)await o.pendingReg;
+       if(o.regError){restore();notify(o.regError);return}
+       const data=await TaskAPI.acceptBid(t.listingId,{bidId:o.bidId,fee:o.fee,taskerName:o.name});
+       if(!data||data.error){restore();notify((data&&data.error)||'Could not accept this offer. Nothing was booked.');return}
+       const f=calcFee(o.fee);
+       S.payment={gross:o.fee,fee:f,tasker:Math.round((o.fee-f)*100)/100,status:'AUTHORISED'};
+       S.agreement={version:1,fee:o.fee,start:fmtTime(o.start),dur:S.task.duration?S.task.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};
+       S.offers.forEach(x=>{if(x.id!==o.id)x.declined=true});
+       S.thread=[{from:'them',text:`Hi ${meName()}, thanks for choosing me. See you ${o.when.split(',')[0]}.`}];
+       setStatus('ACCEPTED');ev(`Offer from ${o.name} accepted`);setStatus('PAYMENT_CONFIRMED');ev(`Payment of ${money(S.payment.gross)} confirmed`);
+       setStatus('UPCOMING');ev('Agreement created (v1)');ev('Address shared with '+o.name);
+       S.stack=[{n:'home'},{n:'task'}];saveBundleSoon();render();notify(`Payment confirmed. ${o.name} has been notified.`);
+     }catch(e){restore();notify(e.message||'Could not accept this offer. Nothing was booked.');}
    },900);
  },
  agreementScreen(){go('agreement')},
@@ -1328,24 +1488,24 @@ const A={
  payments(){go('payments')},
  quick(v){sendMsg(["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."][+v])},
  send(){const t=(S.form.msg||'').trim();if(t){S.form.msg='';sendMsg(t)}},
- demo(v){
+ async demo(v){
    const o=chosen(),f=S.flags;
    if(v==='onway'){f.onway=true;ev(o.name+' is on the way');notify(`${o.name} is on the way.`)}
-   else if(v==='arrived'){f.arrived=true;setStatus('TASK_STARTED');ev(o.name+' has arrived. Task started');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'start');notify(`${o.name} has arrived.`)}
+   else if(v==='arrived'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'start');if(d&&d.error){notify(d.error);return}}f.arrived=true;setStatus('TASK_STARTED');ev(o.name+' has arrived. Task started');notify(`${o.name} has arrived.`);saveBundleSoon()}
    else if(v==='checkin'){f.checkin=true;ev(o.name+' answered the safety check-in: all OK');notify(`${o.name} confirmed all OK.`)}
    else if(v==='nocheckin'){f.missed=true;S.incidents.unshift({kind:'Missed check-in',when:clock(),task:S.task.title,who:o.name});ev('No answer to the safety check-in. Support notified');notify('No answer to the safety check-in. Support has been notified.')}
    else if(v==='confirm'){f.confirmed=true;ev(o.name+' confirmed attendance');notify(`${o.name} confirmed they will be there.`)}
-   else if(v==='autorelease'){setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev('48 hours passed with no problem reported: payment released automatically');setStatus('COMPLETED');ev('Task completed');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'approve-payment');archiveTask();notify('Payment released automatically.')}
+   else if(v==='autorelease'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'approve-payment');if(d&&d.error){notify(d.error);return}}setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev('48 hours passed with no problem reported: payment released automatically');setStatus('COMPLETED');ev('Task completed');archiveTask();notify('Payment released automatically.');saveBundleSoon()}
    else if(v==='fixed'){if(S.proof.length<=S.fix.proofBefore){notify('Add a photo of the fix first.');return}const fl=S.task.fixLog&&S.task.fixLog[S.task.fixLog.length-1];if(fl){fl.done=fmtDate(new Date());fl.photos=S.proof.slice(S.fix.proofBefore).map(x=>x.url)}setStatus('FIX_DONE');ev(o.name+' says it is fixed');notify(`${o.name} says it is fixed.`)}
    else if(v==='disagree'){if(!S.form.tr){notify('Choose a reason first.');return}if(S.proof.length<=S.fix.proofBefore){notify('Add your photos first.');return}S.dispute={reason:o.name+' disagrees with the '+(isVacate()?'re-clean':'fix')+' request: '+S.form.tr,status:'OPEN',taskerPhotos:S.proof.slice(S.fix.proofBefore).map(x=>x.url)};setStatus('DISPUTED');S.payment.status='DISPUTED';ev(o.name+' disagrees and sent photos. We will review both sides');S.form.tr=null;notify('Dispute opened. We will review both sides.')}
    else if(v==='nofix'){S.dispute={reason:'Fix not made within 48 hours',status:'OPEN'};setStatus('DISPUTED');S.payment.status='DISPUTED';ev('No fix within 48 hours. We will review and decide');notify('Dispute opened. We will review both sides.')}
-   else if(v==='complete'){const pl=proofLabel();if(pl&&!S.proof.length){notify('Add the proof photo first.');return}if(isVacate()&&VACATE_LIST.some((x,i)=>!S.checklist[i])){notify('Tick every item on the vacate checklist first.');return}setStatus('TASKER_COMPLETED');ev(o.name+' marked the task complete');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'complete');notify('Your task has been marked complete.')}
+   else if(v==='complete'){const pl=proofLabel();if(pl&&!S.proof.length){notify('Add the proof photo first.');return}if(isVacate()&&VACATE_LIST.some((x,i)=>!S.checklist[i])){notify('Tick every item on the vacate checklist first.');return}if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'complete',{photoCount:Math.max(1,S.proof.length)});if(d&&d.error){notify(d.error);return}}setStatus('TASKER_COMPLETED');ev(o.name+' marked the task complete');notify('Your task has been marked complete.');saveBundleSoon()}
    else if(v==='change'){S.change={};ev(o.name+' requested a change');notify(`${o.name} requested a change to your task.`)}
    render();
  },
  sampleProof(){S.proof.push({name:'Sample receipt',url:SAMPLE_PHOTO});render()},
- noshow(){const o=chosen();S.dispute=null;setStatus('NO_SHOW');S.payment.status='REFUNDED';o.canc=Math.min(99,o.canc+1);ev(`No-show reported: ${o.name} did not arrive`);ev('Full refund issued');ev(`No-show recorded on ${o.name}'s reliability record`);render();notify('No-show recorded. You have been refunded in full.')},
- rematch(){const bad=S.offerId;S.offers=S.offers.filter(x=>x.id!==bad);S.offers.forEach(x=>{x.declined=false});S.offerId=null;S.thread=null;S.agreement=null;S.payment=null;S.flags={};S.proof=[];S.checklist=[];S.fix=null;S.dispute=null;S.change=null;setStatus('OFFERS_RECEIVED');ev('Task re-opened for new offers');scheduleOffers();S.stack=[{n:'home'},{n:'task'}];render();notify('Your task is open again. Other Taskers can offer now.')},
+ async noshow(){const o=chosen();if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'no-show');if(d&&d.error){notify(d.error);return}}S.dispute=null;setStatus('NO_SHOW');if(S.payment)S.payment.status='REFUNDED';o.canc=Math.min(99,o.canc+1);ev(`No-show reported: ${o.name} did not arrive`);ev('Full refund issued');ev(`No-show recorded on ${o.name}'s reliability record`);saveBundleSoon();render();notify('No-show recorded. You have been refunded in full.')},
+ async rematch(){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'rematch');if(d&&d.error){notify(d.error);return}}const bad=S.offerId;S.offers=S.offers.filter(x=>x.id!==bad);S.offers.forEach(x=>{x.declined=false});S.offerId=null;S.thread=null;S.agreement=null;S.payment=null;S.flags={};S.proof=[];S.checklist=[];S.fix=null;S.dispute=null;S.change=null;setStatus('OFFERS_RECEIVED');ev('Task re-opened for new offers');scheduleOffers();S.stack=[{n:'home'},{n:'task'}];saveBundleSoon();render();notify('Your task is open again. Other Taskers can offer now.')},
  agentTog(){S.agent=!S.agent;render()},
  turnarounds(){go('turnarounds')},
  earnings(){go('earnings')},
@@ -1366,11 +1526,13 @@ const A={
  reviewDone(){S.myStrikes.forEach(x=>{x.reviewed=true});render();notify('Review finished. Your account is reinstated.')},
  appeal(v){const x=S.myStrikes[+v];if(x){x.appeal=true}render();notify('Appeal sent. We will review it.')},
  trChip(v){S.form.tr=v;render()},
- decide(v){const o=chosen(),p=S.payment;
+ async decide(v){const o=chosen(),p=S.payment;
+   const outcome=v==='refund'?'refund':v==='partial'?'partial':'release';
+   if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'refund',{outcome});if(d&&d.error){notify(d.error);return}}
    if(v==='refund'){p.status='REFUNDED';setStatus('RESOLVED');ev('Decision: full refund to the requester');claimOutcome('Upheld: refunded')}
    else if(v==='partial'){const g=Math.round(p.gross*50)/100,f=calcFee(g);p.partial={gross:g,fee:f,tasker:Math.round((g-f)*100)/100,refund:Math.round((p.gross-g)*100)/100};p.status='PART_RELEASE';setStatus('RESOLVED');ev(`Decision: ${money(g)} paid to ${o.name}, ${money(p.partial.refund)} refunded`);claimOutcome('Partly upheld: part payment');archiveTask({paid:g,note:'Part payment after review'})}
    else{p.status='RELEASED';setStatus('COMPLETED');ev('Decision: payment released to '+o.name+' in full');claimOutcome('Not upheld: Tasker paid');archiveTask()}
-   if(S.dispute)S.dispute.status='RESOLVED';render();notify('Decision recorded.')},
+   if(S.dispute)S.dispute.status='RESOLVED';saveBundleSoon();render();notify('Decision recorded.')},
  samplePostPhoto(){S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(SAMPLE_ITEM);render()},
  rmPostPhoto(v){(S.draft.photos||[]).splice(+v,1);render()},
  bookAgain(){const t=S.task,o=chosen();if(!t||!o)return;A.startRebook({title:t.title,cat:t.cat,prop:t.prop,tasker:o.name,price:(S.payment&&S.payment.status==='RELEASED')?S.payment.gross:null})},
@@ -1396,41 +1558,49 @@ const A={
  policereq(){const c=S.idc;if(!c.consent){notify('Tick the consent box first.');return}c.police='requested';render();setTimeout(()=>{S.tk.police=true;c.police='done';if(S.stack[S.stack.length-1].n==='idcheck')render();notify('Police check clear (demo).')},2000)},
  tickAll(){S.checklist=VACATE_LIST.map(()=>true);render()},
  fixWhat(v){S.form.fix=v;render()},
- fixSend(){if(!S.form.fix){notify('Choose what needs fixing.');return}const o=chosen(),t=S.task;if(t.fixUsed){notify('The free fix for this job has already been used.');return}t.fixUsed=true;S.fix={what:S.form.fix,text:(S.form.fixText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.fix,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:isVacate()?'Re-clean request':'Fix request',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev(`${isVacate()?'Re-clean':'Fix'} requested: ${S.form.fix}`);S.form.fix=null;S.form.fixText='';S.sheet=null;render();notify(`${o.name} has 48 hours to put it right.`)},
+ async fixSend(){if(!S.form.fix){notify('Choose what needs fixing.');return}const o=chosen(),t=S.task;if(t.fixUsed){notify('The free fix for this job has already been used.');return}if(t.listingId){const d=await TaskAPI.sync(t.listingId,'fix',{what:S.form.fix,text:S.form.fixText||''});if(d&&d.error){notify(d.error);return}}t.fixUsed=true;S.fix={what:S.form.fix,text:(S.form.fixText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.fix,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:isVacate()?'Re-clean request':'Fix request',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev(`${isVacate()?'Re-clean':'Fix'} requested: ${S.form.fix}`);S.form.fix=null;S.form.fixText='';S.sheet=null;saveBundleSoon();render();notify(`${o.name} has 48 hours to put it right.`)},
  tk(v){S.tk[v]=true;render();notify('Demo: in the real app you upload a document here.')},
- confirmDone(){
+ async confirmDone(){
    const o=chosen(),t=S.task,p=S.payment;
    if(!o||!t||!p){notify('Nothing to confirm yet.');return}
    if(!['TASKER_COMPLETED','FIX_DONE'].includes(t.status)){notify('The Tasker has not marked this job complete yet.');return}
    if(p.status==='RELEASED'||t.archived){notify('Payment was already released.');return}
    if(p.status!=='AUTHORISED'){notify('Payment is on hold until this is resolved.');return}
-   setStatus('REQUESTER_CONFIRMED');ev('You confirmed completion');setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev(`Payment of ${money(S.payment.tasker)} released to ${o.name}`);setStatus('COMPLETED');ev('Task completed');if(t.listingId)TaskAPI.sync(t.listingId,'approve-payment');S.claims.forEach(c=>{if(c.task===S.task.title&&!c.outcome)c.outcome='Fixed'});archiveTask();
-   S.form.stars=0;S.form.good=[];S.form.review='';S.form.tip=0;go('review');
+   if(t.listingId){const d=await TaskAPI.sync(t.listingId,'approve-payment');if(d&&d.error){notify(d.error);return}}
+   setStatus('REQUESTER_CONFIRMED');ev('You confirmed completion');setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev(`Payment of ${money(S.payment.tasker)} released to ${o.name}`);setStatus('COMPLETED');ev('Task completed');S.claims.forEach(c=>{if(c.task===S.task.title&&!c.outcome)c.outcome='Fixed'});archiveTask();
+   S.form.stars=0;S.form.good=[];S.form.review='';S.form.tip=0;saveBundleSoon();go('review');
  },
  toReview(){S.form.stars=0;S.form.good=[];go('review')},
  star(v){S.form.stars=+v;render()},
  good(v){const g=S.form.good||[];S.form.good=g.includes(v)?g.filter(x=>x!==v):[...g,v];render()},
- submitReview(){
+ async submitReview(){
    if(!S.form.stars){notify('Choose a star rating first.');return}
-   S.task.reviewed=true;ev('Review submitted');if(S.form.tip){applyTip(S.form.tip);notify('Thanks. A '+money(S.form.tip)+' tip was sent.')}S.form.tip=0;S.stack=[{n:'home'},{n:'task'}];render();notify('Thanks. Your review has been submitted.');
+   if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'review',{stars:S.form.stars,text:S.form.review||'',tags:S.form.good||[]});if(d&&d.error){notify(d.error);return}}
+   S.task.reviewed=true;ev('Review submitted');if(S.form.tip){applyTip(S.form.tip);notify('Thanks. A '+money(S.form.tip)+' tip was sent.')}S.form.tip=0;S.stack=[{n:'home'},{n:'task'}];saveBundleSoon();render();notify('Thanks. Your review has been submitted.');
  },
  sheet(v){openSheet(v)},
  rep(v){S.form.rep=v;render()},
  repSimple(){if(!S.form.rep){notify('Choose what happened.');return}S.form.rep=null;S.sheet=null;render();notify('Report sent. We will review it.')},
- repSubmit(){
+ async repSubmit(){
    if(!S.form.rep){notify('Choose what happened.');return}
    if(S.form.rep==='Tasker did not arrive'){S.form.rep=null;S.sheet=null;A.noshow();return}
-   if(['Task not completed','Partially completed'].includes(S.form.rep)&&!S.task.fixUsed){const t=S.task,o=chosen();t.fixUsed=true;S.fix={what:S.form.rep,text:(S.form.repText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.rep,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:'Problem reported: finish the job',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev('Asked '+o.name+' to finish the job: '+S.form.rep);S.form.rep=null;S.form.repText='';S.sheet=null;render();notify(o.name+' has 48 hours to finish the job. Your payment stays on hold.');return}
+   if(['Task not completed','Partially completed'].includes(S.form.rep)&&!S.task.fixUsed){const t=S.task,o=chosen();if(t.listingId){const d=await TaskAPI.sync(t.listingId,'fix',{what:S.form.rep,text:S.form.repText||''});if(d&&d.error){notify(d.error);return}}t.fixUsed=true;S.fix={what:S.form.rep,text:(S.form.repText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.rep,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:'Problem reported: finish the job',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev('Asked '+o.name+' to finish the job: '+S.form.rep);S.form.rep=null;S.form.repText='';S.sheet=null;saveBundleSoon();render();notify(o.name+' has 48 hours to finish the job. Your payment stays on hold.');return}
+   if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'dispute',{reason:S.form.rep,text:S.form.repText||''});if(d&&d.error){notify(d.error);return}}
    S.claims.unshift({kind:'Problem reported: '+S.form.rep,task:S.task.title,ts:Date.now(),outcome:null});
    S.dispute={reason:S.form.rep,status:'OPEN'};setStatus('DISPUTED');S.payment.status='DISPUTED';ev(`Problem reported: ${S.form.rep}`);ev('Dispute opened');
-   S.form.rep=null;S.sheet=null;render();notify('Problem reported. Your payment stays on hold.');
+   S.form.rep=null;S.sheet=null;saveBundleSoon();render();notify('Problem reported. Your payment stays on hold.');
  },
  blockOk(){S.sheet=null;render();notify('User blocked.')},
  why(v){S.form.why=v;render()},
- cancelOk(){
+ async cancelOk(){
    if(!S.form.why){notify('Choose a reason first.');return}
-   const h=hoursToStart(),late=h<24&&h!==Infinity,fee=late?calloutFee():0;
-   setStatus('CANCELLED');S.payment.callout=fee;S.payment.status=fee?'PART_REFUND':'REFUNDED';ev('Task cancelled: '+S.form.why);ev(fee?`Part refund: ${money(Math.round((S.payment.gross-fee)*100)/100)} refunded, ${money(fee)} call-out fee to the Tasker`:'Payment refunded in full');S.form.why=null;S.sheet=null;render();
+   let fee=0;
+   if(S.task&&S.task.listingId){
+     const d=await TaskAPI.sync(S.task.listingId,'cancel',{reason:S.form.why});
+     if(d&&d.error){notify(d.error);return}
+     if(d.task&&d.task.payment&&S.payment){S.payment.status=d.task.payment.status;S.payment.callout=d.task.payment.callout||0;fee=S.payment.callout}
+   }else{const h=hoursToStart();const late=h<24&&h!==Infinity;fee=late?calloutFee():0;if(S.payment){S.payment.callout=fee;S.payment.status=fee?'PART_REFUND':'REFUNDED'}}
+   setStatus('CANCELLED');ev('Task cancelled: '+S.form.why);ev(fee?`Part refund: ${money(Math.round((S.payment.gross-fee)*100)/100)} refunded, ${money(fee)} call-out fee to the Tasker`:'Payment refunded in full');S.form.why=null;S.sheet=null;saveBundleSoon();render();
  },
  chgOk(){
    S.change=null;S.agreement.version=2;S.agreement.fee+=15;S.agreement.dur='Original plus 30 minutes';S.agreement.history.push({v:2,note:'+30 min, +$15 (approved)'});
@@ -1440,7 +1610,7 @@ const A={
  leave(){S.sheet=null;render();notify('In the real app this ends your part in the task and alerts support.')},
  tcToggle(){S.trusted.on=!S.trusted.on;render()},
  tcSave(){S.sheet=null;render();notify('Trusted contact saved.')},
- ntog(v){S.notif[v]=!S.notif[v];render()},
+ ntog(v){S.notif[v]=!S.notif[v];TaskAPI.settings({notif:S.notif}).catch(()=>{});render()},
  verify(){go('idcheck')},
  fkm(v){S.find.km=+v;render()},fcat(v){S.find.cat=v;render()},
  fsort(v){S.find.sort=v;render()},ffilt(){S.find.fopen=!S.find.fopen;render()},fview(v){S.find.view=v;S.find.pin=null;render()},fpin(v){S.find.pin=+v;render()},fclear(){S.find.q='';S.find.cat='all';render()},
@@ -1452,19 +1622,20 @@ const A={
  otimes(){S.sheet={n:'ostart'};render()},
  oslot(v){S.form.start=v;S.sheet=null;render()},
  odur(v){S.form.dur=+v;render()},
- async sendOffer(){
+  async sendOffer(){
    const stg=tStanding();if(stg.state==='review'){notify('Your account is under review. New offers are on hold.');return}
    if(!S.tk.safety){notify('Complete the safety guide before sending offers.');go('safetyguide');return}
    const t=getFindTask(S.findId);if(!t){notify('Task not found.');return}
    if(t.fromApi&&t.listingStatus!=='Open'){notify('This listing is not open for bids.');return}
-   if(S.sent.some(s=>s.tid===t.id)){notify('You already sent an offer for this task.');return}
+   if(S.sent.some(s=>s.tid===t.id&&s.status!=='withdrawn')){notify('You already sent an offer for this task.');return}
    const fee=parseFloat(S.form.fee);
    if(!(fee>=5)||fee>15000){notify('Enter a fee between $5 and $15,000.');return}
    if(!S.form.ok)return;
-   if(t.fromApi){try{await TaskAPI.bid(t.id,fee,'You');await refreshApiListings()}catch(e){notify(e.message||'Bid failed');return}}
+   let bidId=null;
+   if(t.fromApi){const data=await TaskAPI.bid(t.id,fee,meName(),S.form.omsg||'');if(data.error){notify(data.error);return}bidId=data.bid&&data.bid.id;await refreshApiListings()}
    const st=S.form.start||t.t,[h,m]=st.split(':').map(Number);
    const dur=S.form.dur||t.d;
-   S.sent.push({tid:t.id,title:t.title,date:t.date,time:fmtTime(h*60+m)+' – '+fmtTime(h*60+m+dur),fee});t.offers++;
+   S.sent.push({tid:t.id,bidId,title:t.title,date:t.date,time:fmtTime(h*60+m)+' – '+fmtTime(h*60+m+dur),fee,status:'pending',message:S.form.omsg||''});t.offers++;
    S.stack.pop();render();notify(t.fromApi?`Bid of ${money(fee)} saved · waiting for acceptance`:`Offer of ${money(fee)} sent.`);
  },
  theme:themeCycle,
@@ -1472,10 +1643,102 @@ const A={
  aday(v){const a=S.avail.days,i=+v;S.avail.days=a.includes(i)?a.filter(x=>x!==i):[...a,i];render()},
  akm(v){S.avail.km=+v;render()},
  acat(v){const a=S.avail.cats;S.avail.cats=a.includes(v)?a.filter(x=>x!==v):[...a,v];render()},
- asave(){back();notify('Availability saved.')},
- avail(){go('avail')}
+ asave(){TaskAPI.settings({avail:S.avail}).catch(()=>{});back();notify('Availability saved.')},
+ avail(){go('avail')},
+ authMode(v){S.authMode=v;S.form.password='';render()},
+ async doLogin(){
+   const data=await api('/api/auth/login',{method:'POST',body:{email:S.form.email||'',password:S.form.password||''}});
+   if(data.error){notify(data.error);return}
+   S.form.password='';
+   const me=await api('/api/auth/me');
+   if(me.error){notify(me.error);return}
+   applyWorkspace(me);S.stack=[{n:'home'}];render();refreshApiListings();notify('You are logged in.');
+ },
+ async doSignup(){
+   const data=await api('/api/auth/signup',{method:'POST',body:{name:S.form.name||'',email:S.form.email||'',password:S.form.password||'',phone:S.form.phone||''}});
+   if(data.error){notify(data.error);return}
+   S.form.password='';
+   const me=await api('/api/auth/me');
+   if(me.error){notify(me.error);return}
+   applyWorkspace(me);S.stack=[{n:'home'}];render();notify('Account created. You are logged in.');
+ },
+ async logout(){await api('/api/auth/logout',{method:'POST',body:{}});location.href=location.pathname},
+ account(){S.form.profName=null;S.form.profPhone=null;S.form.profSuburb=null;S.form.profBio=null;S.form.deleteConfirm='';go('account')},
+ async saveProfile(){
+   const data=await api('/api/auth/profile',{method:'PATCH',body:{name:S.form.profName,phone:S.form.profPhone,suburb:S.form.profSuburb,bio:S.form.profBio}});
+   if(data.error){notify(data.error);return}
+   S.user=data.user;notify('Profile saved.');back();
+ },
+ async deleteAccount(){
+   if((S.form.deleteConfirm||'')!=='DELETE'){notify('Type DELETE to confirm.');return}
+   const data=await api('/api/auth/account',{method:'DELETE'});
+   if(data.error){notify(data.error);return}
+   location.href=location.pathname;
+ },
+ askOffer(){const o=chosen();if(!o||!S.task)return;openAsk({listingId:S.task.listingId,withName:o.name,title:S.task.title})},
+ askAbout(){const t=getFindTask(S.findId);if(!t)return;openAsk({listingId:t.fromApi?t.id:null,withName:t.req.name,title:t.title,localId:t.id})},
+ openAsk(v){const th=S.askThreads[+v];if(!th)return;S.ask=th;go('ask')},
+ async askSend(){await sendAsk(S.form.msg||'')},
+ async saveSearch(){
+   const data=await TaskAPI.saveSearch({q:S.find.q||'',cat:S.find.cat||'all',km:S.find.km,sort:S.find.sort||'closest',alert:true});
+   if(data.error){notify(data.error);return}
+   S.savedSearches=data.savedSearches||S.savedSearches;
+   notify('Search saved. We will tell you when a matching task is posted, if it fits your availability.');
+   render();
+ },
+ async searchAlert(v){const s=S.savedSearches.find(x=>x.id===+v);if(!s)return;const data=await TaskAPI.patchSearch(s.id,{alert:!s.alert});if(data.error){notify(data.error);return}S.savedSearches=data.savedSearches;render()},
+ async searchDel(v){const data=await TaskAPI.deleteSearch(v);if(data.error){notify(data.error);return}S.savedSearches=data.savedSearches;render()},
+ editSent(v){S.editIdx=+v;S.form.editFee=null;S.form.editMsg=null;go('editSent')},
+ editSentByTask(v){const i=S.sent.findIndex(s=>s.tid===+v&&s.status!=='withdrawn');if(i<0){notify('No waiting offer to edit.');return}A.editSent(i)},
+ async saveSent(){
+   const s=S.sent[S.editIdx];if(!s||!s.bidId){notify('This offer is only on this phone.');return}
+   const fee=parseFloat(S.form.editFee!=null?S.form.editFee:s.fee);
+   const data=await api('/api/bids/'+s.bidId,{method:'PATCH',body:{fee,message:S.form.editMsg!=null?S.form.editMsg:s.message}});
+   if(data.error){notify(data.error);return}
+   s.fee=data.bid.fee;s.message=data.bid.message;notify('Offer updated.');back();
+ },
+ async withdrawSent(v){
+   const s=S.sent[v!=null?+v:S.editIdx];if(!s)return;
+   if(s.bidId){const data=await api('/api/bids/'+s.bidId+'/withdraw',{method:'POST',body:{}});if(data.error){notify(data.error);return}}
+   s.status='withdrawn';notify('Offer withdrawn.');if(S.stack[S.stack.length-1].n==='editSent')back();else render();
+ },
+ withdrawSentByTask(v){const i=S.sent.findIndex(s=>s.tid===+v&&s.status!=='withdrawn');if(i<0)return;A.withdrawSent(i)},
+ async shareRecord(){
+   const rows=visibleHistory().filter(h=>h.prop===S.propSel);
+   if(!rows.length){notify('There is nothing to share yet.');return}
+   const saved=await TaskAPI.saveRecords(rows.map(r=>({title:r.title,cat:r.cat,taskerName:r.tasker,date:r.date,paid:r.paid,suburb:'Melbourne CBD',propPrivate:r.prop||'',check:r.check||'',note:r.note||'',photoCount:(r.photos&&r.photos.length)||r.photoCount||0})));
+   if(saved.error){notify(saved.error);return}
+   const share=await TaskAPI.createShare(saved.ids);
+   if(share.error){notify(share.error);return}
+   S.shareUrl=location.origin+'/?share='+share.token;
+   render();notify('Share link ready. It does not include the street address.');
+ },
+ async exportCsv(){
+   const rows=visibleHistory();
+   if(rows.length){const saved=await TaskAPI.saveRecords(rows.map(r=>({title:r.title,cat:r.cat,taskerName:r.tasker,date:r.date,paid:r.paid,suburb:'Melbourne CBD',propPrivate:r.prop||'',check:r.check||'',note:r.note||'',photoCount:(r.photos&&r.photos.length)||r.photoCount||0})));if(saved.error){notify(saved.error);return}}
+   location.href='/api/me/records.csv';
+ }
 };
-const OFFPLAT=/\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|don'?t worry about the app|pay me direct/i;
+const OFFPLAT=/\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|don'?t worry about the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me|text me/i;
+function openAsk(info){
+  S.askThreads=S.askThreads||[];
+  let th=S.askThreads.find(t=>(info.listingId&&t.listingId===info.listingId&&t.withName===info.withName)||(info.localId&&t.localId===info.localId&&t.withName===info.withName));
+  if(!th){th={listingId:info.listingId||null,localId:info.localId||null,withName:info.withName,title:info.title,messages:[]};S.askThreads.push(th)}
+  S.ask=th;go('ask');
+}
+async function sendAsk(text){
+  const body=String(text||'').trim();
+  if(!body||!S.ask)return;
+  S.form.msg='';
+  const warning=OFFPLAT.test(body);
+  S.ask.messages.push({from:'me',text:body,warning});
+  if(S.ask.listingId){
+    const data=await api('/api/tasks/'+S.ask.listingId+'/messages',{method:'POST',body:{text:body}});
+    if(data.error){S.ask.messages.pop();notify(data.error);render();return}
+    if(data.warning)S.ask.messages[S.ask.messages.length-1].warning=true;
+  }
+  render();const i=$('#msgin');if(i)i.focus();
+}
 function sendMsg(text){
   S.thread.push({from:'me',text});
   const off=OFFPLAT.test(text);
@@ -1510,11 +1773,24 @@ document.addEventListener('input',e=>{
   if(INP[k])INP[k]();
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&e.target.id==='msgin'){e.preventDefault();A.send()}
+  if(e.key==='Enter'&&e.target.id==='msgin'){e.preventDefault();if(S.stack[S.stack.length-1]&&S.stack[S.stack.length-1].n==='ask')A.askSend();else A.send()}
   if(e.key==='Escape'&&S.sheet)closeSheet();
 });
-render();
-refreshApiListings();
+async function boot(){
+  const share=new URLSearchParams(location.search).get('share');
+  if(share){
+    S.shareView=share;
+    try{const r=await fetch('/api/shares/'+encodeURIComponent(share));S.shareData=await r.json()}catch(e){S.shareData={error:'Could not load this record'}}
+    render();return;
+  }
+  try{
+    const r=await fetch('/api/auth/me',{credentials:'same-origin'});
+    if(r.ok){const data=await r.json();if(data.user)applyWorkspace(data)}
+  }catch(e){}
+  render();
+  if(S.user)refreshApiListings();
+}
+boot();
 </script>
 </body>
 </html>
