@@ -498,6 +498,39 @@ test('building-type jobs over $10,000 are refused, including quotes and stages',
   assert.match(structural.error, /doesn't offer licensed work/);
 });
 
+test('events and hosting tasks are stored as Other, and packing stays its own category', async () => {
+  db.resetStore();
+  const alex = await account('Alex', 'pack@example.com');
+  const party = await db.publishListing((db.upsertListingText('Set up chairs', null, alex)).task.id, {
+    text: 'Set up chairs for a birthday', title: 'Party setup', cat: 'events', suburb: 'Carlton', budgetLabel: 'Request quotes',
+  }, alex);
+  assert.equal(party.task.cat, 'other');
+  const turnover = await db.publishListing((db.upsertListingText('Hand over the apartment', null, alex)).task.id, {
+    text: 'Hand over the apartment after a short stay', title: 'Apartment handover', cat: 'hosting', suburb: 'Carlton', budgetLabel: '$150', priceNum: 150,
+  }, alex);
+  assert.equal(turnover.task.cat, 'other');
+  const packed = await db.publishListing((db.upsertListingText('Pack the kitchen', null, alex)).task.id, {
+    text: 'Pack the kitchen into boxes', title: 'Pack the kitchen', cat: 'packing', suburb: 'Carlton', budgetLabel: '$180', priceNum: 180,
+  }, alex);
+  assert.equal(packed.task.cat, 'packing');
+  const file = path.join(dir, 'store.json');
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const row = raw.tasks.find((task) => task.title === 'Party setup');
+  row.cat = 'hosting';
+  row.bundle = { task: { cat: 'events', title: 'Party setup' } };
+  raw.records.push({ id: 1, userId: alex.id, cat: 'events', title: 'Old party', date: '', paid: 0, suburb: 'Carlton' });
+  raw.savedSearches.push({ id: 1, userId: alex.id, cat: 'hosting', q: 'party', km: 10, alert: false });
+  fs.writeFileSync(file, JSON.stringify(raw));
+  const fresh = await import('./db.js?retired=1');
+  assert.equal(fresh.getTaskById(row.id, alex).cat, 'other');
+  fresh.flushPersist();
+  const again = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(again.tasks.find((task) => task.id === row.id).cat, 'other');
+  assert.equal(again.tasks.find((task) => task.id === row.id).bundle.task.cat, 'other');
+  assert.equal(again.records[0].cat, 'other');
+  assert.equal(again.savedSearches[0].cat, 'other');
+});
+
 test('Google and Apple sign-in are present but not required', () => {
   const providers = listAuthProviders();
   assert.equal(providers.find((p) => p.id === 'password').enabled, true);

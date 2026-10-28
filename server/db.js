@@ -20,6 +20,12 @@ import {
 } from '../shared/places.js';
 
 const FEE_PCT = 15;
+const RETIRED_CATS = new Set(['events', 'hosting']);
+
+function retireCat(cat) {
+  const name = String(cat || '');
+  return RETIRED_CATS.has(name) ? 'other' : name;
+}
 const DEMO_TASKERS = new Set(['Jordan', 'Sam', 'Priya', 'Marco']);
 const CONTACT_OR_CASH = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me on|text me/i;
 export const CONTACT_WARNING = 'Please don’t swap phone numbers or pay cash. TaskSpeck can only protect a job that stays in the app.';
@@ -154,6 +160,8 @@ function normalise() {
   store.geocodes ||= [];
   store.waitlist ||= [];
   for (const task of store.tasks) {
+    if (RETIRED_CATS.has(task.cat)) task.cat = 'other';
+    if (task.bundle && task.bundle.task && RETIRED_CATS.has(task.bundle.task.cat)) task.bundle.task.cat = 'other';
     if (!task.stage) task.stage = stageFromLegacy(task);
     const p = pointFor(task.suburb);
     if (p) {
@@ -171,8 +179,19 @@ function normalise() {
       user.lng = p.lng;
       user.cityId = p.cityId;
     }
-    if (user.avail) user.avail.km = snapRadius(user.avail.km);
+    if (user.avail) {
+      user.avail.km = snapRadius(user.avail.km);
+      if (Array.isArray(user.avail.cats)) {
+        user.avail.cats = [...new Set(user.avail.cats.map((cat) => retireCat(cat)))];
+      }
+    }
     user.demoMode = !!user.demoMode;
+  }
+  for (const search of store.savedSearches) {
+    if (RETIRED_CATS.has(search.cat)) search.cat = 'other';
+  }
+  for (const record of store.records) {
+    if (RETIRED_CATS.has(record.cat)) record.cat = 'other';
   }
 }
 
@@ -413,7 +432,7 @@ export function publicTask(task, viewer) {
     requesterName: task.requesterName || requesterOf(task)?.name || 'Requester',
     text: task.text || '',
     title: task.title || '',
-    cat: task.cat || 'other',
+    cat: retireCat(task.cat) || 'other',
     status: task.status,
     stage: task.stage,
     published: !!task.published,
@@ -460,7 +479,7 @@ function briefTask(task) {
   return {
     id: task.id,
     title: task.title || '',
-    cat: task.cat || 'other',
+    cat: retireCat(task.cat) || 'other',
     suburb: task.suburb || '',
     status: task.status,
     stage: task.stage,
@@ -583,7 +602,7 @@ export function updateProfile(user, patch = {}) {
     if (a.from) user.avail.from = String(a.from).slice(0, 5);
     if (a.to) user.avail.to = String(a.to).slice(0, 5);
     if (a.km != null) user.avail.km = snapRadius(a.km);
-    if (Array.isArray(a.cats)) user.avail.cats = a.cats.map(String).slice(0, 12);
+    if (Array.isArray(a.cats)) user.avail.cats = [...new Set(a.cats.map((cat) => retireCat(String(cat))))].slice(0, 12);
     if (a.paused != null) user.avail.paused = !!a.paused;
   }
   schedulePersist();
@@ -806,7 +825,7 @@ export async function releaseMilestone(taskId, milestoneId, user) {
 function applyMeta(task, meta, user) {
   if (meta.text != null) task.text = String(meta.text).slice(0, 8000);
   if (meta.title != null) task.title = String(meta.title).slice(0, 140);
-  if (meta.cat != null) task.cat = String(meta.cat).slice(0, 40);
+  if (meta.cat != null) task.cat = retireCat(String(meta.cat)).slice(0, 40);
   if (meta.address != null) task.address = String(meta.address).slice(0, 200);
   if (meta.prop != null) task.propPrivate = String(meta.prop).slice(0, 200);
   if (meta.budgetLabel != null) task.budgetLabel = String(meta.budgetLabel).slice(0, 80);
@@ -1554,7 +1573,7 @@ export function saveSearch(user, body = {}) {
     id: store.counters.searchId++,
     userId: user.id,
     q: String(body.q || '').slice(0, 120),
-    cat: String(body.cat || 'all').slice(0, 40),
+    cat: retireCat(String(body.cat || 'all')).slice(0, 40) || 'all',
     km: Math.min(50, Math.max(1, Number(body.km) || 5)),
     sort: String(body.sort || 'closest'),
     maxPrice: body.maxPrice != null && body.maxPrice !== '' ? Number(body.maxPrice) : null,
@@ -1633,7 +1652,7 @@ export function saveRecords(user, rows) {
     let existing = store.records.find((r) => r.userId === user.id && r.title === title && r.date === date && r.paid === paid);
     const next = {
       title,
-      cat: String(row.cat || '').slice(0, 40),
+      cat: retireCat(String(row.cat || '')).slice(0, 40),
       taskerName: String(row.taskerName || row.tasker || '').slice(0, 80),
       date,
       paid,

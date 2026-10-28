@@ -75,6 +75,11 @@ button.card{text-align:left}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;justify-content:center}
 .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cats.home-cats{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;margin-inline:auto;align-items:stretch;justify-content:center}
+.cats.home-cats .cat{width:100%;height:156px;min-height:156px;max-height:156px;padding:16px 8px 12px;justify-content:flex-start;align-items:center;gap:8px}
+.cats.home-cats .ico{width:48px;height:48px}
+.cats.home-cats .lbl{display:flex;align-items:center;justify-content:center;width:100%;height:2.4em;min-height:2.4em;max-height:2.4em;margin:0;overflow:hidden;text-align:center;line-height:1.2}
+.cats.home-cats .lbl span{display:block;width:100%;max-height:2.4em;overflow:hidden;line-height:1.2;text-align:center}
 .cat{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 8px 12px;text-align:center;font-size:13.5px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:124px;justify-content:flex-start;width:100%;box-shadow:0 8px 20px rgba(21,32,28,.05)}
 .cat .ico{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:hsl(var(--h) var(--tint-s) var(--tint-l));color:var(--brand);flex:none}
 .cat .ico svg{width:22px;height:22px;display:block}
@@ -265,6 +270,7 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   .trust{grid-template-columns:repeat(3,1fr)}
   .popular{grid-template-columns:repeat(4,1fr)}
   .cats{grid-template-columns:repeat(5,1fr)}
+  .cats.home-cats{grid-template-columns:repeat(5,minmax(0,1fr))}
   .read{max-width:720px}
   #fres .stack{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   #fres .stack>*+*{margin-top:0}
@@ -355,21 +361,21 @@ const CATS={
  furniture:{name:'Assembly',em:'',h:45,base:150,guide:'A single flat-pack is a smaller job. A house full of assembly costs more. Assembly over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs.'},
  moving:{name:'Moving help',em:'',h:345,base:250,guide:'A few boxes is a small job. A whole move, including multi-day work, is priced by the Tasker.'},
  errands:{name:'Pickup & delivery',em:'',h:215,base:80,guide:'A quick pickup is small. A day of deliveries costs more.'},
+ errand:{name:'Errands',em:'',h:200,base:60,guide:'Shopping runs, queuing, returns and key pickup. A quick stop is small. Several stops cost more.'},
+ packing:{name:'Packing & unpacking',em:'',h:58,base:180,guide:'Boxing up or unpacking for a move, and organising what goes in the boxes. A few boxes is smaller. A whole home costs more.'},
  rubbish:{name:'Hard rubbish',em:'',h:100,base:180,guide:'A few items is a small load. A full clearance costs more. Hazardous waste is not allowed.'},
  home:{name:'Handyman',em:'',h:255,base:200,guide:'Small repairs vary. Larger unlicensed jobs can run to several days. Handyman work over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Licensed trades are not offered.'},
  garden:{name:'Gardening',em:'',h:120,base:160,guide:'A tidy-up is smaller. A big garden over several days costs more. Tree removal with a chainsaw is not offered.'},
  painting:{name:'Painting',em:'',h:30,base:400,guide:'One room is smaller. Several rooms or days cost more. Painting over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Wet-area waterproofing is licensed and not offered.'},
- events:{name:'Events',em:'🎈',h:300,base:200,guide:'Help for a party or setup. Price depends on the hours and the crew.'},
  office:{name:'Office help',em:'🏢',h:210,base:180,guide:'A one-off office job. Shifts and ongoing staffing are not offered.'},
  tech:{name:'Tech setup',em:'💻',h:230,base:120,guide:'Setting up devices you already own. Electrical and TV mounting are not offered.'},
  pets:{name:'Pets & plants',em:'🐕',h:28,base:60,guide:'Feeding, walking or watering. Not vet care.'},
- hosting:{name:'Hosting help',em:'🔑',h:160,base:150,guide:'A one-off turnover or key handover. Not a staffing roster.'},
  admin:{name:'Admin',em:'📋',h:260,base:120,guide:'Sorting, packing lists, or a day of organising.'},
  labour:{name:'General help',em:'💪',h:15,base:180,guide:'An extra pair of hands for a few hours or several days, at a fixed price.'},
  other:{name:'Other',em:'✨',h:200,base:150,guide:'Describe the job and the size. The safety check still applies. Licensed work is not offered.'}
 };
 const FINAL=Object.keys(CATS);
-const HOME_CATS=['garden','furniture','painting','moving','cleaning','home','errands','rubbish','other'];
+const HOME_CATS=[['moving','Moving help'],['cleaning','Cleaning'],['garden','Gardening'],['home','Handyman'],['furniture','Assembly'],['errands','Pickup &\ndelivery'],['rubbish','Hard rubbish'],['painting','Painting'],['packing','Packing &\nunpacking'],['other','Other']];
 const POPULAR=[['cleaning','End-of-lease clean','$180–$400'],['furniture','Furniture assembly','$80–$250'],['garden','Garden tidy','$70–$220'],['rubbish','Hard rubbish pickup','$120–$350']];
 function heroArt(){return `<svg class="illu" viewBox="0 0 320 210" role="img" aria-label="Illustration of a helper with a box and a plant"><rect class="g" x="18" y="168" width="284" height="14" rx="7" opacity=".15"/><rect class="g" x="54" y="86" width="118" height="82" rx="18"/><rect class="y" x="72" y="104" width="82" height="46" rx="10"/><circle class="y" cx="214" cy="78" r="26"/><rect class="g" x="200" y="102" width="28" height="52" rx="12"/><path class="line" d="M176 168c18-26 46-26 66 0"/><rect class="s" x="248" y="118" width="40" height="46" rx="10" stroke="var(--brand)" stroke-width="3"/><path class="g" d="M268 118c-8-26 6-44 0-62 16 16 20 38 0 62z"/></svg>`}
 const RADII=[5,10,25,50];
@@ -381,19 +387,19 @@ const CAT_ICON={
  cleaning:'<path d="M4 20h10"/><path d="M8 20V6"/><path d="M8 6h8l-2 6H8"/>',
  home:'<path d="M14 7l3 3"/><path d="M4 20l8-8 3 3-8 8H4v-3z"/><path d="M12 12l2-2"/>',
  errands:'<path d="M6 7h15l-1.5 9h-12z"/><path d="M6 7L5 4H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
+ errand:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+ packing:'<path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/>',
  rubbish:'<path d="M5 8h14"/><path d="M8 8V6h8v2"/><path d="M7 8l1 12h8l1-12"/>',
- events:'<path d="M12 3v2"/><path d="M8 7h8"/><path d="M7 7c0 5 2 8 5 8s5-3 5-8"/><path d="M12 15v3"/><path d="M9 21h6"/>',
  office:'<path d="M4 20V6h10v14"/><path d="M14 10h6v10"/><path d="M8 10h2M8 14h2"/>',
  tech:'<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4"/>',
  pets:'<circle cx="8" cy="9" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="6" cy="14" r="1.6"/><circle cx="18" cy="14" r="1.6"/><path d="M9 18c1 2 5 2 6 0"/>',
- hosting:'<circle cx="8" cy="14" r="3"/><path d="M11 14h8"/><path d="M16 14v3"/><path d="M19 14v2"/>',
  admin:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
  labour:'<path d="M8 13a4 4 0 1 1 8 0"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
  other:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
 };
 function catIcon(k,s=22){const d=CAT_ICON[k]||CAT_ICON.other;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`}
 const catPill=k=>{const c=CATS[k]||CATS.other;return `<span class="pill c" style="--h:${c.h}">${catIcon(k,14)} ${esc(c.name)}</span>`};
-function catGrid(keys){return keys.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="ico">${catIcon(k,22)}</span><span class="lbl">${esc(CATS[k].name)}</span></button>`).join('')}
+function catGrid(keys){return keys.map(item=>{const k=Array.isArray(item)?item[0]:item;const name=Array.isArray(item)?item[1]:CATS[k].name;const label=String(name).split('\n').map(esc).join('<br>');return `<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="ico">${catIcon(k,22)}</span><span class="lbl"><span>${label}</span></span></button>`}).join('')}
 function photoDrop(name,label){return `<label class="drop">${ic('camera',28)}<b>${esc(label)}</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" multiple data-in="${name}" aria-label="${esc(label)}"></label>`}
 const avatar=(n,s=44)=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return `<div class="avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 70% 82%)">${esc(n[0])}</div>`};
 const chip=(l,on,attr)=>`<button class="chip${on?' on':''}" aria-pressed="${!!on}" ${attr}>${esc(l)}</button>`;
@@ -421,13 +427,13 @@ const RULES=[
  ['furniture',/assembl|flat.?pack|ikea|put together/i],
  ['rubbish',/\b(rubbish|hard rubbish|junk|tip run|dump|skip|take away|haul away|dispos\w*|old (mattress|sofa|couch|fridge|furniture|bed|wardrobe|desk|tv|tvs|television))\b/i],
  ['cleaning',/\b(clean\w*|vacuum\w*|mop\w*|sweep\w*)\b/i],
- ['moving',/\b(boxes|carry|move|moving|unload|load|unpack\w*|pack)\b/i],
- ['events',/\b(event|party|chairs|tables|decorations|balloons)\b/i],
- ['errands',/\b(grocer\w*|coles|woolworths|aldi|pick ?up|collect|return\w*|parcel|errand|queue|deliver\w*|courier|mail|post office|shop)\b/i],
+ ['packing',/\b(pack\w*|unpack\w*|boxing|box(?:es)? up)\b/i],
+ ['moving',/\b(boxes|carry|move|moving|unload|load)\b/i],
+ ['errand',/\b(errands?|queu(?:e|ing)|grocer\w*|coles|woolworths|aldi|key ?pick ?up|pick ?up (?:the |my |a )?keys?|shopping run|shop for)\b/i],
+ ['errands',/\b(pick ?up|collect|parcel|deliver\w*|courier|post office)\b/i],
  ['painting',/\b(paint\w*|undercoat|feature wall)\b/i],
  ['garden',/\b(garden|lawn|mow|weed|hedge|plants?|mulch)\b/i],
  ['pets',/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank)\b/i],
- ['hosting',/\b(airbnb|turnover|short.?stay|key handover|linen)\b/i],
  ['admin',/\b(sort|organi[sz]e|filing|paperwork|label)\b/i],
  ['labour',/\b(extra pair of hands|general help|labour|labor)\b/i],
  ['home',/\b(hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
@@ -676,7 +682,7 @@ const EX={
  other:['Help me sort my wardrobe.','Help me with something not listed.']
 };
 function makeOffers(t){
-  const base=t.budget.type==='SET'?t.budget.amount:t.budget.type==='RANGE'?Math.round((t.budget.min+t.budget.max)/2):CATS[t.cat].base;
+  const base=t.budget.type==='SET'?t.budget.amount:t.budget.type==='RANGE'?Math.round((t.budget.min+t.budget.max)/2):(CATS[t.cat]||CATS.other).base;
   const dur=(t.duration&&t.duration.min)||90,d=t.date||nextSat(),dl=fmtDate(d);
   const st=t.startMin!=null?[0,0,0,0].map(()=>t.startMin):(t.part==='Morning'?[540,570,600,510]:t.part==='Afternoon'?[780,840,810,900]:t.part==='Evening'?[1080,1110,1050,1140]:[600,660,570,840]);
   const mk=(i,name,mult,km,rating,done,comp,canc,ver,msg,cats,repeat,reply)=>({id:i,name,demo:true,fee:Math.max(10,Math.round(base*mult/5)*5),km,rating,done,comp,canc,ver,msg,cats,repeat,reply,age:['2 years','8 months','3 years','5 months'][i-1],when:`${dl}, ${fmtTime(st[i-1])} – ${fmtTime(st[i-1]+dur)}`,start:st[i-1]});
@@ -853,7 +859,7 @@ home(){
   ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
   <h2>What do you need?</h2>
-  <div class="cats">${catGrid(HOME_CATS)}</div>
+  <div class="cats home-cats">${catGrid(HOME_CATS)}</div>
   <button class="btn secondary" style="margin-top:12px" data-a="seeCats">See all categories</button>
   <p class="muted small" style="margin-top:14px">${ic('shield',16)} Licensed work such as electrical, gas and plumbing is not offered. Painting, handyman and assembly over $10,000 need a registered builder, so TaskSpeck can’t take those.</p>
   ${S.demoMode?'<p class="muted small center" style="margin-top:18px"><span class="pill warn">Demo</span> Sample people and prompts are turned on.</p>':''}`};
@@ -1201,7 +1207,7 @@ find(){
   ${standingBanner()}
   ${S.tk.safety?'':`<button class="notice" style="text-align:left;width:100%;margin:8px 0" data-a="safetyguide"><b>Complete the 5-minute safety guide</b>Required before your first job. Tap to start.</button>`}
   <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks, e.g. old sofa" aria-label="Search tasks" autocomplete="off"></div>
-  <button class="chip" style="margin-top:10px" data-a="ffilt" aria-expanded="${!!f.fopen}">Filters: ${f.km} km · ${f.cat==='all'?'All categories':CATS[f.cat].name} ${f.fopen?'▴':'▾'}</button>
+  <button class="chip" style="margin-top:10px" data-a="ffilt" aria-expanded="${!!f.fopen}">Filters: ${f.km} km · ${f.cat==='all'||!CATS[f.cat]?'All categories':CATS[f.cat].name} ${f.fopen?'▴':'▾'}</button>
   ${f.fopen?`<p class="muted small" style="margin:12px 0 6px">Distance</p>
   <div class="chips scroll">${[1,2,3,5,10].map(k=>chip(k+' km',f.km===k,`data-a="fkm" data-v="${k}"`)).join('')}</div>
   <p class="muted small" style="margin:12px 0 6px">Category</p>
@@ -1298,7 +1304,7 @@ function findMatch(t,q){
   q=q.trim().toLowerCase();if(!q)return true;
   const hit=RULES.find(([,re])=>re.test(q));
   const words=q.split(/[^a-z0-9]+/).filter(w=>w.length>2&&!STOP.has(w)).map(w=>w.replace(/(ing|ed|s)$/,''));
-  const hay=(t.title+' '+t.desc+' '+t.suburb+' '+CATS[t.cat].name).toLowerCase();
+  const hay=(t.title+' '+t.desc+' '+t.suburb+' '+(CATS[t.cat]||CATS.other).name).toLowerCase();
   if(hit)return t.cat===hit[0];
   return words.some(w=>w.length>2&&hay.includes(w));
 }
