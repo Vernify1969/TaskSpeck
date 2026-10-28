@@ -40,7 +40,7 @@ input,textarea,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 #app{width:100%;max-width:430px;height:100%;max-height:900px;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
 @media (min-width:500px){#app{height:min(900px,calc(100% - 32px));border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.25)}}
-.top{display:flex;align-items:center;gap:10px;padding:14px 16px 8px;flex:none}
+.top{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:14px 16px 8px;flex:none}
 .logo{width:28px;height:28px;border-radius:9px;background:var(--gold);color:var(--on-gold);display:grid;place-items:center}
 .wordmark{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:21px;letter-spacing:-.02em;flex:1}
 .seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
@@ -73,6 +73,18 @@ button.card{text-align:left}
 .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .cat{background:hsl(var(--h) var(--tint-s) var(--tint-l));border-radius:16px;padding:10px 6px;text-align:center;font-size:14px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:8px;aspect-ratio:1/1;min-height:0;justify-content:center;width:100%}
 .cat .em{font-size:32px;line-height:1}
+.cat svg{color:var(--ink)}
+.brand{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.brandtext{display:flex;flex-direction:column;min-width:0}
+.tagline{font-size:11px;font-weight:650;color:var(--muted);line-height:1.2}
+.top .seg{flex:1 0 100%;display:flex;justify-content:flex-end;margin-left:0}
+.perks{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.perk{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.perk svg{color:var(--brand);flex:none}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:124px;border:1.5px dashed var(--line);border-radius:18px;background:var(--surface);cursor:pointer;text-align:center;padding:16px;margin-top:8px}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop svg{color:var(--brand)}
+.pill.c{display:inline-flex;align-items:center;gap:4px}
 .cat .lbl{display:block;min-height:2.4em}
 .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:250px;overflow:auto;margin-top:10px;padding:2px}
 .slots .chip{width:100%;justify-content:center;text-align:center}
@@ -257,32 +269,69 @@ const IC={
  check:'<path d="M5 12l5 5 9-10"/>',
  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
  wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3M17 14h.01"/>',
- bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>'
+ bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
+ camera:'<path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.2"/>'
 };
 const ic=(n,s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 const CATS={
- furniture:{name:'Furniture',em:'🪑',h:45,base:60},moving:{name:'Moving help',em:'📦',h:345,base:70},cleaning:{name:'Cleaning',em:'🧽',h:185,base:80},
- errands:{name:'Pickup & delivery',em:'🚚',h:215,base:50},office:{name:'Office help',em:'🏢',h:215,base:120},home:{name:'Handyman',em:'🛠️',h:255,base:90},pets:{name:'Pets & plants',em:'🐕',h:28,base:30},
- tech:{name:'Tech setup',em:'📺',h:230,base:55},rubbish:{name:'Hard rubbish',em:'🚛',h:100,base:110},hosting:{name:'Host help',em:'🔑',h:160,base:75},events:{name:'Events',em:'🎈',h:300,base:60},other:{name:'Other',em:'✨',h:200,base:45}
+ cleaning:{name:'Cleaning',em:'',h:185,base:200,guide:'A small clean is often a few hundred dollars. A whole home or several days costs more. Taskers set the price.'},
+ furniture:{name:'Assembly',em:'',h:45,base:150,guide:'A single flat-pack is a smaller job. A house full of assembly costs more.'},
+ moving:{name:'Removals',em:'',h:345,base:250,guide:'A few boxes is a small job. A whole move, including multi-day work, is priced by the Tasker.'},
+ errands:{name:'Pickup & delivery',em:'',h:215,base:80,guide:'A quick pickup is small. A day of deliveries costs more.'},
+ rubbish:{name:'Hard rubbish',em:'',h:100,base:180,guide:'A few items is a small load. A full clearance costs more. Hazardous waste is not allowed.'},
+ home:{name:'Handyman',em:'',h:255,base:200,guide:'Small repairs vary. Larger unlicensed jobs can run to several days. Licensed trades are not offered.'},
+ garden:{name:'Gardening',em:'',h:120,base:160,guide:'A tidy-up is smaller. A big garden over several days costs more. Tree removal with a chainsaw is not offered.'},
+ painting:{name:'Painting',em:'🖌️',h:30,base:400,guide:'One room is smaller. Several rooms or days cost more. Wet-area waterproofing is licensed and not offered.'},
+ events:{name:'Events',em:'🎈',h:300,base:200,guide:'Help for a party or setup. Price depends on the hours and the crew.'},
+ office:{name:'Office help',em:'🏢',h:210,base:180,guide:'A one-off office job. Shifts and ongoing staffing are not offered.'},
+ tech:{name:'Tech setup',em:'💻',h:230,base:120,guide:'Setting up devices you already own. Electrical and TV mounting are not offered.'},
+ pets:{name:'Pets & plants',em:'🐕',h:28,base:60,guide:'Feeding, walking or watering. Not vet care.'},
+ hosting:{name:'Hosting help',em:'🔑',h:160,base:150,guide:'A one-off turnover or key handover. Not a staffing roster.'},
+ admin:{name:'Admin',em:'📋',h:260,base:120,guide:'Sorting, packing lists, or a day of organising.'},
+ labour:{name:'General help',em:'💪',h:15,base:180,guide:'An extra pair of hands for a few hours or several days, at a fixed price.'},
+ other:{name:'Other',em:'✨',h:200,base:150,guide:'Describe the job and the size. The safety check still applies. Licensed work is not offered.'}
 };
-const FINAL=['moving','rubbish','cleaning','furniture','errands','home'];
-const SHORT=FINAL;
-const catPill=k=>`<span class="pill c" style="--h:${CATS[k].h}">${CATS[k].em} ${CATS[k].name}</span>`;
+const FINAL=Object.keys(CATS);
+const HOME_CATS=['garden','furniture','painting','moving','cleaning','home','errands','rubbish','other'];
+const RADII=[5,10,25,50];
+const CAT_ICON={
+ garden:'<path d="M12 22v-8"/><path d="M12 14c0-5-5-6-7-4 2 4 4 4 7 4z"/><path d="M12 14c0-5 5-6 7-4-2 4-4 4-7 4z"/><path d="M8 22h8"/>',
+ furniture:'<path d="M4 10h16v4H4z"/><path d="M6 14v6M18 14v6M4 10V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>',
+ painting:'<path d="M4 20c4-1 6-4 8-8"/><path d="M14 8l2-4 4 2-2 4"/><path d="M9 20h10"/>',
+ moving:'<path d="M3 8h11v10H3z"/><path d="M14 11h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>',
+ cleaning:'<path d="M4 20h10"/><path d="M8 20V6"/><path d="M8 6h8l-2 6H8"/>',
+ home:'<path d="M14 7l3 3"/><path d="M4 20l8-8 3 3-8 8H4v-3z"/><path d="M12 12l2-2"/>',
+ errands:'<path d="M6 7h15l-1.5 9h-12z"/><path d="M6 7L5 4H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
+ rubbish:'<path d="M5 8h14"/><path d="M8 8V6h8v2"/><path d="M7 8l1 12h8l1-12"/>',
+ events:'<path d="M12 3v3"/><path d="M5 8h14v4a7 7 0 0 1-14 0z"/><path d="M12 19v2"/>',
+ office:'<path d="M4 20V6h10v14"/><path d="M14 10h6v10"/><path d="M8 10h2M8 14h2"/>',
+ tech:'<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4"/>',
+ pets:'<circle cx="8" cy="9" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="6" cy="14" r="1.6"/><circle cx="18" cy="14" r="1.6"/><path d="M9 18c1 2 5 2 6 0"/>',
+ hosting:'<path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="5" y="11" width="14" height="9" rx="2"/>',
+ admin:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
+ labour:'<path d="M8 13a4 4 0 1 1 8 0"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
+ other:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
+};
+function catIcon(k,s=22){const d=CAT_ICON[k]||CAT_ICON.other;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`}
+const catPill=k=>{const c=CATS[k]||CATS.other;return `<span class="pill c" style="--h:${c.h}">${catIcon(k,14)} ${esc(c.name)}</span>`};
+function catGrid(keys){return keys.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}">${catIcon(k,28)}<span class="lbl">${esc(CATS[k].name)}</span></button>`).join('')}
+function photoDrop(name,label){return `<label class="drop">${ic('camera',28)}<b>${esc(label)}</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" multiple data-in="${name}" aria-label="${esc(label)}"></label>`}
 const avatar=(n,s=44)=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return `<div class="avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 70% 82%)">${esc(n[0])}</div>`};
 const chip=(l,on,attr)=>`<button class="chip${on?' on':''}" aria-pressed="${!!on}" ${attr}>${esc(l)}</button>`;
 const kv=(l,v)=>{const none=(v==='Not stated'||!v);return `<div class="kv"><span>${l}</span><b class="${none?'none':''}">${none?'Not stated':v}</b></div>`};
 /* ---------- task understanding (prototype rules; production uses the AI prompts in the spec) ---------- */
+const LICENSED_MSG="TaskSpeck doesn't offer licensed work at the moment, so you'll need a licensed tradesperson.";
 const BLOCK=[
- [/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank|plants?|watering)\b/i,'Pet and plant care is not available during the Melbourne CBD pilot.'],
- [/\b(airbnb|turnover|short.?stay|key handover|linen)\b/i,'Host turnovers are not available during the Melbourne CBD pilot.'],
- [/\b(staff|staffing|waiters?|waitress\w*|bartend\w*|barista|kitchen ?hand|promo(tional)?|receptionist|personal assistant|shifts?|roster\w*|casual (worker|staff|role)|per hour|an hour|\/ ?hr|hourly|full.?time|part.?time)\b/i,'TaskSpeck is for one-off jobs at a fixed price. Staffing, shifts, hourly roles and ongoing positions cannot be posted.'],
- [/(mount\w*|install\w*|hang\w*|wall|connect\w*|set ?up|wir\w*|cabl\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|install\w*|wall|bracket|connect\w*|set ?up|wir\w*|cabl\w*|antenna|hdmi|soundbar)|\b(antenna|soundbar|hdmi)\b/i,'TV work can involve power points, concealed cabling or antenna points, which must be done by a licensed electrician, so TV tasks cannot be posted on TaskSpeck.'],
- [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit/i,'This task involves electrical work and cannot be posted on TaskSpeck because it may require a licensed professional.'],
- [/\bgas\b/i,'This task involves gas work and cannot be posted on TaskSpeck because it requires a licensed professional.'],
- [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i,'This task involves plumbing work and cannot be posted on TaskSpeck because it may require a licensed professional.'],
- [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos|renovat/i,'This task involves building or structural work and cannot be posted on TaskSpeck.'],
- [/pest control|termite|chainsaw|tree (removal|felling)|forklift|\bcrane\b/i,'This task involves specialist or dangerous equipment and cannot be posted on TaskSpeck.'],
- [/waterproof/i,'Waterproofing is not available during the pilot because mistakes can damage other units.'],
+ [/\b(staff|staffing|waiters?|waitress\w*|bartend\w*|barista|kitchen ?hand|promo(tional)?|receptionist|personal assistant|shifts?|roster\w*|casual (worker|staff|role)|per hour|an hour|\/ ?hr|hourly|full.?time|part.?time)\b/i,'TaskSpeck is for a fixed price for a job, not staffing, shifts or hourly roles.'],
+ [/(mount\w*|install\w*|hang\w*|wall|connect\w*|set ?up|wir\w*|cabl\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|install\w*|wall|bracket|connect\w*|set ?up|wir\w*|cabl\w*|antenna|hdmi|soundbar)|\b(antenna|soundbar|hdmi)\b/i,'TV mounting and antenna work can be electrical. '+LICENSED_MSG],
+ [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit|air[\s-]?con|aircon|refrigerat/i,'This looks like electrical, air-conditioning or refrigeration work. '+LICENSED_MSG],
+ [/\bgas\b/i,'This looks like gas work. '+LICENSED_MSG],
+ [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i,'This looks like plumbing. '+LICENSED_MSG],
+ [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos|renovat/i,'This looks like building, roofing or asbestos work. '+LICENSED_MSG],
+ [/pest control|termite|pesticide/i,'Pest control that uses chemicals needs a licence. '+LICENSED_MSG],
+ [/waterproof/i,'Waterproofing is licensed work. '+LICENSED_MSG],
+ [/locksmith|rekey|re-key/i,'Locksmith work is licensed. '+LICENSED_MSG],
+ [/chainsaw|tree (removal|felling)|forklift|\bcrane\b/i,"This job needs specialist or dangerous equipment, so it can't be posted on TaskSpeck."],
  [/gas (bottle|cylinder)|syringe|\bsharps\b|paint tins?|pesticide|solvent|fireworks|car batter(y|ies)|\bfuel\b|oil drum/i,'Hazardous waste such as chemicals, gas bottles, batteries and sharps cannot be handled through TaskSpeck.'],
  [/\bweapons?\b|firearm|\bguns?\b|ammunition|hazardous|chemical|\bdrugs?\b/i,'This task involves items or materials that cannot be handled through TaskSpeck.'],
  [/medic(ation|ine|al)|\bnurs(e|ing)|aged care|disability care|personal care|\bwound|injection/i,'Medical and professional care tasks cannot be posted on TaskSpeck.'],
@@ -296,7 +345,13 @@ const RULES=[
  ['moving',/\b(boxes|carry|move|moving|unload|load|unpack\w*|pack)\b/i],
  ['events',/\b(event|party|chairs|tables|decorations|balloons)\b/i],
  ['errands',/\b(grocer\w*|coles|woolworths|aldi|pick ?up|collect|return\w*|parcel|errand|queue|deliver\w*|courier|mail|post office|shop)\b/i],
- ['home',/\b(paint\w*|hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
+ ['painting',/\b(paint\w*|undercoat|feature wall)\b/i],
+ ['garden',/\b(garden|lawn|mow|weed|hedge|plants?|mulch)\b/i],
+ ['pets',/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank)\b/i],
+ ['hosting',/\b(airbnb|turnover|short.?stay|key handover|linen)\b/i],
+ ['admin',/\b(sort|organi[sz]e|filing|paperwork|label)\b/i],
+ ['labour',/\b(extra pair of hands|general help|labour|labor)\b/i],
+ ['home',/\b(hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
 ];
 function parseWhen(t){
   const s=t.toLowerCase(),now=new Date();let date=null;
@@ -343,7 +398,7 @@ function parse(t){
 }
 function questionsFor(p){
   const q=[];
-  if(!p.duration)q.push({id:'duration',q:'How long do you expect the task to take?',o:['Under 30 minutes','30–60 minutes','1–2 hours','2–4 hours','Not sure']});
+  if(!p.duration)q.push({id:'duration',q:'How long do you expect the task to take?',o:['Under 30 minutes','30–60 minutes','1–2 hours','2–4 hours','A full day','Several days','Not sure']});
   const t=p.text;
   const inHome=p.cat!=='errands'||/apartment|my place|home|door|level|upstairs|deliver it|bring (it|them)/i.test(t);
   if(inHome){
@@ -374,9 +429,10 @@ function questionsFor(p){
 function eff(){
   const p={...S.p},a=S.draft.answers;
   if(a.date&&a.date!=='Custom'){if(a.date==='Today')p.date=new Date();else if(a.date==='Tomorrow')p.date=addDays(new Date(),1);else if(a.date==='This weekend')p.date=nextSat();else p.flexible=true;}
-  if(a.duration){const M={'Under 30 minutes':30,'30–60 minutes':60,'1–2 hours':120,'2–4 hours':240,'Not sure':null};p.duration={label:a.duration,min:M[a.duration]||90};}
-  if(S.draft.budgetMode==='set'&&parseFloat(S.draft.budgetAmt)>0){const v=Math.round(parseFloat(S.draft.budgetAmt));p.budget={type:'SET',amount:v,label:'$'+v};}
-  else if(S.draft.budgetTouched){p.budget={type:'OPEN',label:'Open to offers'};}
+  if(a.duration){const M={'Under 30 minutes':30,'30–60 minutes':60,'1–2 hours':120,'2–4 hours':240,'A full day':480,'Several days':2400,'Not sure':null};p.duration={label:a.duration,min:M[a.duration]||90};}
+  if(S.form.catPick&&CATS[S.form.catPick])p.cat=S.form.catPick;
+  if(S.draft.budgetMode==='set'&&parseFloat(S.draft.budgetAmt)>0){const v=Math.round(parseFloat(S.draft.budgetAmt));p.budget={type:'SET',amount:v,label:'$'+v.toLocaleString('en-AU')};}
+  else if(S.draft.budgetTouched||S.draft.budgetMode==='open'){p.budget={type:'OPEN',label:'Request quotes'};}
   if(a.date==='Custom'&&S.draft.dateValue){const[yy,mm,dd]=S.draft.dateValue.split('-').map(Number);p.date=new Date(yy,mm-1,dd);p.flexible=false;}
   if(a.part==='Time'&&S.draft.timeValue){const[hh,mi]=S.draft.timeValue.split(':').map(Number);p.startMin=hh*60+mi;p.part=null;}
   else if(a.part){p.part=a.part==='Anytime'?null:a.part;p.startMin=null;}
@@ -386,20 +442,18 @@ function evaluate(){
   const p=eff(),a=S.draft.answers,rv='We need to check a few details before this task can be posted.';
   const reparsed=parse(p.text||'');p.blocked=reparsed.blocked;
   if(p.blocked)return{risk:'PROHIBITED',why:p.blocked};
-  if(p.cat==='other')return{risk:'REVIEW_REQUIRED',why:rv};
   if(a.height==='Yes')return{risk:'HIGH_RISK',why:'Work at significant height cannot be posted automatically because of the safety risk.'};
   if(/\b(every (day|week|fortnight|month)|each (day|week|month)|weekly|fortnightly|daily|ongoing|regular(ly)?)\b/i.test(p.text))return{risk:'REVIEW_REQUIRED',why:'Regular repeat work for the same person can start to look like employment, so we need to check it before posting.'};
   if(p.cat==='cleaning'&&/\b(office|offices|commercial|workplace|retail|shop|cafe|restaurant|common areas?|lobby|strata)\b/i.test(p.text))return{risk:'REVIEW_REQUIRED',why:'Office and commercial cleaning is limited to one-off jobs and needs a check first, because regular commercial cleaning can look like employment.'};
   if(a.bio==='Yes')return{risk:'HIGH_RISK',why:'Mould, pest infestations, needles and other biohazards need a specialist cleaner and cannot be posted on TaskSpeck.'};
-  if(a.wet==='Yes')return{risk:'HIGH_RISK',why:'Wet-area work involves waterproofing and cannot be posted during the pilot.'};
+  if(a.wet==='Yes')return{risk:'HIGH_RISK',why:'Wet-area waterproofing is licensed work. '+LICENSED_MSG};
   if(a.haz==='Yes')return{risk:'HIGH_RISK',why:'Hazardous waste (chemicals, paint, gas bottles, asbestos or sharps) cannot be handled through TaskSpeck.'};
-  if(a.size==='More than a van load')return{risk:'REVIEW_REQUIRED',why:'Loads larger than a van need a manual check before posting.'};
-  if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'New cabling or wiring inside walls must be done by a licensed professional.'};
+  if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'New cabling or wiring is licensed electrical work. '+LICENSED_MSG};
   if(a.hazard==='Yes')return{risk:'HIGH_RISK',why:'Restricted or hazardous items cannot be handled through TaskSpeck.'};
-  const trade=p.cat==='home'&&/tile|tiling|plaster|paint|patch|grout/i.test(p.text);
-  const top=p.budget.type==='SET'?p.budget.amount:p.budget.type==='RANGE'?p.budget.max:0;
-  if(trade&&top>10000)return{risk:'REVIEW_REQUIRED',why:'Painting, plastering and tiling jobs over $10,000 need a registered builder in Victoria, so this one needs a manual check.'};
-  if(trade&&a.trades==='Yes, more than one')return{risk:'REVIEW_REQUIRED',why:'Jobs combining trades can need a registered builder once the total passes $10,000, so we need to check the scope.'};
+  const trade=/tile|tiling|plaster|paint|patch|grout/i.test(p.text);
+  const top=p.budget&&p.budget.type==='SET'?p.budget.amount:p.budget&&p.budget.type==='RANGE'?p.budget.max:0;
+  if(trade&&top>10000)return{risk:'PROHIBITED',why:'In Victoria, this size of building work needs a registered builder. '+LICENSED_MSG};
+  if(trade&&a.trades==='Yes, more than one'&&top>10000)return{risk:'PROHIBITED',why:'Combining trades at this size can need a registered builder. '+LICENSED_MSG};
   if(a.perm==='No, not sure')return{risk:'REVIEW_REQUIRED',why:'In an apartment, drilling or fixing to walls usually needs permission from the owner or owners corporation.'};
   if(a.furn==='No'||a.heavy==='Yes')return{risk:'REVIEW_REQUIRED',why:rv};
   const notes=[];
@@ -429,7 +483,7 @@ const S={
   task:null,offers:[],sort:'new',offerId:null,events:[],payment:null,agreement:null,dispute:null,change:null,flags:{},thread:null,proof:[],checklist:[],fix:null,agent:false,history:SEED_HISTORY.map(x=>({...x,seed:true})),propSel:null,incidents:[],myStrikes:[],claims:[],tprof:{bio:'',langs:['English'],vehicle:'',areas:'Melbourne CBD',photos:[]},receipts:[],rcptNo:1000,notifs:[],notifSeen:0,qtGst:false,idc:{type:null,front:false,selfie:false,status:'idle',consent:false,police:'idle'},recIdx:0,invIdx:0,profName:null,payouts:[{title:'Assemble a flat-pack bookshelf',date:'Mon 5 Oct',price:80},{title:'Collect a furniture order and deliver it',date:'Tue 6 Oct',price:90}],tk:{abn:false,ins:false,veh:false,safety:false,gst:false,abnNum:'',police:false},
   sent:[],find:{km:5,cat:'all',sort:'closest',view:'list',q:'',pin:null,fopen:false},findId:null,saved:{},verified:false,sheet:null,timers:[],lastKey:'',
   avail:{days:[1,2,3,4,5,6],from:'09:00',to:'17:00',km:3,cats:['furniture','moving','errands','rubbish'],paused:false},
-  notif:{offers:true,messages:true,reminders:true,nearby:false,email:true,sms:false},trusted:{name:'',on:false},
+  notif:{offers:true,messages:true,reminders:true,nearby:false,email:true,sms:false},trusted:{name:'',on:false},demoMode:false,catQ:'',
   user:null,myTasks:[],askThreads:[],ask:null,savedSearches:[],shareUrl:'',shareView:null,shareData:null,authMode:'login',editIdx:0
 };
 const meName=()=>(S.user&&S.user.name)||'You';
@@ -468,7 +522,7 @@ function taskKm(t){return Math.round(kmBetween(mePoint(),taskPoint(t))*10)/10}
 function priceOf(t){if(typeof t==='number')return t;if(t&&t.priceNum!=null&&t.priceNum!==''&&!Number.isNaN(+t.priceNum))return +t.priceNum;const s=typeof t==='string'?t:(t&&t.budget)||'';const m=String(s).match(/\$(\d+)/);return m?+m[1]:1e9}
 function timeAgo(iso){if(!iso)return 'Just now';const m=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/60000));if(m<1)return 'Just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<36)return h+' hr ago';return 'Earlier'}
 function apiToNear(row){const p=parse(row.text||'');const st=row.stage||row.status||'Open';const open=st==='POSTED'||st==='OFFERS_RECEIVED'||row.status==='Open';const budget=row.budgetLabel||(p.budget&&p.budget.label)||'Open to offers';const when=row.startAt?new Date(row.startAt):null;const tstr=row.startMin!=null?hhmm(row.startMin):'10:00';const point=taskPoint(row);let cond='Live listing from a local requester';if(row.bid)cond=`Booked · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(!open)cond=row.status||st;return{id:row.id,fromApi:true,listingStatus:open?'Open':(row.status||st),stage:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',lat:point.lat,lng:point.lng,km:taskKm({...row,...point}),date:when&&!Number.isNaN(when.getTime())?fmtDate(when):(row.date||'Flexible'),t:tstr.length>5?tstr:tstr,d:row.durationMin||p.duration&&p.duration.min||90,budget,priceNum:row.priceNum!=null?row.priceNum:priceOf(budget),offers:row.bidCount||0,posted:timeAgo(row.updatedAt),at:row.updatedAt||null,suburb:row.suburb||'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:row.requesterName||'Requester',r:'New',n:1},photoCount:row.photoCount||0}}
-function allFindTasks(){return [...(S.apiListings||[]).map(apiToNear),...NEAR]}
+function allFindTasks(){const live=(S.apiListings||[]).map(apiToNear);return S.demoMode?[...live,...NEAR]:live}
 function getFindTask(id){const t=allFindTasks().find(x=>x.id===+id);if(!t)return null;const p=taskPoint(t);return{...t,lat:p.lat,lng:p.lng,km:taskKm(t)}}
 const TERMINAL_STATUS=new Set(['COMPLETED','CANCELLED','NO_SHOW','RESOLVED','EXPIRED']);
 const ACTIVE_ASSIGNMENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','FIX_REQUESTED','FIX_DONE','DISPUTED']);
@@ -504,7 +558,7 @@ function saveBundleSoon(){if(!S.user||!S.task||!S.task.listingId)return;const id
 function stashCurrent(){if(!S.task)return;S.task._bundle=captureBundle();S.task._address=S.form.addr||S.task._address||'';const i=S.myTasks.findIndex(t=>t===S.task||(t.listingId&&S.task.listingId&&t.listingId===S.task.listingId));if(i<0)S.myTasks.unshift(S.task);else S.myTasks[i]=S.task;saveBundleSoon()}
 function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bundle||{};S.task=t;S.offers=b.offers||[];S.offerId=b.offerId??null;S.events=b.events||[];S.payment=b.payment??null;S.agreement=b.agreement??null;S.dispute=b.dispute??null;S.change=b.change??null;S.flags=b.flags||{};S.thread=b.thread??null;S.proof=b.proof||[];S.checklist=b.checklist||[];S.fix=b.fix??null;if(t._address)S.form.addr=t._address;if(!S.myTasks.includes(t))S.myTasks.unshift(t)}
 function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);return t}
-function applyWorkspace(data){S.user=data.user;if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
+function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
 function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
 function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
 function themeCycle(){const el=document.documentElement,cur=el.dataset.theme||'auto';const next=cur==='auto'?'light':cur==='light'?'dark':'auto';if(next==='auto')delete el.dataset.theme;else el.dataset.theme=next;try{localStorage.setItem('ts-theme',next)}catch(e){}render()}
@@ -545,7 +599,7 @@ function makeOffers(t){
   const base=t.budget.type==='SET'?t.budget.amount:t.budget.type==='RANGE'?Math.round((t.budget.min+t.budget.max)/2):CATS[t.cat].base;
   const dur=(t.duration&&t.duration.min)||90,d=t.date||nextSat(),dl=fmtDate(d);
   const st=t.startMin!=null?[0,0,0,0].map(()=>t.startMin):(t.part==='Morning'?[540,570,600,510]:t.part==='Afternoon'?[780,840,810,900]:t.part==='Evening'?[1080,1110,1050,1140]:[600,660,570,840]);
-  const mk=(i,name,mult,km,rating,done,comp,canc,ver,msg,cats,repeat,reply)=>({id:i,name,fee:Math.max(10,Math.round(base*mult/5)*5),km,rating,done,comp,canc,ver,msg,cats,repeat,reply,age:['2 years','8 months','3 years','5 months'][i-1],when:`${dl}, ${fmtTime(st[i-1])} – ${fmtTime(st[i-1]+dur)}`,start:st[i-1]});
+  const mk=(i,name,mult,km,rating,done,comp,canc,ver,msg,cats,repeat,reply)=>({id:i,name,demo:true,fee:Math.max(10,Math.round(base*mult/5)*5),km,rating,done,comp,canc,ver,msg,cats,repeat,reply,age:['2 years','8 months','3 years','5 months'][i-1],when:`${dl}, ${fmtTime(st[i-1])} – ${fmtTime(st[i-1]+dur)}`,start:st[i-1]});
   return[
    mk(1,'Jordan',1,0.6,4.9,83,99,1,true,'Hi! I have done plenty of jobs like this nearby and can bring my own basic tools.',['Furniture','Household','Moving'],14,'Usually replies within 10 minutes'),
    mk(2,'Sam',.85,1.8,4.8,41,97,3,true,'Happy to help. I can do it at the time suggested.',['Pickup & delivery','Furniture'],6,'Usually replies within 30 minutes'),
@@ -554,6 +608,7 @@ function makeOffers(t){
   ];
 }
 function scheduleOffers(){
+  if(!S.demoMode)return;
   const task=S.task;if(!task)return;
   (task._timers||[]).forEach(clearTimeout);task._timers=[];
   const all=makeOffers(task);
@@ -604,7 +659,7 @@ let toastT;
 function notify(msg){S.notifs.unshift({m:msg,t:clock()});if(S.notifs.length>50)S.notifs.pop();const t=$('#toast');t.textContent=msg;t.className='show';clearTimeout(toastT);toastT=setTimeout(()=>{t.className=''},4200)}
 function topRoot(){
   const unread=Math.max(0,S.notifs.length-S.notifSeen);
-  return `<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span>
+  return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee</span></span></div>
   <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
   <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>`;
 }
@@ -674,11 +729,11 @@ const verBadge=o=>o.ver?'<span class="pill ok">Identity verified</span>':'<span 
 function taskSummary(t){
   return `<div class="card"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:19px">${esc(t.title)}</h3>${statusPill(t.status)}</div>
   <div style="margin:8px 0">${catPill(t.cat)}</div>
-  ${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Location','Melbourne CBD (approximate)')}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>`;
+  ${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Location',(t.suburb||'Suburb')+' only')}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>`;
 }
 function feeBox(fee,gstOn){
   const f=calcFee(fee);
-  return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="muted small" style="margin:6px 2px 0">TaskSpeck keeps ${FEE_PCT}% of the task price from the Tasker. It is not added to your price.</p>`;
+  return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="perk" style="margin-top:8px">${ic('wallet',18)} No booking fee. TaskSpeck's share comes from the Tasker.</p>`;
 }
 const empty=(em,t,s)=>`<div class="empty"><div class="big">${em}</div><h3 style="color:var(--ink)">${t}</h3><p style="margin-top:6px">${s}</p></div>`;
 /* ---------- screens ---------- */
@@ -686,40 +741,45 @@ const SCREENS={
 home(){
   const t=S.task;
   return{html:`
-  <div class="hero-band"><p class="muted small" style="margin:0 0 4px">Melbourne CBD · Fixed-price jobs</p><h1 class="display" style="margin:0;font-size:30px">What do you need help with?</h1><p class="muted small" style="margin:8px 0 0">Post once, compare offers, pay when you are ready.</p></div>
+  <div class="hero-band"><h1 class="display" style="margin:0;font-size:30px">What do you need help with?</h1><p class="muted small" style="margin:8px 0 0">Any size of everyday job. You choose the offer.</p></div>
+  ${S.user&&S.user.launch&&S.user.launch.open===false?`<div class="card" style="margin-bottom:12px"><h3>Coming soon to your area</h3><p class="muted small" style="margin-top:6px">TaskSpeck is open within ${esc(String(S.user.launch.radiusKm||10))} km of Melbourne CBD, around Flinders Street and Swanston Street. ${esc(S.user.suburb||'Your suburb')} is not open yet.</p><button class="btn primary" style="margin-top:10px" data-a="joinWait">Join the waitlist</button></div>`:''}
   <button class="ask" data-a="post">Describe the job in your own words</button>
   <button class="btn primary big" data-a="post">Post a task</button>
-  <div class="tiles">
-    <button class="tile" data-a="mode" data-v="tasker">${ic('search')}Find Tasks</button>
-    <button class="tile" data-a="tab" data-v="tasks">${ic('list')}My Tasks</button>
-    <button class="tile" data-a="tab" data-v="msgs">${ic('chat')}Messages</button>
-    <button class="tile" data-a="payments">${ic('wallet')}Payments</button>
-  </div>
   ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
   <h2>What do you need?</h2>
-  <div class="cats">${SHORT.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="em">${CATS[k].em}</span><span class="lbl">${CATS[k].name}</span></button>`).join('')}</div>
-  <div class="notice info" style="margin-top:20px"><b>Melbourne CBD pilot</b>Small jobs only. No electrical (including TV work), gas, plumbing, childcare or other licensed work. Pets, host turnovers and office jobs are not available yet. Check lift and loading dock rules with your building first.</div>
-  <p class="muted small center" style="margin-top:18px">TaskSpeck is a working name. Prototype only: no real payments, people or data.</p>`};
+  <div class="cats">${catGrid(HOME_CATS)}</div>
+  <button class="btn secondary" style="margin-top:12px" data-a="seeCats">See all categories</button>
+  <div class="perks">
+    <div class="perk">${ic('wallet',20)} No booking fee for customers</div>
+    <div class="perk">${ic('shield',20)} Payment held until the job is done</div>
+    <div class="perk">${ic('check',20)} Checked Taskers</div>
+  </div>
+  <p class="muted small" style="margin-top:14px">${ic('shield',16)} Licensed work such as electrical, gas and plumbing is not offered.</p>
+  ${S.demoMode?'<p class="muted small center" style="margin-top:18px"><span class="pill warn">Demo</span> Sample people and prompts are turned on.</p>':''}`};
 },
 post(a){
   const cat=a.cat;const ex=EX[cat||'all'];
   return{title:cat?CATS[cat].name:'Post a task',html:`
   <h1 class="display" style="font-size:28px">What do you need help with?</h1>
   <textarea id="pt" data-in="text" placeholder="${esc(PH[cat||'all']||PH.all)}" aria-label="Describe your task">${esc(S.draft.text)}</textarea>
-  <p class="muted small" style="margin:14px 0 8px">Your budget</p>
-  <div class="chips">${chip('Open to offers',S.draft.budgetMode!=='set','data-a="bmode" data-v="open"')}${chip('I have a budget',S.draft.budgetMode==='set','data-a="bmode" data-v="set"')}</div>
-  ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Budget</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="80"></div>`:`<p class="muted small" style="margin-top:8px">Taskers will make fixed-price offers and you choose.</p>`}
-  ${GUIDE[cat]?`<p class="muted small" style="margin-top:6px">${GUIDE[cat]} A guide only: Taskers can offer more or less.</p>`:''}
-  <p class="muted small" style="margin:14px 0 4px">Photos (optional)</p>
-  <p class="muted small" style="margin:0 0 8px">Photos help Taskers price accurately, especially for hard rubbish, moving and handyman jobs.</p>
-  <input type="file" accept="image/*" multiple data-in="postPhoto" style="margin-bottom:8px">
+  <p class="muted small" style="margin:14px 0 8px">Price</p>
+  <div class="chips">${chip('Request quotes',S.draft.budgetMode!=='set','data-a="bmode" data-v="open"')}${chip('Fixed price',S.draft.budgetMode==='set','data-a="bmode" data-v="set"')}</div>
+  ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Your price</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="0"></div>`:`<p class="muted small" style="margin-top:8px">Taskers send a fixed price. You choose.</p>`}
+  ${cat&&CATS[cat]&&CATS[cat].guide?`<p class="muted small" style="margin-top:6px">${esc(CATS[cat].guide)}</p>`:''}
+  ${photoDrop('postPhoto','Add photos')}
   ${(S.draft.photos||[]).length?`<div class="thumbs">${S.draft.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Your photo"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmPostPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
-  <button class="btn secondary" style="margin-top:6px" data-a="samplePostPhoto">Use a sample photo</button>
-  <p class="muted small" style="margin:12px 0 8px">Tap an example to try it</p>
-  <div class="stack">${ex.map((e,i)=>`<button class="card" style="padding:12px 14px;font-size:15px" data-a="ex" data-v="${i}|${cat||'all'}">${esc(e)}</button>`).join('')}</div>
+  ${S.demoMode?`<button class="btn secondary" style="margin-top:6px" data-a="samplePostPhoto">Use a sample photo</button><p class="muted small" style="margin:12px 0 8px"><span class="pill warn">Demo</span> Tap an example to try it</p><div class="stack">${(ex||[]).map((e,i)=>`<button class="card" style="padding:12px 14px;font-size:15px" data-a="ex" data-v="${i}|${cat||'all'}">${esc(e)}</button>`).join('')}</div>`:''}
   <button class="btn primary big" style="margin-top:18px" data-a="analyse">Continue</button>
-  <div class="notice info" style="margin-top:16px">Include what, where and roughly when. We will only ask about anything important that is missing.</div>`};
+  <p class="perk" style="margin-top:16px">${ic('check',18)} Say what, roughly where, and when.</p>`};
+},
+allcats(){
+  const q=(S.catQ||'').trim().toLowerCase();
+  const list=FINAL.filter(k=>!q||CATS[k].name.toLowerCase().includes(q));
+  return{title:'All categories',html:`
+  <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="catq" data-in="catQ" value="${esc(S.catQ||'')}" placeholder="Search categories" aria-label="Search categories" autocomplete="off"></div>
+  <div class="cats" id="catgrid" style="margin-top:14px">${list.length?catGrid(list):'<p class="muted">No category matches. Licensed trades are not listed.</p>'}</div>
+  <p class="muted small" style="margin-top:12px">Electrical, gas, plumbing and other licensed work are not offered.</p>`};
 },
 understood(){
   const p=eff(),qs=questionsFor(S.p),a=S.draft.answers;
@@ -731,7 +791,7 @@ understood(){
   <div class="card" style="margin-top:14px">
     <div class="kv"><span>Category</span><b>${catPill(p.cat)}</b></div>
     ${kv('When',whenLabel(p))}${kv('Duration',p.duration?p.duration.label:'Not stated')}${kv('Budget',p.budget.label)}
-    ${kv('Location','Melbourne CBD (approximate)')}${kv('Photos',(S.draft.photos||[]).length?(S.draft.photos||[]).length+' attached':'None')}${kv('Materials',p.materials||'Not stated')}
+    ${kv('Location',((S.user&&S.user.suburb)||'Suburb')+' only')}${kv('Photos',(S.draft.photos||[]).length?(S.draft.photos||[]).length+' attached':'None')}${kv('Materials',p.materials||'Not stated')}
   </div>
   <button class="btn ghost" data-a="editText">Edit my description</button>
   <label class="f" for="prop">Property or unit (optional, for your records)</label><input type="text" id="prop" data-in="prop" placeholder="e.g. Unit 1204, 200 Spencer St" value="${esc(S.form.prop||'')}">
@@ -916,9 +976,9 @@ myprofile(){
   <p class="muted small" style="margin:12px 0 6px">Languages</p><div class="chips">${['English','Mandarin','Hindi','Greek','Spanish','Vietnamese','Other'].map(l=>chip(l,t.langs.includes(l),`data-a="tlang" data-v="${l}"`)).join('')}</div>
   <label class="f" for="tpv">Vehicle (optional)</label><input type="text" id="tpv" data-in="tpveh" value="${esc(t.vehicle)}" placeholder="e.g. white ute">
   <label class="f" for="tpa">Areas you cover</label><input type="text" id="tpa" data-in="tpareas" value="${esc(t.areas)}">
-  <p class="muted small" style="margin:14px 0 6px">Past-work photos</p><input type="file" accept="image/*" multiple data-in="tpPhoto" style="margin-bottom:8px">
+  <p class="muted small" style="margin:14px 0 6px">Past-work photos</p>${photoDrop('tpPhoto','Add photos')}
   ${t.photos.length?`<div class="thumbs">${t.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Past work"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmWorkPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
-  <button class="btn secondary" style="margin-top:6px" data-a="sampleWorkPhoto">Use a sample photo</button>
+  ${S.demoMode?'<button class="btn secondary" style="margin-top:6px" data-a="sampleWorkPhoto">Use a sample photo</button>':''}
   <button class="btn primary" style="margin-top:14px" data-a="seeMine">See how requesters see it</button>`};
 },
 receipts(){
@@ -1027,6 +1087,7 @@ profile(){
    <button class="card" data-a="sheet" data-v="trusted">Trusted contact</button>
    <button class="card" data-a="sheet" data-v="notif">Notifications</button>
    <button class="card" data-a="sheet" data-v="help">Help and support</button>
+   <button class="card" data-a="demoToggle">Demo mode <span class="pill ${S.demoMode?'warn':''}" style="float:right">${S.demoMode?'On':'Off'}</span></button>
    <button class="card" data-a="account">Edit profile</button>
    <button class="card" data-a="logout">Log out</button>
   </div>
@@ -1179,7 +1240,7 @@ function mountJobMap(list){
   const bounds=[[me.lat,me.lng]];
   window.L.circleMarker(me,{radius:7,color:'#0E5A4B',fillColor:'#0E5A4B',fillOpacity:1,weight:2}).addTo(map).bindTooltip('You (approximate)');
   (list||[]).forEach(t=>{
-    const icon=window.L.divIcon({className:'leaflet-pin',html:(CATS[t.cat]&&CATS[t.cat].em)||'•',iconSize:[36,36],iconAnchor:[18,18]});
+    const icon=window.L.divIcon({className:'leaflet-pin',html:catIcon(t.cat,18),iconSize:[40,40],iconAnchor:[20,20]});
     const marker=window.L.marker([t.lat,t.lng],{icon,title:t.title,keyboard:true}).addTo(map);
     marker.on('click',()=>{S.find.pin=t.id;const box=document.getElementById('mappick');if(box)box.innerHTML=taskCard(t)});
     bounds.push([t.lat,t.lng]);
@@ -1207,7 +1268,7 @@ function offersBlock(){
   return `<h2>${list.length?list.length+' offer'+(list.length>1?'s':''):'Offers'}</h2>
   ${list.length?`<div class="chips" style="margin-bottom:12px">${chip('Newest',S.sort==='new','data-a="sort" data-v="new"')}${chip('Lowest price',S.sort==='price','data-a="sort" data-v="price"')}${chip('Nearest',S.sort==='near','data-a="sort" data-v="near"')}</div>
   <div class="stack">${list.map(o=>`<button class="card ${o.declined?'dim':''}" data-a="offer" data-v="${o.id}">
-    <div class="row">${avatar(o.name)}<div class="grow"><b style="font-size:17px">${esc(o.name)}</b><div style="margin-top:3px">${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
+    <div class="row">${avatar(o.name)}<div class="grow"><b style="font-size:17px">${esc(o.name)}</b><div style="margin-top:3px">${o.demo?'<span class="pill warn">Demo</span> ':''}${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
     <div class="wrap small" style="margin-top:10px"><span>★ ${o.rating}</span><span>${o.done} tasks</span><span>${o.comp}% completed</span><span>${o.canc}% cancelled</span><span>${o.km} km away</span></div>
     <p style="margin-top:8px;font-weight:600;font-size:14.5px">${esc(o.when)}</p>${o.msg?`<p class="quote">“${esc(o.msg)}”</p>`:''}${o.declined?'<p class="small muted" style="margin-top:6px">Declined</p>':''}</button>`).join('')}</div>
   <p class="muted small" style="margin-top:12px">Offers are shown in the order you choose. You make the final call.</p>`
@@ -1242,6 +1303,7 @@ function activeBlock(){
   return h;
 }
 function demoPanel(){
+  if(!S.demoMode)return '';
   const st=S.task.status,f=S.flags,o=chosen();let b='';
   if(st==='UPCOMING'){
     if(!f.confirmed)b+=`<button class="btn secondary" data-a="demo" data-v="confirm">${esc(o.name)}: Confirm attendance (24 hours before)</button>`;
@@ -1249,14 +1311,14 @@ function demoPanel(){
   }else if(st==='TASK_STARTED'){const pl=proofLabel();
     if(!f.checkin&&!f.missed)b+=`<button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="checkin">${esc(o.name)}: Answer the safety check-in (All OK)</button><button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="nocheckin">Skip ahead: ${esc(o.name)} does not answer</button>`;
     if(isVacate())b+=`<p class="small" style="margin:6px 0"><b>Vacate checklist</b> (every item must be ticked)</p><div class="stack">${VACATE_LIST.map((x,i)=>`<label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-in="vc${i}" ${S.checklist[i]?'checked':''}><span class="small">${esc(x)}</span></label>`).join('')}</div><button class="btn secondary" style="margin:8px 0" data-a="tickAll">Tick all (demo)</button>`;
-    if(pl)b+=`<p class="small" style="margin:6px 0"><b>Proof required:</b> ${esc(pl)}</p><input type="file" accept="image/*" multiple data-in="proofFile" style="margin:4px 0 8px">${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button>`;
+    if(pl)b+=`<p class="small" style="margin:6px 0"><b>Proof required:</b> ${esc(pl)}</p>${photoDrop('proofFile','Add photos')}${thumbs()}${S.demoMode?'<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button>':''}`;
     b+=`<button class="btn secondary" data-a="demo" data-v="complete">${esc(o.name)}: Mark task complete</button>`;
   }else if(st==='TASKER_COMPLETED')b+=`<button class="btn secondary" data-a="demo" data-v="autorelease">Skip ahead 48 hours (automatic release)</button>`;
   else if(st==='FIX_REQUESTED')b+=`<p class="small" style="margin:6px 0"><b>New photo of the fix required</b></p><input type="file" accept="image/*" multiple data-in="proofFile" style="margin:4px 0 8px">${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button><button class="btn secondary" data-a="demo" data-v="fixed">${esc(o.name)}: Mark as fixed</button><button class="btn secondary" data-a="demo" data-v="nofix">Skip ahead 48 hours (no fix made)</button><p class="small" style="margin:10px 0 6px"><b>Or respond if the request is not fair</b></p><div class="chips">${['The work matches the agreed scope','Access was blocked','Extra mess or items were left','Other'].map(x=>chip(x,S.form.tr===x,`data-a="trChip" data-v="${x}"`)).join('')}</div><button class="btn secondary" style="margin-top:8px" data-a="demo" data-v="disagree">${esc(o.name)}: Disagree and send my photos</button>`;
   else if(st==='DISPUTED')b+=`<p class="small" style="margin:6px 0"><b>Support decision</b> (a person decides in the real app)</p><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="refund">Full refund to the requester</button><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="partial">Part payment: Tasker 50%, requester 50% back</button><button class="btn secondary" data-a="decide" data-v="full">Pay the Tasker in full</button>`;
   if((st==='UPCOMING'||st==='TASK_STARTED')&&!S.change&&S.agreement.version===1)b+=`<button class="btn secondary" data-a="demo" data-v="change">${esc(o.name)}: Request a change</button>`;
   if(!b)return '';
-  return `<div class="demo"><div class="demo-h">Prototype controls</div><p class="muted small" style="margin:2px 0 10px">These stand in for what the Tasker does on their own phone.</p>${b}</div>`;
+  return `<div class="demo"><div class="demo-h"><span class="pill warn">Demo</span> Sample controls</div><p class="muted small" style="margin:2px 0 10px">These stand in for what a Tasker does on their own phone. They are not real people.</p>${b}</div>`;
 }
 function buildTask(){
   const p=eff(),r=evaluate(),a=S.draft.answers,special=[];
@@ -1419,7 +1481,10 @@ const A={
  tab(v){root(v);if(v==='find')refreshApiListings()},back,close:closeSheet,
  mode(v){S.mode=v;root(v==='tasker'?'find':'home');if(v==='tasker')refreshApiListings()},
  home(){root('home')},
- post(v){if(S.task&&S.task.status==='Draft'&&!S.draft.text){S.draft.text=S.task.desc||S.task.text||'';if(S.task.listingId)S.draft.listingId=S.task.listingId}if(v&&!S.draft.text)S.draft.answers={};S.stack.push({n:'post',a:{cat:v||null}});render()},
+ post(v){if(S.task&&S.task.status==='Draft'&&!S.draft.text){S.draft.text=S.task.desc||S.task.text||'';if(S.task.listingId)S.draft.listingId=S.task.listingId}if(v&&!S.draft.text)S.draft.answers={};if(v)S.form.catPick=v;S.stack.push({n:'post',a:{cat:v||null}});render()},
+ seeCats(){S.catQ='';go('allcats')},
+ async joinWait(){const data=await api('/api/waitlist',{method:'POST',body:{email:S.user&&S.user.email,suburb:S.user&&S.user.suburb,name:S.user&&S.user.name}});notify(data.error||(data.already?'You are already on the waitlist.':'You are on the waitlist. We will email you when your suburb opens.'))},
+ demoToggle(){S.demoMode=!S.demoMode;if(S.user)api('/api/auth/profile',{method:'PATCH',body:{demoMode:S.demoMode}}).then(d=>{if(d.user)S.user=d.user}).catch(()=>{});if(!S.demoMode)S.offers=(S.offers||[]).filter(o=>!o.demo);else if(S.task&&['POSTED','OFFERS_RECEIVED'].includes(S.task.status))scheduleOffers();render()},
  ex(v){const[i,c]=v.split('|');S.draft.text=EX[c][+i];queueDraftSave();render()},
  bmode(v){S.draft.budgetMode=v;S.draft.budgetTouched=true;render()},
  analyse(){
@@ -1769,6 +1834,7 @@ document.addEventListener('input',e=>{
   else if(k==='afrom')S.avail.from=v;else if(k==='ato')S.avail.to=v;
   else if(k==='tcname')S.trusted.name=v;
   else if(k==='fq'){S.find.q=v;INP.fq();return}
+  else if(k==='catQ'){S.catQ=v;const box=$('#catgrid');if(box){const q=String(v||'').trim().toLowerCase();const list=FINAL.filter(c=>!q||CATS[c].name.toLowerCase().includes(q));box.innerHTML=list.length?catGrid(list):'<p class="muted">No category matches. Licensed trades are not listed.</p>'}return}
   else S.form[k]=v;
   if(INP[k])INP[k]();
 });

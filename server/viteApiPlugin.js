@@ -43,6 +43,12 @@ import {
   listNotifications,
   markNotificationsRead,
   sweepJobDays,
+  catalogue,
+  lookupVictoria,
+  joinWaitlist,
+  waitlistCsv,
+  releaseMilestone,
+  zoneFor,
 } from './db.js';
 
 function readJsonBody(req) {
@@ -123,6 +129,22 @@ async function handle(req, res) {
     return sendJson(res, 200, { ok: true });
   }
 
+  if (url === '/api/places' && req.method === 'GET') {
+    return sendJson(res, 200, catalogue(query.get('q') || ''));
+  }
+
+  if (url === '/api/launch' && req.method === 'GET') {
+    const zone = zoneFor(query.get('suburb') || '');
+    return sendJson(res, 200, zone);
+  }
+
+  if (url === '/api/waitlist' && req.method === 'POST') {
+    const body = await readJsonBody(req);
+    const result = joinWaitlist(body);
+    if (result.error) return fail(res, result);
+    return sendJson(res, 200, result);
+  }
+
   if (url === '/api/auth/providers' && req.method === 'GET') {
     return sendJson(res, 200, { providers: listAuthProviders() });
   }
@@ -173,6 +195,24 @@ async function handle(req, res) {
     if (!user) return sendJson(res, 200, { user: null });
     await sweepJobDays();
     return sendJson(res, 200, workspace(user));
+  }
+
+  if (url === '/api/waitlist.csv' && req.method === 'GET') {
+    const key = process.env.LAUNCH_ADMIN_KEY || '';
+    const header = req.headers['x-admin-key'] || '';
+    if (key) {
+      if (header !== key) return sendJson(res, 403, { error: 'Not allowed' });
+    } else if (!user) {
+      return sendJson(res, 401, { error: 'Sign in required' });
+    }
+    return sendCsv(res, 'taskspeck-waitlist.csv', waitlistCsv());
+  }
+
+  if (url === '/api/places/geocode' && req.method === 'GET') {
+    if (!user) return sendJson(res, 401, { error: 'Sign in required' });
+    const result = await lookupVictoria(query.get('q') || '');
+    if (result.error) return fail(res, result);
+    return sendJson(res, 200, result);
   }
 
   if (!user) return sendJson(res, 401, { error: 'Sign in required' });
@@ -282,6 +322,13 @@ async function handle(req, res) {
     const row = getTaskById(Number(taskGet[1]), user);
     if (!row) return sendJson(res, 404, { error: 'Task not found' });
     return sendJson(res, 200, { task: row });
+  }
+
+  const milestoneRelease = url.match(/^\/api\/tasks\/(\d+)\/milestones\/(\d+)\/release$/);
+  if (milestoneRelease && req.method === 'POST') {
+    const result = await releaseMilestone(milestoneRelease[1], milestoneRelease[2], user);
+    if (result.error) return fail(res, result);
+    return sendJson(res, 200, result);
   }
 
   const taskAction = url.match(/^\/api\/tasks\/(\d+)\/([a-z-]+)$/);

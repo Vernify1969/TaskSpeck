@@ -29,6 +29,10 @@ async function account(name, email) {
   const stored = raw.users.find((u) => u.email === email);
   assert.notEqual(stored.password.hash, 'correct-horse');
   assert.equal(stored.password.algo, 'scrypt');
+  const placed = db.updateProfile(again, { suburb: 'Melbourne' });
+  assert.equal(placed.error, undefined);
+  assert.equal(placed.user.launch.open, true);
+  assert.equal(placed.user.demoMode, false);
   return again;
 }
 
@@ -55,7 +59,8 @@ test('a requester can post more than one task, and a booked task cannot be publi
   assert.equal(pubB.task.stage, 'POSTED');
   assert.equal(db.getTaskListing(alex).length, 2);
 
-  const offer = await db.placeBid(pubA.task.id, { taskerName: 'Jordan', fee: 80 }, alex);
+  const sam = await account('Sam', 'sam@example.com');
+  const offer = await db.placeBid(pubA.task.id, { fee: 80 }, sam);
   const accepted = await db.acceptBid(pubA.task.id, { bidId: offer.bid.id }, alex);
   assert.equal(accepted.task.stage, 'UPCOMING');
   assert.equal(accepted.task.payment.gross, 80);
@@ -87,7 +92,7 @@ test('licensed work is refused by the server', async () => {
   const draft = db.upsertListingText('Please rewire the power point', null, alex);
   const pub = await db.publishListing(draft.task.id, { text: 'Please rewire the power point', title: 'Rewire power point' }, alex);
   assert.equal(pub.code, 400);
-  assert.match(pub.error, /licensed professional/i);
+  assert.match(pub.error, /doesn't offer licensed work/i);
 });
 
 test('taskers can edit and withdraw their own offers only', async () => {
@@ -299,6 +304,99 @@ test('profile edits stick and a deleted account cannot sign in', async () => {
   db.deleteAccount(alex);
   const gone = db.login({ email: 'alex@example.com', password: 'correct-horse' });
   assert.equal(gone.code, 401);
+});
+
+test('launch zone is 10 km from the city centre, with a waitlist outside it', async () => {
+  db.resetStore();
+  delete process.env.LAUNCH_EXTRA_SUBURBS;
+  delete process.env.LAUNCH_RADIUS_KM;
+  const richmond = db.zoneFor('Richmond');
+  const frankston = db.zoneFor('Frankston');
+  assert.equal(richmond.radiusKm, 10);
+  assert.equal(richmond.open, true);
+  assert.ok(richmond.km < 10);
+  assert.equal(frankston.open, false);
+  assert.ok(frankston.km > 10);
+  const alex = await account('Alex', 'alex@example.com');
+  db.updateProfile(alex, { suburb: 'Frankston' });
+  const draft = db.upsertListingText('Mow the lawn and tidy the edges', null, alex);
+  const blocked = await db.publishListing(draft.task.id, { text: draft.task.text, title: 'Mow the lawn', cat: 'garden', suburb: 'Frankston' }, alex);
+  assert.equal(blocked.code, 403);
+  assert.match(blocked.error, /Coming soon to your area/);
+  assert.match(blocked.error, /10 km/);
+  const joined = db.joinWaitlist({ email: 'alex@example.com', suburb: 'Frankston', name: 'Alex' });
+  assert.equal(joined.entry.suburb, 'Frankston');
+  const csv = db.waitlistCsv();
+  assert.match(csv, /alex@example.com/);
+  assert.match(csv, /Frankston/);
+  const openAlready = db.joinWaitlist({ email: 'alex@example.com', suburb: 'Richmond' });
+  assert.equal(openAlready.code, 400);
+  process.env.LAUNCH_EXTRA_SUBURBS = 'Frankston';
+  assert.equal(db.zoneFor('Frankston').open, true);
+  const opened = await db.publishListing(draft.task.id, { text: draft.task.text, title: 'Mow the lawn', cat: 'garden', suburb: 'Frankston', budgetLabel: 'Request quotes' }, alex);
+  assert.equal(opened.error, undefined);
+  delete process.env.LAUNCH_EXTRA_SUBURBS;
+  const far = await account('Far', 'far@example.com');
+  db.updateProfile(far, { suburb: 'Frankston', avail: { km: 50, cats: [], days: [0, 1, 2, 3, 4, 5, 6], from: '00:00', to: '23:59', paused: false }, notif: { nearby: true, email: false } });
+  const near = await account('Near', 'near@example.com');
+  db.updateProfile(near, { suburb: 'Carlton', avail: { km: 10, cats: [], days: [0, 1, 2, 3, 4, 5, 6], from: '00:00', to: '23:59', paused: false }, notif: { nearby: true, email: false } });
+  const city = db.upsertListingText('Assemble a large wardrobe', null, alex);
+  db.updateProfile(alex, { suburb: 'Richmond' });
+  await db.publishListing(city.task.id, { text: 'Assemble a large wardrobe', title: 'Assemble a wardrobe', cat: 'furniture', suburb: 'Richmond', budgetLabel: '$400', priceNum: 400, startAt: future(48), startMin: 600 }, alex);
+  const outsider = await db.placeBid(city.task.id, { fee: 400 }, far);
+  assert.equal(outsider.code, 403);
+  assert.match(outsider.error, /Coming soon/);
+  const insider = await db.placeBid(city.task.id, { fee: 380 }, near);
+  assert.equal(insider.error, undefined);
+});
+
+test('demo offers stay off unless Demo mode is on, and large unlicensed jobs are allowed', async () => {
+  db.resetStore();
+  const alex = await account('Alex', 'alex@example.com');
+  const sam = await account('Sam', 'sam@example.com');
+  const draft = db.upsertListingText('Help me organise a warehouse move over three days', null, alex);
+  const pub = await db.publishListing(draft.task.id, {
+    text: draft.task.text,
+    title: 'Three-day warehouse move',
+    cat: 'moving',
+    suburb: 'Richmond',
+    budgetLabel: '$48000',
+    priceNum: 48000,
+    milestones: [{ title: 'Pack and load', amount: 20000 }, { title: 'Deliver and unpack', amount: 28000 }],
+    startAt: future(72),
+    startMin: 480,
+  }, alex);
+  assert.equal(pub.error, undefined);
+  assert.equal(pub.task.milestones.length, 2);
+  assert.equal(pub.task.cat, 'moving');
+  const fake = await db.placeBid(pub.task.id, { taskerName: 'Jordan', fee: 48000 }, alex);
+  assert.equal(fake.code, 403);
+  assert.match(fake.error, /Demo mode/);
+  db.updateProfile(alex, { demoMode: true });
+  const sample = await db.placeBid(pub.task.id, { taskerName: 'Jordan', fee: 47000 }, alex);
+  assert.equal(sample.bid.source, 'demo');
+  const seenBySam = db.getTaskById(pub.task.id, sam);
+  assert.equal(seenBySam.bids.some((b) => b.taskerName === 'Jordan'), false);
+  const real = await db.placeBid(pub.task.id, { fee: 46000 }, sam);
+  assert.equal(real.error, undefined);
+  assert.equal(real.bid.taskerName, 'Sam');
+  const accepted = await db.acceptBid(pub.task.id, { bidId: real.bid.id }, alex);
+  assert.equal(accepted.task.payment.gross, 46000);
+  db.markStarted(pub.task.id, sam);
+  const partial = await db.releaseMilestone(pub.task.id, 1, alex);
+  assert.equal(partial.milestone.status, 'released');
+  assert.equal(partial.task.milestones[1].status, 'held');
+  assert.notEqual(partial.task.payment.status, 'RELEASED');
+  const other = await db.publishListing((db.upsertListingText('Paint two rooms', null, alex)).task.id, {
+    text: 'Paint two bedrooms, ground floor only', title: 'Paint two rooms', cat: 'painting', suburb: 'Carlton', budgetLabel: 'Request quotes', priceNum: 120000,
+  }, alex);
+  assert.equal(other.error, undefined);
+  assert.equal(other.task.priceNum, 120000);
+  const licensed = await db.publishListing((db.upsertListingText('Rewire the kitchen', null, alex)).task.id, {
+    text: 'Rewire the kitchen', title: 'Rewire the kitchen', cat: 'other', suburb: 'Carlton',
+  }, alex);
+  assert.equal(licensed.code, 400);
+  assert.match(licensed.error, /doesn't offer licensed work/);
 });
 
 test('Google and Apple sign-in are present but not required', () => {

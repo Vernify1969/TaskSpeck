@@ -3,20 +3,25 @@ import path from 'path';
 import { hashPassword, verifyPassword, newSessionToken, hashToken } from './auth.js';
 import { deliver } from './notify.js';
 import { prohibitedReason, highRiskAnswer } from './safety.js';
+import {
+  resolveSuburb as resolveKnownSuburb,
+  searchSuburbs,
+  listCities,
+  nearestSuburb,
+  geocodeVictoria,
+  snapRadius,
+  RADII,
+  launchRadiusKm,
+  launchStatus,
+  comingSoonMessage,
+  LAUNCH_CENTER,
+  extraOpenSuburbs,
+} from '../shared/places.js';
 
 const FEE_PCT = 15;
 const DEMO_TASKERS = new Set(['Jordan', 'Sam', 'Priya', 'Marco']);
 const CONTACT_OR_CASH = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me on|text me/i;
 export const CONTACT_WARNING = 'Please don’t swap phone numbers or pay cash. TaskSpeck can only protect a job that stays in the app.';
-
-const PLACES = {
-  'melbourne cbd': [-37.8136, 144.9631],
-  melbourne: [-37.8136, 144.9631],
-  southbank: [-37.8228, 144.9643],
-  docklands: [-37.8152, 144.946],
-  carlton: [-37.8001, 144.9671],
-  'east melbourne': [-37.8126, 144.9859],
-};
 
 const BOOKED_STAGES = new Set([
   'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'TASK_STARTED', 'TASKER_COMPLETED',
@@ -53,6 +58,8 @@ function emptyStore() {
     reviews: [],
     records: [],
     outbox: [],
+    geocodes: [],
+    waitlist: [],
   };
 }
 
@@ -66,21 +73,50 @@ function defaultNotif() {
   return { offers: true, messages: true, reminders: true, nearby: false, email: true, sms: false };
 }
 function defaultAvail() {
-  return { days: [1, 2, 3, 4, 5, 6], from: '09:00', to: '17:00', km: 3, cats: ['furniture', 'moving', 'errands', 'rubbish'], paused: false };
+  return { days: [1, 2, 3, 4, 5, 6], from: '09:00', to: '17:00', km: 10, cats: [], paused: false };
 }
 
-export function placeFor(suburb) {
-  const key = String(suburb || '').trim().toLowerCase();
-  return PLACES[key] || PLACES['melbourne cbd'];
+function resolveSuburb(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return null;
+  const key = raw.toLowerCase();
+  const extra = (store.geocodes || []).find((g) => String(g.name || '').toLowerCase() === key);
+  if (extra) return { name: extra.name, lat: extra.lat, lng: extra.lng, cityId: extra.cityId || 'victoria' };
+  return resolveKnownSuburb(raw);
 }
 
-function approxPoint(suburb, id) {
-  const [lat, lng] = placeFor(suburb);
-  const j = ((Number(id) || 1) % 20) - 10;
-  return {
-    lat: Math.round((lat + j * 0.0011) * 1e6) / 1e6,
-    lng: Math.round((lng + (((Number(id) || 1) * 3) % 20 - 10) * 0.0011) * 1e6) / 1e6,
-  };
+function pointFor(suburb) {
+  const hit = resolveSuburb(suburb);
+  if (!hit) return null;
+  return { lat: hit.lat, lng: hit.lng, name: hit.name, cityId: hit.cityId };
+}
+
+export function catalogue(query) {
+  return { cities: listCities(), radii: RADII, suburbs: searchSuburbs(query || '') };
+}
+
+export function nearestPlace(lat, lng) {
+  return nearestSuburb(lat, lng);
+}
+
+export async function lookupVictoria(query) {
+  const known = searchSuburbs(query);
+  if (known.length === 1 && known[0].name.toLowerCase() === String(query || '').trim().toLowerCase()) {
+    return { places: known };
+  }
+  const result = await geocodeVictoria(query);
+  if (result.places) {
+    for (const place of result.places) rememberGeocode(place);
+  }
+  return result;
+}
+
+function rememberGeocode(place) {
+  store.geocodes ||= [];
+  if (!place?.name) return;
+  if (store.geocodes.some((g) => g.name.toLowerCase() === place.name.toLowerCase())) return;
+  store.geocodes.push({ name: place.name, lat: place.lat, lng: place.lng, cityId: place.cityId || 'victoria' });
+  schedulePersist();
 }
 
 export function distanceKm(lat1, lng1, lat2, lng2) {
@@ -114,13 +150,28 @@ function normalise() {
   store.reviews ||= [];
   store.records ||= [];
   store.outbox ||= [];
+  store.geocodes ||= [];
+  store.waitlist ||= [];
   for (const task of store.tasks) {
     if (!task.stage) task.stage = stageFromLegacy(task);
-    if (task.lat == null || task.lng == null) {
-      const p = approxPoint(task.suburb || 'Melbourne CBD', task.id);
+    const p = pointFor(task.suburb);
+    if (p) {
+      task.suburb = p.name;
       task.lat = p.lat;
       task.lng = p.lng;
+      task.cityId = p.cityId;
     }
+  }
+  for (const user of store.users) {
+    const p = pointFor(user.suburb);
+    if (p) {
+      user.suburb = p.name;
+      user.lat = p.lat;
+      user.lng = p.lng;
+      user.cityId = p.cityId;
+    }
+    if (user.avail) user.avail.km = snapRadius(user.avail.km);
+    user.demoMode = !!user.demoMode;
   }
 }
 
@@ -204,9 +255,12 @@ export function publicUser(user) {
     name: user.name,
     email: user.email,
     phone: user.phone || '',
-    suburb: user.suburb || 'Melbourne CBD',
-    lat: user.lat,
-    lng: user.lng,
+    suburb: user.suburb || '',
+    lat: user.lat ?? null,
+    lng: user.lng ?? null,
+    cityId: user.cityId || '',
+    demoMode: !!user.demoMode,
+    launch: launchForUser(user),
     bio: user.bio || '',
     areas: user.areas || '',
     vehicle: user.vehicle || '',
@@ -332,8 +386,13 @@ function publicBid(bid) {
   };
 }
 
+function showDemoBids(task, viewer) {
+  return !!(viewer && viewer.demoMode && viewer.id === task.requesterId);
+}
+
 function visibleBids(task, viewer) {
-  const bids = bidsForTask(task.id).map(publicBid);
+  let bids = bidsForTask(task.id).map(publicBid);
+  if (!showDemoBids(task, viewer)) bids = bids.filter((b) => b.source !== 'demo');
   if (viewer && viewer.id === task.requesterId) return bids;
   if (!viewer) return [];
   return bids.filter((b) => b.taskerId === viewer.id);
@@ -344,7 +403,9 @@ export function publicTask(task, viewer) {
   const all = bidsForTask(task.id);
   const accepted = all.find((b) => b.id === task.acceptedBidId) || all.find((b) => b.status === 'accepted');
   const party = isParty(task, viewer);
-  const pendingCount = all.filter((b) => b.status === 'pending').length;
+  const countDemo = showDemoBids(task, viewer);
+  const pendingCount = all.filter((b) => b.status === 'pending' && (countDemo || b.source !== 'demo')).length;
+  const acceptedPublic = accepted && (accepted.source !== 'demo' || countDemo) ? accepted : null;
   const base = {
     id: task.id,
     requesterId: task.requesterId,
@@ -357,7 +418,7 @@ export function publicTask(task, viewer) {
     published: !!task.published,
     acceptedBidId: task.acceptedBidId || null,
     paymentStatus: task.paymentStatus || 'none',
-    suburb: task.suburb || 'Melbourne CBD',
+    suburb: task.suburb || '',
     lat: task.lat,
     lng: task.lng,
     date: task.date || null,
@@ -370,9 +431,10 @@ export function publicTask(task, viewer) {
     bidCount: pendingCount,
     updatedAt: task.updatedAt,
     createdAt: task.createdAt,
-    bid: accepted
-      ? { taskerName: accepted.taskerName, fee: accepted.fee, at: accepted.at, id: accepted.id }
+    bid: acceptedPublic
+      ? { taskerName: acceptedPublic.taskerName, fee: acceptedPublic.fee, at: acceptedPublic.at, id: acceptedPublic.id, demo: acceptedPublic.source === 'demo' }
       : undefined,
+    milestones: (task.milestones || []).map((m) => ({ ...m })),
   };
   if (!party && !(viewer && viewer.id === task.requesterId)) {
     return { ...base, bids };
@@ -398,7 +460,7 @@ function briefTask(task) {
     id: task.id,
     title: task.title || '',
     cat: task.cat || 'other',
-    suburb: task.suburb || 'Melbourne CBD',
+    suburb: task.suburb || '',
     status: task.status,
     stage: task.stage,
     date: task.date || null,
@@ -422,17 +484,19 @@ export function signup({ email, password, name, phone }) {
   if (!emailOk(clean)) return { error: 'Enter a valid email address', code: 400 };
   if (String(password || '').length < 8) return { error: 'Use at least 8 characters for the password', code: 400 };
   if (store.users.some((u) => u.email === clean && !u.deletedAt)) return { error: 'An account with that email already exists', code: 409 };
-  const [lat, lng] = placeFor('Melbourne CBD');
   const user = {
     id: store.counters.userId++,
     email: clean,
     password: hashPassword(password),
     name: display,
     phone: String(phone || '').trim().slice(0, 30),
-    suburb: 'Melbourne CBD',
-    lat, lng,
+    suburb: '',
+    lat: null,
+    lng: null,
+    cityId: 'melbourne',
+    demoMode: false,
     bio: '',
-    areas: 'Melbourne CBD',
+    areas: '',
     vehicle: '',
     langs: ['English'],
     notif: defaultNotif(),
@@ -500,12 +564,14 @@ export function updateProfile(user, patch = {}) {
   if (patch.areas != null) user.areas = String(patch.areas).trim().slice(0, 160);
   if (patch.vehicle != null) user.vehicle = String(patch.vehicle).trim().slice(0, 80);
   if (patch.suburb != null) {
-    const suburb = String(patch.suburb).trim().slice(0, 80) || 'Melbourne CBD';
-    user.suburb = suburb;
-    const [lat, lng] = placeFor(suburb);
-    user.lat = lat;
-    user.lng = lng;
+    const hit = resolveSuburb(patch.suburb);
+    if (!hit) return { error: 'Choose a suburb from the list.', code: 400 };
+    user.suburb = hit.name;
+    user.lat = hit.lat;
+    user.lng = hit.lng;
+    user.cityId = hit.cityId;
   }
+  if (patch.demoMode != null) user.demoMode = !!patch.demoMode;
   if (patch.notif && typeof patch.notif === 'object') {
     user.notif = { ...defaultNotif(), ...user.notif, ...pickBool(patch.notif, ['offers', 'messages', 'reminders', 'nearby', 'email', 'sms']) };
   }
@@ -515,7 +581,7 @@ export function updateProfile(user, patch = {}) {
     if (Array.isArray(a.days)) user.avail.days = a.days.map(Number).filter((n) => n >= 0 && n <= 6);
     if (a.from) user.avail.from = String(a.from).slice(0, 5);
     if (a.to) user.avail.to = String(a.to).slice(0, 5);
-    if (a.km != null) user.avail.km = Math.min(50, Math.max(1, Number(a.km) || user.avail.km));
+    if (a.km != null) user.avail.km = snapRadius(a.km);
     if (Array.isArray(a.cats)) user.avail.cats = a.cats.map(String).slice(0, 12);
     if (a.paused != null) user.avail.paused = !!a.paused;
   }
@@ -600,6 +666,8 @@ export async function notifyUser(user, { kind, title, body, taskId }) {
 export function taskerMatchesAvailability(user, task) {
   if (!user || user.deletedAt || !task) return false;
   if (user.id === task.requesterId) return false;
+  const home = pointFor(user.suburb);
+  if (!home || !launchStatus(home).open) return false;
   const a = { ...defaultAvail(), ...(user.avail || {}) };
   if (a.paused) return false;
   if (Array.isArray(a.cats) && a.cats.length && task.cat && !a.cats.includes(task.cat)) return false;
@@ -663,11 +731,81 @@ async function fanoutNewTask(task) {
   return told.size;
 }
 
-function applyMeta(task, meta) {
+function launchForUser(user) {
+  const place = user ? pointFor(user.suburb) : null;
+  const zone = place ? launchStatus(place) : { open: false, km: null, reason: 'unknown' };
+  return {
+    open: !!zone.open,
+    radiusKm: launchRadiusKm(),
+    center: LAUNCH_CENTER,
+    kmFromCentre: zone.km,
+    extra: zone.reason === 'extra',
+    extraSuburbs: extraOpenSuburbs(),
+  };
+}
+
+export function zoneFor(name) {
+  const place = resolveSuburb(name);
+  const zone = place ? launchStatus(place) : { open: false, km: null, reason: 'unknown' };
+  return { suburb: place?.name || '', ...zone, radiusKm: launchRadiusKm(), center: LAUNCH_CENTER };
+}
+
+export function joinWaitlist({ email, suburb, name }) {
+  const clean = String(email || '').trim().toLowerCase();
+  if (!emailOk(clean)) return { error: 'Enter a valid email address', code: 400 };
+  const place = resolveSuburb(suburb);
+  if (!place) return { error: 'Choose a suburb from the list.', code: 400 };
+  if (launchStatus(place).open) return { error: 'That suburb is already open. You can sign up and post a task.', code: 400 };
+  store.waitlist ||= [];
+  const existing = store.waitlist.find((w) => w.email === clean && w.suburb.toLowerCase() === place.name.toLowerCase());
+  if (existing) return { entry: { ...existing }, already: true };
+  const entry = { id: (store.counters.waitId = (store.counters.waitId || 1), store.counters.waitId++), email: clean, name: String(name || '').slice(0, 80), suburb: place.name, createdAt: iso() };
+  store.waitlist.push(entry);
+  schedulePersist();
+  return { entry: { ...entry } };
+}
+
+export function waitlistCsv() {
+  const lines = ['email,name,suburb,joined'];
+  for (const w of store.waitlist || []) {
+    lines.push([w.email, w.name, w.suburb, w.createdAt].map((v) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(','));
+  }
+  return lines.join('\n') + '\n';
+}
+
+export async function releaseMilestone(taskId, milestoneId, user) {
+  const gate = requireUser(user);
+  if (gate) return gate;
+  const task = findTask(taskId);
+  if (!task) return { error: 'Task not found', code: 404 };
+  if (!isRequester(task, user)) return { error: 'Only the requester can release a payment stage', code: 403 };
+  if (!['TASK_STARTED', 'TASKER_COMPLETED', 'FIX_DONE', 'FIX_REQUESTED', 'REQUESTER_CONFIRMED'].includes(task.stage)) {
+    return { error: 'A stage stays held until the work on it has started', code: 409 };
+  }
+  if (task.payment?.status === 'DISPUTED' || task.stage === 'DISPUTED') return { error: 'Payment is on hold until the problem is resolved', code: 409 };
+  const milestone = (task.milestones || []).find((m) => m.id === Number(milestoneId));
+  if (!milestone) return { error: 'That payment stage was not found', code: 404 };
+  if (milestone.status === 'released') return { error: 'That stage is already released', code: 409 };
+  milestone.status = 'released';
+  const allOut = task.milestones.every((m) => m.status === 'released');
+  if (allOut && task.payment) {
+    task.payment.status = 'RELEASED';
+    task.paymentStatus = 'RELEASED';
+    task.stage = 'COMPLETED';
+    syncLegacy(task);
+  }
+  task.updatedAt = iso();
+  schedulePersist();
+  return { task: publicTask(task, user), milestone: { ...milestone } };
+}
+
+function applyMeta(task, meta, user) {
   if (meta.text != null) task.text = String(meta.text).slice(0, 8000);
   if (meta.title != null) task.title = String(meta.title).slice(0, 140);
   if (meta.cat != null) task.cat = String(meta.cat).slice(0, 40);
-  if (meta.suburb != null) task.suburb = String(meta.suburb).slice(0, 80) || 'Melbourne CBD';
   if (meta.address != null) task.address = String(meta.address).slice(0, 200);
   if (meta.prop != null) task.propPrivate = String(meta.prop).slice(0, 200);
   if (meta.budgetLabel != null) task.budgetLabel = String(meta.budgetLabel).slice(0, 80);
@@ -679,9 +817,37 @@ function applyMeta(task, meta) {
   if (meta.photoCount != null) task.photoCount = Math.min(8, Number(meta.photoCount) || 0);
   if (Array.isArray(meta.notes)) task.notes = meta.notes.map((n) => String(n).slice(0, 300)).slice(0, 12);
   if (Array.isArray(meta.special)) task.special = meta.special.map((n) => String(n).slice(0, 300)).slice(0, 12);
-  const point = approxPoint(task.suburb || 'Melbourne CBD', task.id);
-  task.lat = point.lat;
-  task.lng = point.lng;
+  if (Array.isArray(meta.milestones)) {
+    const cleaned = cleanMilestones(meta.milestones, task.priceNum);
+    if (cleaned.error) return cleaned;
+    task.milestones = cleaned;
+  }
+  const suburbName = meta.suburb != null ? meta.suburb : (task.suburb || user?.suburb || '');
+  const hit = resolveSuburb(suburbName);
+  if (!hit) return { error: 'Choose a suburb for this task.', code: 400 };
+  const zone = launchStatus(hit);
+  if (!zone.open) return { error: comingSoonMessage(), code: 403 };
+  task.suburb = hit.name;
+  task.lat = hit.lat;
+  task.lng = hit.lng;
+  task.cityId = hit.cityId;
+  return null;
+}
+
+function cleanMilestones(list, priceNum) {
+  const rows = list.map((m, i) => ({
+    id: i + 1,
+    title: String(m.title || `Stage ${i + 1}`).slice(0, 80),
+    amount: Math.round(Number(m.amount) * 100) / 100,
+    status: 'held',
+  })).filter((m) => m.title && m.amount > 0);
+  if (!rows.length) return [];
+  if (rows.length < 2) return { error: 'Add at least two payment stages, or leave stages off.', code: 400 };
+  if (priceNum) {
+    const sum = Math.round(rows.reduce((s, m) => s + m.amount, 0) * 100) / 100;
+    if (Math.abs(sum - Number(priceNum)) > 1) return { error: 'Stage amounts need to add up to the fixed price.', code: 400 };
+  }
+  return rows;
 }
 
 export function upsertListingText(text, id, user) {
@@ -715,7 +881,7 @@ export function upsertListingText(text, id, user) {
     paymentStatus: 'none',
     payment: null,
     address: '',
-    suburb: user.suburb || 'Melbourne CBD',
+    suburb: user.suburb || '',
     date: null,
     startAt: null,
     startMin: null,
@@ -734,9 +900,11 @@ export function upsertListingText(text, id, user) {
     createdAt: now,
     updatedAt: now,
   };
-  const point = approxPoint(row.suburb, row.id);
-  row.lat = point.lat;
-  row.lng = point.lng;
+  const point = pointFor(row.suburb);
+  row.lat = point ? point.lat : null;
+  row.lng = point ? point.lng : null;
+  row.cityId = point ? point.cityId : '';
+  if (point) row.suburb = point.name;
   store.tasks.push(row);
   schedulePersist();
   return { task: publicTask(row, user) };
@@ -756,7 +924,8 @@ export async function publishListing(id, meta = {}, user) {
   if (blocked) return { error: blocked, code: 400 };
 
   const wasLive = row.published && (row.stage === 'POSTED' || row.stage === 'OFFERS_RECEIVED' || row.status === 'Open');
-  applyMeta(row, meta);
+  const located = applyMeta(row, meta, user);
+  if (located && located.error) return located;
   row.requesterName = user.name;
   if (!wasLive) {
     row.published = true;
@@ -785,12 +954,17 @@ export async function placeBid(id, { taskerName, fee, message } = {}, user) {
     return { error: 'Task is not open for offers', code: 409 };
   }
   const amount = Number(fee);
-  if (!Number.isFinite(amount) || amount < 5 || amount > 15000) return { error: 'Enter a fee between $5 and $15,000', code: 400 };
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) return { error: 'Enter a price above $0.', code: 400 };
 
   const demoName = String(taskerName || '').trim();
   const asDemo = user.id === row.requesterId && DEMO_TASKERS.has(demoName);
+  if (asDemo && !user.demoMode) return { error: 'Sample offers are off. Turn on Demo mode if you want to try them.', code: 403 };
   if (user.id === row.requesterId && !asDemo) {
     return { error: 'You cannot make an offer on your own task', code: 403 };
+  }
+  if (!asDemo) {
+    const home = pointFor(user.suburb);
+    if (!home || !launchStatus(home).open) return { error: comingSoonMessage(), code: 403 };
   }
   if (!asDemo) {
     const dup = store.bids.find((b) => b.taskId === row.id && b.taskerId === user.id && (b.status === 'pending' || b.status === 'accepted'));
@@ -842,7 +1016,7 @@ export function updateBid(bidId, { fee, message } = {}, user) {
   }
   if (fee != null) {
     const amount = Number(fee);
-    if (!Number.isFinite(amount) || amount < 5 || amount > 15000) return { error: 'Enter a fee between $5 and $15,000', code: 400 };
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) return { error: 'Enter a price above $0.', code: 400 };
     bid.fee = amount;
   }
   if (message != null) bid.message = String(message).slice(0, 1000);
@@ -1200,8 +1374,8 @@ export function markCompleted(taskId, user, { photoCount } = {}) {
   if (!isParty(task, user)) return { error: 'Only the requester or the booked Tasker can complete this task', code: 403 };
   if (task.stage !== 'TASK_STARTED') return { error: 'Task must be started before it can be completed', code: 409 };
   const photos = Number(photoCount ?? task.photoCount ?? 0);
-  if (PROOF_CATS.has(task.cat) && !(photos > 0)) {
-    return { error: 'Add the proof photo for this type of job before marking it complete', code: 400 };
+  if (!(photos > 0)) {
+    return { error: 'Add a photo showing the work is done before marking it complete', code: 400 };
   }
   if (photos > 0) task.photoCount = photos;
   task.stage = 'TASKER_COMPLETED';
@@ -1397,7 +1571,7 @@ function ownerRecord(rec) {
     taskerName: rec.taskerName,
     date: rec.date,
     paid: rec.paid,
-    suburb: rec.suburb || 'Melbourne CBD',
+    suburb: rec.suburb || '',
     property: rec.propPrivate || '',
     check: rec.check || '',
     note: rec.note || '',
@@ -1413,7 +1587,7 @@ export function toPublicRecord(rec) {
     taskerName: rec.taskerName,
     date: rec.date,
     paid: rec.paid,
-    suburb: rec.suburb || 'Melbourne CBD',
+    suburb: rec.suburb || '',
     check: rec.check || '',
     note: rec.note || '',
     photoCount: rec.photoCount || 0,
@@ -1436,7 +1610,7 @@ export function saveRecords(user, rows) {
       taskerName: String(row.taskerName || row.tasker || '').slice(0, 80),
       date,
       paid,
-      suburb: String(row.suburb || 'Melbourne CBD').slice(0, 80),
+      suburb: String(row.suburb || '').slice(0, 80),
       propPrivate: String(row.propPrivate || row.property || '').slice(0, 200),
       check: String(row.check || '').slice(0, 40),
       note: String(row.note || '').slice(0, 300),
@@ -1491,7 +1665,7 @@ export function recordsToCsv(records, { includeProperty }) {
     : ['date', 'title', 'category', 'tasker', 'amount', 'suburb', 'proof_photos'];
   const lines = [headers.join(',')];
   for (const r of records) {
-    const cells = [r.date, r.title, r.cat, r.taskerName, r.paid, r.suburb || 'Melbourne CBD'];
+    const cells = [r.date, r.title, r.cat, r.taskerName, r.paid, r.suburb || ''];
     if (includeProperty) cells.push(r.property || r.propPrivate || '');
     cells.push(r.photoCount || 0);
     lines.push(cells.map(csvCell).join(','));
@@ -1609,7 +1783,7 @@ function migrateLegacyTasksFile() {
         paymentStatus: row.status === 'Assigned' ? 'AUTHORISED' : 'none',
         payment: null,
         address: '',
-        suburb: 'Melbourne CBD',
+        suburb: 'Melbourne',
         budgetLabel: 'Open to offers',
         priceNum: null,
         photoCount: 0,
@@ -1622,9 +1796,10 @@ function migrateLegacyTasksFile() {
         createdAt: row.updatedAt || iso(),
         updatedAt: row.updatedAt || iso(),
       };
-      const point = approxPoint(task.suburb, task.id);
-      task.lat = point.lat;
-      task.lng = point.lng;
+      const point = pointFor(task.suburb);
+      task.lat = point ? point.lat : null;
+      task.lng = point ? point.lng : null;
+      task.cityId = point ? point.cityId : 'melbourne';
       store.tasks.push(task);
       if (row.bid) {
         const bid = {

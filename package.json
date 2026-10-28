@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test server/api.test.js"
+    "test": "node --test --test-concurrency=1 server/api.test.js"
   },
   "dependencies": {
     "leaflet": "^1.9.4"
