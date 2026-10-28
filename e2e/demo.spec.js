@@ -111,6 +111,11 @@ for (const viewport of widths) {
       await expect(page.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await expect(page.getByText('$500–$950')).toBeVisible();
       await expect(page.getByText('Typical Melbourne examples for 2026')).toBeVisible();
+      const view = await page.locator('#view').innerHTML();
+      expect(view.indexOf('home-cats')).toBeGreaterThan(-1);
+      expect(view.indexOf('home-cats')).toBeLessThan(view.indexOf('How it works'));
+      await expect(page.locator('.recent-tasks .card')).toHaveCount(3);
+      await expect(page.getByRole('button', { name: 'View all my tasks' })).toBeVisible();
       const tiles = page.locator('.home-cats .cat');
       await expect(tiles).toHaveCount(10);
       const boxes = await tiles.evaluateAll((els) => els.map((el) => {
@@ -120,13 +125,6 @@ for (const viewport of widths) {
       expect(new Set(boxes.map((b) => b.w)).size).toBe(1);
       expect(new Set(boxes.map((b) => b.h)).size).toBe(1);
       expect(boxes[0].h).toBe(156);
-      if (viewport.width >= 960) {
-        fs.mkdirSync(SHOTS, { recursive: true });
-        await page.screenshot({ path: path.join(SHOTS, 'home-desktop.png'), fullPage: true });
-      } else {
-        fs.mkdirSync(SHOTS, { recursive: true });
-        await page.screenshot({ path: path.join(SHOTS, 'home-mobile.png'), fullPage: true });
-      }
     });
 
     test('signs up, edits profile, and logs out', async ({ page }) => {
@@ -193,14 +191,18 @@ for (const viewport of widths) {
       await page.getByRole('button', { name: 'Map', exact: true }).click();
       await expect(page.locator('#jobmap')).toBeVisible();
       await page.getByRole('button', { name: 'List', exact: true }).click();
-      await page.getByRole('button', { name: /Filters:/ }).click();
+      await expect(page.locator('#fres .card, #fres .map').first()).toBeVisible();
+      await page.getByRole('button', { name: 'Filters', exact: true }).click();
       await page.getByRole('button', { name: 'Gardening', exact: true }).click();
+      await page.getByRole('button', { name: 'Apply', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Remove Gardening filter' })).toBeVisible();
       await expect(page.getByText('Tidy a small courtyard')).toBeVisible();
       await page.getByRole('button', { name: 'Save this search and alert me' }).click();
       await expect(page.getByText(/Search saved/)).toBeVisible();
       await settle(page);
-      if (viewport.width >= 960) await page.screenshot({ path: path.join(SHOTS, 'find-desktop.png'), fullPage: true });
-      else await page.screenshot({ path: path.join(SHOTS, 'find-mobile.png'), fullPage: true });
+      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await page.getByRole('button', { name: /Saved searches/ }).click();
+      await expect(page.getByText(/Any wording · Gardening/).first()).toBeVisible();
     });
 
     test('makes, edits, and withdraws an offer', async ({ page }) => {

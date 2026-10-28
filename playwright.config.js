@@ -1,7 +1,9 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { defineConfig } from '@playwright/test';
 
-const dataDir = path.join(process.cwd(), 'data', 'e2e');
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskspeck-e2e-'));
 
 export default defineConfig({
   testDir: 'e2e',
@@ -25,6 +27,7 @@ export default defineConfig({
     env: {
       ...process.env,
       TASKSPECK_DEMO: '1',
+      TASKSPECK_E2E: '1',
       TASKSPECK_HOST: '127.0.0.1',
       TASKSPECK_PORT: '5174',
       TASKSPECK_DATA: dataDir,

@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -541,6 +542,29 @@ test('demo logins stay hidden unless demo mode is on', async () => {
   assert.equal(demoPublic().accounts[0].password, 'demo-help-2026');
   if (previous == null) delete process.env.TASKSPECK_DEMO;
   else process.env.TASKSPECK_DEMO = previous;
+});
+
+test('demo seed contains only the realistic sample tasks', () => {
+  const seedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskspeck-seed-'));
+  const script = `
+    process.env.TASKSPECK_DATA = ${JSON.stringify(seedDir)};
+    process.env.TASKSPECK_DEMO = '1';
+    process.env.TASKSPECK_SYNC_SAVE = '1';
+    process.env.NOTIFY_PROVIDER = 'log';
+    const db = await import(${JSON.stringify(path.join(process.cwd(), 'server/db.js'))});
+    const { seedDemo } = await import(${JSON.stringify(path.join(process.cwd(), 'server/seedDemo.js'))});
+    await seedDemo(db);
+  `;
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  const store = JSON.parse(fs.readFileSync(path.join(seedDir, 'store.json'), 'utf8'));
+  const bad = /\bmobile\b|\bdesktop\b|Cancel me|Dispute me|spare room/i;
+  assert.equal(store.tasks.length, 10);
+  for (const task of store.tasks) {
+    assert.equal(typeof task.title, 'string');
+    assert.doesNotMatch(task.title, bad);
+    assert.doesNotMatch(task.text || '', bad);
+  }
 });
 
 test('Google and Apple sign-in are present but not required', () => {

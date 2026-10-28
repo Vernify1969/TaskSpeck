@@ -5,7 +5,16 @@ import { createServer } from 'vite';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
-if (!process.env.TASKSPECK_DATA) process.env.TASKSPECK_DATA = path.join(root, 'data', 'demo');
+const demoDir = path.join(root, 'data', 'demo');
+if (process.env.TASKSPECK_E2E === '1') {
+  const data = path.resolve(process.env.TASKSPECK_DATA || '');
+  const insideRepoData = data.startsWith(path.resolve(root, 'data') + path.sep);
+  if (!data || insideRepoData) {
+    throw new Error('Click-through tests must set TASKSPECK_DATA to a temp directory outside data/.');
+  }
+} else {
+  process.env.TASKSPECK_DATA = demoDir;
+}
 process.env.TASKSPECK_DEMO = '1';
 process.env.TASKSPECK_SYNC_SAVE = '1';
 process.env.NOTIFY_PROVIDER = process.env.NOTIFY_PROVIDER || 'log';

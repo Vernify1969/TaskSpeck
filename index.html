@@ -187,6 +187,29 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 @keyframes down{from{transform:translateY(-16px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ---------- Find Tasks: search, sort, list/map ---------- */
+.findbar{display:flex;align-items:center;gap:8px;margin-top:8px;position:relative}
+.findbar .fsearch{flex:1;min-width:0;margin:0}
+.ficon{position:relative;width:48px;height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none;color:var(--ink)}
+.ficon[aria-expanded="true"]{border-color:var(--brand);color:var(--brand)}
+.fbadge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:99px;background:var(--gold);color:var(--on-gold);font-size:11px;font-weight:800;display:grid;place-items:center}
+.active-filters{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.active-filters .chip{min-height:32px;padding:4px 10px;font-size:13px}
+.results-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0}
+.save-bell{display:inline-flex;align-items:center;gap:4px;color:var(--brand);font-weight:700;font-size:13px;min-height:36px;width:auto}
+.find-anchor{position:relative}
+.filter-back{display:none}
+.filter-pop{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px 16px 12px;box-shadow:0 16px 40px rgba(21,32,28,.16);display:flex;flex-direction:column}
+.filter-body{overflow:auto;min-height:0}
+.filter-actions{flex:none;display:flex;gap:8px;padding-top:10px;background:var(--surface)}
+.filter-actions .btn{margin-top:0;width:auto;flex:1}
+.filter-pop .chips{margin-top:6px}
+@media (max-width:959px){
+  .filter-back{display:block;position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:24}
+  .filter-pop{position:fixed;left:0;right:0;bottom:0;z-index:25;margin:0;border-radius:24px 24px 0 0;max-height:78vh}
+}
+@media (min-width:960px){
+  .filter-pop{position:absolute;z-index:8;top:calc(100% + 8px);right:0;width:min(440px,100%)}
+}
 .fsearch{position:relative;margin:10px 0 2px}
 .fsearch>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);display:flex;pointer-events:none}
 .fsearch input{padding-left:44px;min-height:50px}
@@ -353,6 +376,7 @@ const IC={
  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
  wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3M17 14h.01"/>',
  bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
+ filter:'<path d="M4 6h16M7 12h10M10 18h4"/>',
  camera:'<path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.2"/>'
 };
 const ic=(n,s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -649,6 +673,7 @@ function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" da
 function demoLoginCard(){const info=S.demoInfo;if(!info||!info.enabled||!(info.accounts||[]).length)return '';return `<div class="card" id="demo-logins" style="margin:14px 0"><span class="pill warn">Demo</span><h3 style="margin-top:8px">Demo logins</h3><p class="muted small">Sample people only. No real money moves.</p>${info.accounts.map(a=>`<button class="btn secondary" style="margin-top:8px" data-a="fillDemo" data-v="${esc(a.email)}"><b>${esc(a.name)}</b> · ${esc(a.role)}<br><span class="muted small">${esc(a.email)} · password ${esc(a.password)}</span></button>`).join('')}</div>`}
 function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);if(data.user&&data.user.safetyGuide)S.tk.safety=true;S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];if((data.records||[]).length)S.history=data.records.map(r=>({prop:r.property||'My jobs',title:r.title,cat:r.cat,tasker:r.taskerName,date:r.date,paid:+r.paid||0,seed:false,note:r.note||''}));S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
 function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
+function recentTasks(){return [...myTaskList()].sort((a,b)=>(Number(b.listingId)||0)-(Number(a.listingId)||0)).slice(0,3)}
 function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
 function themeCycle(){const el=document.documentElement,cur=el.dataset.theme||'auto';const next=cur==='auto'?'light':cur==='light'?'dark':'auto';if(next==='auto')delete el.dataset.theme;else el.dataset.theme=next;try{localStorage.setItem('ts-theme',next)}catch(e){}render()}
 themeInit();
@@ -846,6 +871,9 @@ home(){
       ${soon?`<h3>Coming soon to your area</h3><p class="muted small" style="margin:6px 0 12px">TaskSpeck is open within ${esc(String(S.user.launch.radiusKm||10))} km of Melbourne CBD, around Flinders Street and Swanston Street. ${esc(S.user.suburb||'Your suburb')} is not open yet.</p><button class="btn primary" data-a="joinWait">Join the waitlist</button>`:`<button class="ask" data-a="post">Describe the job in your own words</button><button class="btn primary big" data-a="post">Post a task</button>`}
     </div>
   </section>
+  <h2>What do you need?</h2>
+  <div class="cats home-cats">${catGrid(HOME_CATS)}</div>
+  <button class="btn secondary" style="margin-top:12px" data-a="seeCats">See all categories</button>
   <div class="trust">
     <div class="perk">${ic('wallet',22)}<span><b>No booking fee</b><span class="muted small">You pay the price you accept. TaskSpeck’s share comes from the Tasker.</span></span></div>
     <div class="perk">${ic('shield',22)}<span><b>Payment held until done</b><span class="muted small">Money stays held until you confirm the job.</span></span></div>
@@ -860,11 +888,8 @@ home(){
   <h2>Popular tasks</h2>
   <p class="muted small" style="margin:-4px 0 10px">Typical Melbourne examples for 2026. A Tasker can offer more or less. These are not quotes.</p>
   <div class="popular">${POPULAR.map(([k,name,range])=>`<button class="card" data-a="post" data-v="${k}"><span class="typical">Typical</span><b>${esc(name)}</b><span class="price">${esc(range)}</span></button>`).join('')}</div>
-  ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
+  ${recentTasks().length?`<h2>Recent tasks</h2><div class="stack recent-tasks">${recentTasks().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div><button class="btn ghost" data-a="tab" data-v="tasks">View all my tasks</button>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
-  <h2>What do you need?</h2>
-  <div class="cats home-cats">${catGrid(HOME_CATS)}</div>
-  <button class="btn secondary" style="margin-top:12px" data-a="seeCats">See all categories</button>
   <p class="muted small" style="margin-top:14px">${ic('shield',16)} Licensed work such as electrical, gas and plumbing is not offered. Painting, handyman and assembly over $10,000 need a registered builder, so TaskSpeck can’t take those.</p>
   ${S.demoMode?'<p class="muted small center" style="margin-top:18px"><span class="pill warn">Demo</span> Sample people and prompts are turned on.</p>':''}`};
 },
@@ -872,11 +897,13 @@ post(a){
   const cat=a.cat;const ex=EX[cat||'all'];
   return{title:cat?CATS[cat].name:'Post a task',html:`
   <h1 class="display" style="font-size:28px">What do you need help with?</h1>
+  <p class="muted small" style="margin:0 0 6px"><b>1. The job</b></p>
   <textarea id="pt" data-in="text" placeholder="${esc(PH[cat||'all']||PH.all)}" aria-label="Describe your task">${esc(S.draft.text)}</textarea>
-  <p class="muted small" style="margin:14px 0 8px">Price</p>
+  <p class="muted small" style="margin:14px 0 8px"><b>2. Price</b></p>
   <div class="chips">${chip('Request quotes',S.draft.budgetMode!=='set','data-a="bmode" data-v="open"')}${chip('Fixed price',S.draft.budgetMode==='set','data-a="bmode" data-v="set"')}</div>
   ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Your price</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="0"></div><button class="btn secondary" style="margin-top:10px" data-a="stages">${S.draft.stagesOn?'Payment stages on':'Split the price into two stages'}</button>${S.draft.stagesOn?`<label class="f" for="stage1">Stage 1 amount</label><div class="money"><span class="cur">$</span><input id="stage1" type="number" inputmode="decimal" data-in="stage1" min="1" value="${esc(S.form.stage1||'')}"></div><label class="f" for="stage2">Stage 2 amount</label><div class="money"><span class="cur">$</span><input id="stage2" type="number" inputmode="decimal" data-in="stage2" min="1" value="${esc(S.form.stage2||'')}"></div><p class="muted small">The two stages need to add up to your price. Each stage stays held until that part is done.</p>`:''}`:`<p class="muted small" style="margin-top:8px">Taskers send a fixed price. You choose.</p>`}
   ${cat&&CATS[cat]&&CATS[cat].guide?`<p class="muted small" style="margin-top:6px">${esc(CATS[cat].guide)}</p>`:''}
+  <p class="muted small" style="margin:14px 0 0"><b>3. Photos</b></p>
   ${photoDrop('postPhoto','Add photos')}
   ${(S.draft.photos||[]).length?`<div class="thumbs">${S.draft.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Your photo"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmPostPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
   ${S.demoMode?`<button class="btn secondary" style="margin-top:6px" data-a="samplePostPhoto">Use a sample photo</button><p class="muted small" style="margin:12px 0 8px"><span class="pill warn">Demo</span> Tap an example to try it</p><div class="stack">${(ex||[]).map((e,i)=>`<button class="card" style="padding:12px 14px;font-size:15px" data-a="ex" data-v="${i}|${cat||'all'}">${esc(e)}</button>`).join('')}</div>`:''}
@@ -1199,28 +1226,46 @@ profile(){
    <button class="card" data-a="sheet" data-v="notif">Notifications</button>
    <button class="card" data-a="sheet" data-v="help">Help and support</button>
    <button class="card" data-a="demoToggle">Demo mode <span class="pill ${S.demoMode?'warn':''}" style="float:right">${S.demoMode?'On':'Off'}</span></button>
+   <button class="card" data-a="savedSearches">Saved searches<span class="pill" style="float:right">${(S.savedSearches||[]).length}</span></button>
    <button class="card" data-a="account">Edit profile</button>
    <button class="card" data-a="logout">Log out</button>
   </div>
   <p class="muted small" style="margin-top:16px">TaskSpeck is a marketplace that connects people. Taskers are not employees of TaskSpeck. Legal wording is a placeholder until reviewed by Australian legal counsel.</p>`};
 },
+savedSearches(){
+  const rows=S.savedSearches||[];
+  return{title:'Saved searches',html:rows.length?`<p class="muted small" style="margin-bottom:10px">We tell you when a saved search matches a new task, if alerts are on and it fits your availability.</p><div class="stack">${rows.map(s=>`<div class="card"><b>${esc(s.q||'Any wording')} · ${s.cat&&s.cat!=='all'&&CATS[s.cat]?CATS[s.cat].name:'All categories'} · ${s.km==null?'Any distance':s.km+' km'}</b><p class="muted small">Alerts are ${s.alert?'on':'off'}.</p><div class="row" style="margin-top:8px"><button class="chip" data-a="searchAlert" data-v="${s.id}">${s.alert?'Turn alerts off':'Turn alerts on'}</button><button class="chip" data-a="searchDel" data-v="${s.id}">Delete</button></div></div>`).join('')}</div>`:`<div class="empty"><div class="big">${ic('bell',28)}</div><h3 style="color:var(--ink)">No saved searches</h3><p style="margin-top:6px">On Find Tasks, tap the bell next to the results to save a search and get an alert.</p></div>`};
+},
 find(){
   const f=S.find;
+  const n=filterCount(f);
+  const chips=activeFilterChips(f);
+  const draft=f.draft||{km:f.km,cat:f.cat,sort:f.sort||'closest'};
   return{wide:true,html:`
-  <div class="row"><h1 class="display grow" style="font-size:28px">Tasks near you</h1>
-  <div class="vt" role="group" aria-label="Show tasks as">${[['list','List'],['map','Map']].map(([k,l])=>`<button data-a="fview" data-v="${k}" aria-pressed="${f.view===k}">${l}</button>`).join('')}</div></div>
+  <div class="find-anchor">
+  <h1 class="display" style="font-size:28px;margin-bottom:0">Tasks near you</h1>
   ${standingBanner()}
   ${S.tk.safety?'':`<button class="notice" style="text-align:left;width:100%;margin:8px 0" data-a="safetyguide"><b>Complete the 5-minute safety guide</b>Required before your first job. Tap to start.</button>`}
-  <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks, e.g. old sofa" aria-label="Search tasks" autocomplete="off"></div>
-  <button class="chip" style="margin-top:10px" data-a="ffilt" aria-expanded="${!!f.fopen}">Filters: ${f.km} km · ${f.cat==='all'||!CATS[f.cat]?'All categories':CATS[f.cat].name} ${f.fopen?'▴':'▾'}</button>
-  ${f.fopen?`<p class="muted small" style="margin:12px 0 6px">Distance</p>
-  <div class="chips scroll">${[1,2,3,5,10].map(k=>chip(k+' km',f.km===k,`data-a="fkm" data-v="${k}"`)).join('')}</div>
-  <p class="muted small" style="margin:12px 0 6px">Category</p>
-  <div class="chips scroll">${chip('All',f.cat==='all','data-a="fcat" data-v="all"')}${FINAL.map(k=>chip(CATS[k].name,f.cat===k,`data-a="fcat" data-v="${k}"`)).join('')}</div>`:''}
-  <div class="chips scroll" style="margin-top:10px">${SORTS.map(([k,l])=>chip(l,(f.sort||'closest')===k,`data-a="fsort" data-v="${k}"`)).join('')}</div>
-  <button class="btn secondary" style="margin-top:10px" data-a="saveSearch">Save this search and alert me</button>
-  ${(S.savedSearches||[]).length?`<div class="stack" style="margin-top:10px">${S.savedSearches.map(s=>`<div class="card"><b>${esc(s.q||'Any wording')} · ${s.cat&&s.cat!=='all'&&CATS[s.cat]?CATS[s.cat].name:'All categories'} · ${s.km} km</b><p class="muted small">Alerts are ${s.alert?'on':'off'}. A match is sent only if it fits your availability.</p><div class="row" style="margin-top:8px"><button class="chip" data-a="searchAlert" data-v="${s.id}">${s.alert?'Turn alerts off':'Turn alerts on'}</button><button class="chip" data-a="searchDel" data-v="${s.id}">Delete</button></div></div>`).join('')}</div>`:''}
-  <div id="fres" style="margin-top:14px">${findResults()}</div>`,after(){refreshApiListings()}};
+  <div class="findbar">
+    <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off"></div>
+    <button class="ficon" data-a="ffilt" aria-label="Filters" aria-expanded="${!!f.fopen}">${ic('filter',20)}${n?`<span class="fbadge">${n}</span>`:''}</button>
+    <div class="vt" role="group" aria-label="Show tasks as">${[['list','List'],['map','Map']].map(([k,l])=>`<button data-a="fview" data-v="${k}" aria-pressed="${f.view===k}">${l}</button>`).join('')}</div>
+  ${f.fopen?`<div class="filter-back" data-a="fclose"></div><div class="filter-pop" role="dialog" aria-label="Filters">
+    <div class="filter-body">
+    <h2 style="margin-top:0">Filters</h2>
+    <p class="muted small">Distance</p>
+    <div class="chips">${chip('Any distance',draft.km==null,'data-a="fdkm" data-v="any"')}${[5,10,25,50].map(k=>chip(k+' km',draft.km===k,`data-a="fdkm" data-v="${k}"`)).join('')}</div>
+    <p class="muted small" style="margin-top:12px">Category</p>
+    <div class="chips">${chip('All',draft.cat==='all','data-a="fdcat" data-v="all"')}${FINAL.map(k=>chip(CATS[k].name,draft.cat===k,`data-a="fdcat" data-v="${k}"`)).join('')}</div>
+    <p class="muted small" style="margin-top:12px">Sort</p>
+    <div class="chips">${SORTS.map(([k,l])=>chip(l,(draft.sort||'closest')===k,`data-a="fdsort" data-v="${k}"`)).join('')}</div>
+    </div>
+    <div class="filter-actions"><button class="btn primary" data-a="fapply">Apply</button><button class="btn secondary" data-a="freset">Clear</button></div>
+  </div>`:''}
+  </div>
+  ${chips?`<div class="active-filters">${chips}</div>`:''}
+  <div id="fres" style="margin-top:8px">${findResults()}</div>
+  </div>`,after(){refreshApiListings()}};
 },
 findTask(){
   PHOTO_REG.length=0;
@@ -1318,19 +1363,38 @@ function findList(){
   const f=S.find;
   const rows=allFindTasks().map(t=>{const p=taskPoint(t);return {...t,lat:p.lat,lng:p.lng,km:taskKm(t),priceNum:priceOf(t)}});
   const cmp={closest:(a,b)=>a.km-b.km,newest:(a,b)=>ageMins(a)-ageMins(b),price:(a,b)=>priceOf(a)-priceOf(b),pricehi:(a,b)=>priceOf(b)-priceOf(a)};
-  return rows.filter(t=>t.km<=f.km&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'')).sort(cmp[f.sort||'closest']||cmp.closest);
+  return rows.filter(t=>(f.km==null||t.km<=f.km)&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'')).sort(cmp[f.sort||'closest']||cmp.closest);
+}
+function filterCount(f){
+  let n=0;
+  if(f.km!=null&&f.km!==5)n++;
+  if(f.cat&&f.cat!=='all')n++;
+  if((f.sort||'closest')!=='closest')n++;
+  if((f.q||'').trim())n++;
+  return n;
+}
+function activeFilterChips(f){
+  const bits=[];
+  if(f.km!=null)bits.push(`<button class="chip" data-a="fchip" data-v="km" aria-label="Remove ${f.km} km filter">${f.km} km ×</button>`);
+  if(f.cat&&f.cat!=='all'&&CATS[f.cat])bits.push(`<button class="chip" data-a="fchip" data-v="cat" aria-label="Remove ${esc(CATS[f.cat].name)} filter">${esc(CATS[f.cat].name)} ×</button>`);
+  if((f.sort||'closest')!=='closest'){const label=(SORTS.find(([k])=>k===f.sort)||[])[1]||'Sort';bits.push(`<button class="chip" data-a="fchip" data-v="sort" aria-label="Remove sort">${esc(label)} ×</button>`);}
+  if((f.q||'').trim())bits.push(`<button class="chip" data-a="fchip" data-v="q" aria-label="Clear search">“${esc(f.q.trim())}” ×</button>`);
+  return bits.join('');
+}
+function resultsLine(f,l,extra){
+  return `<div class="results-line"><p class="muted small" style="margin:0">${l.length} task${l.length===1?'':'s'}${extra||''} · ${SORT_NOTE[f.sort||'closest']}</p><button class="save-bell" data-a="saveSearch" aria-label="Save this search and alert me">${ic('bell',16)}<span>Alert me</span></button></div>`;
 }
 function findResults(){
   const f=S.find,q=(f.q||'').trim(),l=findList();
   const blocked=q&&BLOCK.find(([re])=>re.test(q));
   if(blocked)return `<div class="notice"><b>Not available on TaskSpeck</b>${esc(blocked[1])}</div>`;
+  const hit=q?RULES.find(([,re])=>re.test(q)):null;
+  const head=resultsLine(f,l,hit?' · matched to '+(CATS[hit[0]]||CATS.other).name:'');
   if(!l.length){
-    return empty('search','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
-    +(f.km<10?`<button class="btn secondary" data-a="fkm" data-v="10">Widen to 10 km</button>`:'')
+    return head+empty('search','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
+    +(f.km!=null&&f.km<10?`<button class="btn secondary" data-a="fkm" data-v="10">Widen to 10 km</button>`:'')
     +((q||f.cat!=='all')?`<button class="btn ghost" data-a="fclear">Clear search and category</button>`:'');
   }
-  const hit=q?RULES.find(([,re])=>re.test(q)):null;
-  const head=`<p class="muted small" style="margin-bottom:10px">${l.length} task${l.length===1?'':'s'}${hit?' · matched to '+CATS[hit[0]].name:''} · ${SORT_NOTE[f.sort||'closest']}</p>`;
   return head+(f.view==='map'?mapHtml(l):`<div class="stack">${l.map(taskCard).join('')}</div>`);
 }
 function mapHtml(l){
@@ -1799,7 +1863,17 @@ const A={
  ntog(v){S.notif[v]=!S.notif[v];TaskAPI.settings({notif:S.notif}).catch(()=>{});render()},
  verify(){go('idcheck')},
  fkm(v){S.find.km=+v;render()},fcat(v){S.find.cat=v;render()},
- fsort(v){S.find.sort=v;render()},ffilt(){S.find.fopen=!S.find.fopen;render()},fview(v){S.find.view=v;S.find.pin=null;render()},fpin(v){S.find.pin=+v;render()},fclear(){S.find.q='';S.find.cat='all';render()},
+ fsort(v){S.find.sort=v;render()},
+ ffilt(){S.find.fopen=!S.find.fopen;S.find.draft=S.find.fopen?{km:S.find.km,cat:S.find.cat,sort:S.find.sort||'closest'}:null;render()},
+ fclose(){S.find.fopen=false;S.find.draft=null;render()},
+ fdkm(v){if(!S.find.draft)return;S.find.draft.km=v==='any'?null:+v;render()},
+ fdcat(v){if(!S.find.draft)return;S.find.draft.cat=v;render()},
+ fdsort(v){if(!S.find.draft)return;S.find.draft.sort=v;render()},
+ fapply(){const d=S.find.draft;if(d){S.find.km=d.km;S.find.cat=d.cat||'all';S.find.sort=d.sort||'closest'}S.find.fopen=false;S.find.draft=null;render()},
+ freset(){S.find.draft={km:null,cat:'all',sort:'closest'};render()},
+ fchip(v){if(v==='km')S.find.km=null;else if(v==='cat')S.find.cat='all';else if(v==='sort')S.find.sort='closest';else if(v==='q')S.find.q='';render()},
+ fview(v){S.find.view=v;S.find.pin=null;render()},fpin(v){S.find.pin=+v;render()},fclear(){S.find.q='';S.find.cat='all';render()},
+ savedSearches(){go('savedSearches')},
  openFind(v){S.findId=+v;go('findTask')},
  save(){S.saved[S.findId]=!S.saved[S.findId];render()},
  makeOffer(){S.form.fee='';S.form.ok=false;S.form.omsg='';S.form.start=null;S.form.end=null;S.form.dur=null;S.form.showStart=false;go('makeOffer')},
