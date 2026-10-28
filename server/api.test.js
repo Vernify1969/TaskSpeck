@@ -608,14 +608,32 @@ test('retired categories, including general help, are stored as Other', async ()
   assert.equal(again.tasks.find((task) => task.title === 'File the invoices').cat, 'adminoffice');
 });
 
-test('demo logins stay hidden unless demo mode is on', async () => {
-  const { demoPublic } = await import('./demoAccounts.js?hidden=1');
+test('demo mode opens sample people without publishing a password', async () => {
+  const { demoPublic, demoCredentials, DEMO_ACCOUNTS, DEMO_PASSWORD } = await import('./demoAccounts.js?view=1');
   const previous = process.env.TASKSPECK_DEMO;
   delete process.env.TASKSPECK_DEMO;
   assert.deepEqual(demoPublic(), { enabled: false, accounts: [] });
+  assert.equal(demoCredentials(DEMO_ACCOUNTS[0].email).code, 404);
   process.env.TASKSPECK_DEMO = '1';
-  assert.equal(demoPublic().accounts.length, 4);
-  assert.equal(demoPublic().accounts[0].password, 'demo-help-2026');
+  const pub = demoPublic();
+  assert.equal(pub.accounts.length, 4);
+  assert.equal(pub.accounts[0].name, 'Maya Chen');
+  assert.equal(JSON.stringify(pub).includes(DEMO_PASSWORD), false);
+  for (const account of pub.accounts) assert.equal(Object.hasOwn(account, 'password'), false);
+  db.resetStore();
+  for (const spec of DEMO_ACCOUNTS) {
+    const creds = demoCredentials(spec.email);
+    assert.equal(creds.email, spec.email);
+    assert.equal(Object.hasOwn(creds, 'password'), true);
+    const signed = db.signup({ name: spec.name, email: creds.email, password: creds.password });
+    assert.equal(signed.error, undefined);
+    assert.equal(signed.user.password, undefined);
+  }
+  const maya = db.login(demoCredentials('maya.demo@taskspeck.test'));
+  assert.equal(maya.user.name, 'Maya Chen');
+  assert.equal(maya.user.password, undefined);
+  assert.equal(demoCredentials('nobody@taskspeck.test').code, 400);
+  db.resetStore();
   if (previous == null) delete process.env.TASKSPECK_DEMO;
   else process.env.TASKSPECK_DEMO = previous;
 });

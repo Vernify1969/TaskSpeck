@@ -35,7 +35,7 @@ for (const entries of Object.values(os.networkInterfaces())) {
   }
 }
 console.log('\nTaskSpeck demo');
-console.log('Sign in with a demo account. The password is on the sign-in screen.');
+console.log('Opens as Maya. Use Viewing as to switch to Sam, Priya, or Casey.');
 console.log('No real money moves.');
 for (const url of urls) console.log('Open ' + url);
 if (urls.length > 1) console.log('On a phone on the same Wi-Fi, use an address that is not 127.0.0.1.');
