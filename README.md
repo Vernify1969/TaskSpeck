@@ -2,7 +2,32 @@
 
 TaskSpeck is a small marketplace for one-off jobs. A requester posts a task, Taskers make offers, and the requester picks who does the work. There is no booking fee. The payment is held until the job is done. Cancelling inside 24 hours of the start keeps a call-out fee for the Tasker and refunds the rest. A no-show is a full refund and the task can be matched again. Proof photos depend on the kind of job. The safety check blocks risky or licensed work. One account can post tasks and make offers.
 
-## Run it
+## How to run the demo
+
+The demo fills the app with sample people, sample tasks around inner Melbourne, offers, messages, and one finished job with a review. Payments are pretend. Nothing is charged.
+
+On a Mac or Linux computer:
+
+```bash
+npm install
+npm run demo
+```
+
+On Windows, double-click `start-demo.bat` in this folder. The first time, it installs the app. It then starts the demo and opens a browser at http://127.0.0.1:5173/ .
+
+The sign-in screen lists the demo email addresses and the shared password. Each name says whether that person posts tasks, makes offers, or lives outside the launch area. A yellow Demo label shows wherever the sample data appears. A Demo payment note shows when a price is recorded. No real money moves.
+
+The server listens on every network address on your computer, not only this machine. The terminal prints a second address such as http://192.168.1.20:5173/ . On a phone connected to the same Wi-Fi, type that address into the browser. Leave the terminal window open while you look around.
+
+The demo keeps its sample data in `data/demo/`, separate from any account you create with `npm run dev`.
+
+To run the automatic click-through checks (phone width and desktop width):
+
+```bash
+npm run test:e2e
+```
+
+## Run it yourself
 
 ```bash
 npm install
@@ -10,7 +35,7 @@ npm test
 npm run dev
 ```
 
-Open http://localhost:5173 . Create an account with an email and a password (at least 8 characters), then log in. The same account has a Requester side and a Tasker side. The switch is at the top of the screen.
+Open http://127.0.0.1:5173 . Create an account with an email and a password (at least 8 characters), then log in. The same account has a Requester side and a Tasker side. The switch is at the top of the screen.
 
 Data is saved in `data/store.json`, so it is still there after you restart. That file is not committed.
 

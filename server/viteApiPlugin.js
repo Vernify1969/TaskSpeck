@@ -1,4 +1,5 @@
 import { oauthUnavailable, listAuthProviders } from './auth.js';
+import { demoPublic } from './demoAccounts.js';
 import {
   userFromToken,
   signup,
@@ -127,6 +128,10 @@ async function handle(req, res) {
 
   if (url === '/api/health' && req.method === 'GET') {
     return sendJson(res, 200, { ok: true });
+  }
+
+  if (url === '/api/demo' && req.method === 'GET') {
+    return sendJson(res, 200, demoPublic());
   }
 
   if (url === '/api/places' && req.method === 'GET') {

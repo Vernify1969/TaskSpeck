@@ -376,7 +376,7 @@ const CATS={
 };
 const FINAL=Object.keys(CATS);
 const HOME_CATS=[['moving','Moving help'],['cleaning','Cleaning'],['garden','Gardening'],['home','Handyman'],['furniture','Assembly'],['errands','Pickup &\ndelivery'],['rubbish','Hard rubbish'],['painting','Painting'],['packing','Packing &\nunpacking'],['other','Other']];
-const POPULAR=[['cleaning','End-of-lease clean','$180–$400'],['furniture','Furniture assembly','$80–$250'],['garden','Garden tidy','$70–$220'],['rubbish','Hard rubbish pickup','$120–$350']];
+const POPULAR=[['cleaning','End-of-lease clean','$500–$950'],['furniture','Furniture assembly','$150–$450'],['garden','Garden tidy','$220–$550'],['rubbish','Hard rubbish pickup','$280–$650']];
 function heroArt(){return `<svg class="illu" viewBox="0 0 320 210" role="img" aria-label="Illustration of a helper with a box and a plant"><rect class="g" x="18" y="168" width="284" height="14" rx="7" opacity=".15"/><rect class="g" x="54" y="86" width="118" height="82" rx="18"/><rect class="y" x="72" y="104" width="82" height="46" rx="10"/><circle class="y" cx="214" cy="78" r="26"/><rect class="g" x="200" y="102" width="28" height="52" rx="12"/><path class="line" d="M176 168c18-26 46-26 66 0"/><rect class="s" x="248" y="118" width="40" height="46" rx="10" stroke="var(--brand)" stroke-width="3"/><path class="g" d="M268 118c-8-26 6-44 0-62 16 16 20 38 0 62z"/></svg>`}
 const RADII=[5,10,25,50];
 const CAT_ICON={
@@ -643,8 +643,11 @@ let bundleT;
 function saveBundleSoon(){if(!S.user||!S.task||!S.task.listingId)return;const id=S.task.listingId,bundle=captureBundle();clearTimeout(bundleT);bundleT=setTimeout(()=>{api('/api/tasks/'+id+'/bundle',{method:'PUT',body:{bundle}}).catch(()=>{})},500)}
 function stashCurrent(){if(!S.task)return;S.task._bundle=captureBundle();S.task._address=S.form.addr||S.task._address||'';const i=S.myTasks.findIndex(t=>t===S.task||(t.listingId&&S.task.listingId&&t.listingId===S.task.listingId));if(i<0)S.myTasks.unshift(S.task);else S.myTasks[i]=S.task;saveBundleSoon()}
 function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bundle||{};S.task=t;S.offers=b.offers||[];S.offerId=b.offerId??null;S.events=b.events||[];S.payment=b.payment??null;S.agreement=b.agreement??null;S.dispute=b.dispute??null;S.change=b.change??null;S.flags=b.flags||{};S.thread=b.thread??null;S.proof=b.proof||[];S.checklist=b.checklist||[];S.fix=b.fix??null;if(t._address)S.form.addr=t._address;if(!S.myTasks.includes(t))S.myTasks.unshift(t)}
-function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);return t}
-function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
+function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];hydrateOffers(row,t);return t}
+function hydrateOffers(row,t){if(t._bundle.offers&&t._bundle.offers.length)return;const bids=Array.isArray(row.bids)?row.bids.filter(b=>b.status==='pending'||b.status==='accepted'):[];if(!bids.length)return;const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=bids.map(b=>({id:b.id,bidId:b.id,name:b.taskerName,fee:b.fee,km:1,rating:'New',done:1,comp:100,canc:0,ver:true,msg:b.message||'',cats:[],repeat:0,reply:'Usually replies the same day',age:'Demo',when,start:t.startMin||600,demo:b.source==='demo'}));const acc=bids.find(b=>b.status==='accepted');if(acc){t._bundle.offerId=acc.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:acc.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(row.payment)t._bundle.payment=row.payment;if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}}
+function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" data-demo-pay="1" style="margin-top:12px"><b>Demo payment</b>No real money moves. Amounts are only recorded in this demo.</div>`}
+function demoLoginCard(){const info=S.demoInfo;if(!info||!info.enabled||!(info.accounts||[]).length)return '';return `<div class="card" id="demo-logins" style="margin:14px 0"><span class="pill warn">Demo</span><h3 style="margin-top:8px">Demo logins</h3><p class="muted small">Sample people only. No real money moves.</p>${info.accounts.map(a=>`<button class="btn secondary" style="margin-top:8px" data-a="fillDemo" data-v="${esc(a.email)}"><b>${esc(a.name)}</b> · ${esc(a.role)}<br><span class="muted small">${esc(a.email)} · password ${esc(a.password)}</span></button>`).join('')}</div>`}
+function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);if(data.user&&data.user.safetyGuide)S.tk.safety=true;S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];if((data.records||[]).length)S.history=data.records.map(r=>({prop:r.property||'My jobs',title:r.title,cat:r.cat,tasker:r.taskerName,date:r.date,paid:+r.paid||0,seed:false,note:r.note||''}));S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
 function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
 function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
 function themeCycle(){const el=document.documentElement,cur=el.dataset.theme||'auto';const next=cur==='auto'?'light':cur==='light'?'dark':'auto';if(next==='auto')delete el.dataset.theme;else el.dataset.theme=next;try{localStorage.setItem('ts-theme',next)}catch(e){}render()}
@@ -748,7 +751,7 @@ function topRoot(backTitle){
   const items=S.mode==='requester'?[['home','Home','home'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']]:[['find','Find Tasks','search'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']];
   const cur=S.stack[0].n;
   const desk=items.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" ${cur===k&&!backTitle?'aria-current="page"':''}>${ic(i,16)}<span>${l}</span></button>`).join('');
-  return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee</span></span></div>
+  return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee${S.serverDemo?' · Demo':''}</span></span></div>
   <nav class="desk-nav" aria-label="Sections">${desk}</nav>
   <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
   <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}`;
@@ -767,6 +770,7 @@ function renderAuth(){
   $('#view').innerHTML=`<div class="auth-card">
     <h1 class="display" style="font-size:30px">${mode==='login'?'Welcome back':'Create your account'}</h1>
     <p class="muted">One account covers both sides. You can post tasks and make offers.</p>
+    ${demoLoginCard()}
     ${mode==='signup'?`<label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="name" autocomplete="name" value="${esc(S.form.name||'')}">`:''}
     <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="username" value="${esc(S.form.email||'')}">
     <label class="f" for="pw">Password</label><input id="pw" type="password" data-in="password" autocomplete="${mode==='login'?'current-password':'new-password'}">
@@ -854,7 +858,7 @@ home(){
     <article><span class="n">3</span><b>Pay when done</b><span class="muted small">Your payment stays held until you confirm the work.</span></article>
   </div>
   <h2>Popular tasks</h2>
-  <p class="muted small" style="margin:-4px 0 10px">Typical ranges around inner Melbourne. A Tasker can offer more or less. These are not quotes.</p>
+  <p class="muted small" style="margin:-4px 0 10px">Typical Melbourne examples for 2026. A Tasker can offer more or less. These are not quotes.</p>
   <div class="popular">${POPULAR.map(([k,name,range])=>`<button class="card" data-a="post" data-v="${k}"><span class="typical">Typical</span><b>${esc(name)}</b><span class="price">${esc(range)}</span></button>`).join('')}</div>
   ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
@@ -871,7 +875,7 @@ post(a){
   <textarea id="pt" data-in="text" placeholder="${esc(PH[cat||'all']||PH.all)}" aria-label="Describe your task">${esc(S.draft.text)}</textarea>
   <p class="muted small" style="margin:14px 0 8px">Price</p>
   <div class="chips">${chip('Request quotes',S.draft.budgetMode!=='set','data-a="bmode" data-v="open"')}${chip('Fixed price',S.draft.budgetMode==='set','data-a="bmode" data-v="set"')}</div>
-  ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Your price</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="0"></div>`:`<p class="muted small" style="margin-top:8px">Taskers send a fixed price. You choose.</p>`}
+  ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Your price</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="0"></div><button class="btn secondary" style="margin-top:10px" data-a="stages">${S.draft.stagesOn?'Payment stages on':'Split the price into two stages'}</button>${S.draft.stagesOn?`<label class="f" for="stage1">Stage 1 amount</label><div class="money"><span class="cur">$</span><input id="stage1" type="number" inputmode="decimal" data-in="stage1" min="1" value="${esc(S.form.stage1||'')}"></div><label class="f" for="stage2">Stage 2 amount</label><div class="money"><span class="cur">$</span><input id="stage2" type="number" inputmode="decimal" data-in="stage2" min="1" value="${esc(S.form.stage2||'')}"></div><p class="muted small">The two stages need to add up to your price. Each stage stays held until that part is done.</p>`:''}`:`<p class="muted small" style="margin-top:8px">Taskers send a fixed price. You choose.</p>`}
   ${cat&&CATS[cat]&&CATS[cat].guide?`<p class="muted small" style="margin-top:6px">${esc(CATS[cat].guide)}</p>`:''}
   ${photoDrop('postPhoto','Add photos')}
   ${(S.draft.photos||[]).length?`<div class="thumbs">${S.draft.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Your photo"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmPostPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
@@ -973,6 +977,7 @@ confirm(){
   return{title:'Confirm task',html:`
   <div class="card">${kv('Task',esc(t.title))}${kv('Tasker',esc(o.name))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Time',o.when.split(', ')[1])}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Agreed fee',money(o.fee))}${kv('Location','Exact address shown privately after confirmation')}</div>
   <h2>What you will pay</h2>${feeBox(o.fee,(TASKERS[o.name]||{}).gst)}
+  ${demoPayNote()}
   ${PROMISE}${isVacate()?'<div class="notice info" style="margin-top:10px"><b>Re-clean promise</b>If your agent\'s inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</div>':''}<button class="btn ghost" style="margin-bottom:6px" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>
   <button class="btn primary big" data-a="toPay">Accept and pay ${money(o.fee)}</button>`};
 },
@@ -984,7 +989,7 @@ pay(){
   <div class="card row"><div class="logo" style="background:var(--line);color:var(--ink)">${ic('wallet',16)}</div><div class="grow"><b>Visa ending 4242</b><p class="muted small">Demo card</p></div>${ic('check',18)}</div>
   <div class="notice info" style="margin-top:12px">Card details are handled by the payment provider. TaskSpeck does not store card numbers. Your payment is authorised now and released to ${esc(o.name)} after you confirm the task is done.</div>
   <button class="btn primary big" style="margin-top:16px" id="paybtn" data-a="pay">Pay ${money(o.fee)}</button>
-  <p class="muted small center" style="margin-top:10px">Prototype: no real payment is taken.</p>`};
+  ${demoPayNote()}`};
 },
 agreement(){
   const t=S.task,o=chosen(),g=S.agreement;
@@ -1220,7 +1225,7 @@ find(){
 findTask(){
   PHOTO_REG.length=0;
   const t=getFindTask(S.findId);if(!t)return{title:'Task details',html:empty('search','Task not found','It may have been removed.')};
-  const sent=S.sent.find(x=>x.tid===t.id);
+  const sent=S.sent.find(x=>x.tid===t.id&&x.status!=='withdrawn');
   const openOnly=t.fromApi&&t.listingStatus==='Open';
   return{title:'Task details',html:`
   <div class="card"><h3 style="font-size:20px">${esc(t.title)}</h3><div class="wrap" style="margin:8px 0">${catPill(t.cat)}<span class="pill">${t.km} km away</span>${t.fromApi?`<span class="pill ${openOnly?'ok':'warn'}">${esc(t.listingStatus)}</span>`:''}</div>
@@ -1386,6 +1391,8 @@ function activeBlock(){
   const t=S.task,o=chosen();if(!o)return taskSummary(t)+`<div class="notice" style="margin-top:12px">The accepted offer is not on this screen yet. Open the task again in a moment.</div>`;
   const st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
   let h=taskSummary(t);
+  if(t.reviews&&t.reviews.length)h+=t.reviews.map(r=>`<div class="card" style="margin-top:12px"><span class="pill warn">Demo</span> <b>Review from ${esc(r.name||'a demo account')}</b><p style="margin:6px 0">${'★'.repeat(r.stars||0)}</p><p>${esc(r.text||'')}</p></div>`).join('');
+  if(S.payment)h+=demoPayNote();
   h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
   if(idx>=0)h+=`<div class="steps" aria-label="Progress" style="margin-top:14px">${STEPS.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div><p class="small"><b>${STEPS[idx][0]}</b>${f.onway&&st==='UPCOMING'&&!f.arrived?' · '+esc(o.name)+' is on the way':''}</p>`;
   if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','errands'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
@@ -1565,10 +1572,17 @@ async function publishTask(){
   stashCurrent();
   const when=startFrom(built);
   const priceNum=built.budget&&built.budget.type==='SET'?built.budget.amount:built.budget&&built.budget.type==='RANGE'?built.budget.min:null;
+  let milestones;
+  if(S.draft.stagesOn){
+    const a=Number(S.form.stage1),b=Number(S.form.stage2);
+    if(!(a>0&&b>0)){notify('Enter both stage amounts.');return}
+    if(priceNum&&Math.abs(a+b-priceNum)>1){notify('Stage amounts need to add up to the fixed price.');return}
+    milestones=[{title:'Stage 1',amount:a},{title:'Stage 2',amount:b}];
+  }
   let listingId=S.draft.listingId;
   try{
     if(!listingId){const d=await TaskAPI.draft(built.desc||built.text||'',null);listingId=d.task&&d.task.id}
-    const pub=await TaskAPI.publish(listingId,{text:built.desc,title:built.title,cat:built.cat,budgetLabel:built.budget&&built.budget.label,priceNum,startAt:when?when.toISOString():null,startMin:built.startMin,durationMin:built.duration&&built.duration.min,suburb:'Melbourne CBD',address:S.form.addr||'',prop:built.prop||'',photoCount:(built.photos||[]).length,notes:built.notes||[],special:built.special||[],answers:S.draft.answers||{}});
+    const pub=await TaskAPI.publish(listingId,{text:built.desc,title:built.title,cat:built.cat,budgetLabel:built.budget&&built.budget.label,priceNum,milestones,startAt:when?when.toISOString():null,startMin:built.startMin,durationMin:built.duration&&built.duration.min,suburb:(S.user&&S.user.suburb)||'Melbourne',address:S.form.addr||'',prop:built.prop||'',photoCount:(built.photos||[]).length,notes:built.notes||[],special:built.special||[],answers:S.draft.answers||{}});
     if(!pub.task)throw new Error('Could not publish listing');
     listingId=pub.task.id;
   }catch(e){
@@ -1592,7 +1606,8 @@ const A={
  async joinWait(){const data=await api('/api/waitlist',{method:'POST',body:{email:S.user&&S.user.email,suburb:S.user&&S.user.suburb,name:S.user&&S.user.name}});notify(data.error||(data.already?'You are already on the waitlist.':'You are on the waitlist. We will email you when your suburb opens.'))},
  demoToggle(){S.demoMode=!S.demoMode;if(S.user)api('/api/auth/profile',{method:'PATCH',body:{demoMode:S.demoMode}}).then(d=>{if(d.user)S.user=d.user}).catch(()=>{});if(!S.demoMode)S.offers=(S.offers||[]).filter(o=>!o.demo);else if(S.task&&['POSTED','OFFERS_RECEIVED'].includes(S.task.status))scheduleOffers();render()},
  ex(v){const[i,c]=v.split('|');S.draft.text=EX[c][+i];queueDraftSave();render()},
- bmode(v){S.draft.budgetMode=v;S.draft.budgetTouched=true;render()},
+ bmode(v){S.draft.budgetMode=v;S.draft.budgetTouched=true;if(v!=='set')S.draft.stagesOn=false;render()},
+ stages(){S.draft.stagesOn=!S.draft.stagesOn;const total=Math.round(parseFloat(S.draft.budgetAmt)||0);if(S.draft.stagesOn&&total>1){const a=Math.round(total/2);S.form.stage1=String(a);S.form.stage2=String(total-a)}render()},
  analyse(){
    const t=(S.draft.text||'').trim();
    if(t.length<8){notify('Add a few more words about the job.');return}
@@ -1818,6 +1833,7 @@ const A={
  asave(){TaskAPI.settings({avail:S.avail}).catch(()=>{});back();notify('Availability saved.')},
  avail(){go('avail')},
  authMode(v){S.authMode=v;S.form.password='';render()},
+ fillDemo(v){const acc=(S.demoInfo&&S.demoInfo.accounts||[]).find(a=>a.email===v);if(!acc)return;S.form.email=acc.email;S.form.password=acc.password;S.authMode='login';render()},
  async doLogin(){
    const data=await api('/api/auth/login',{method:'POST',body:{email:S.form.email||'',password:S.form.password||''}});
    if(data.error){notify(data.error);return}
@@ -1956,6 +1972,8 @@ async function boot(){
     try{const r=await fetch('/api/shares/'+encodeURIComponent(share));S.shareData=await r.json()}catch(e){S.shareData={error:'Could not load this record'}}
     render();return;
   }
+  try{const demo=await fetch('/api/demo');if(demo.ok)S.demoInfo=await demo.json()}catch(e){}
+  S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);
   try{
     const r=await fetch('/api/auth/me',{credentials:'same-origin'});
     if(r.ok){const data=await r.json();if(data.user)applyWorkspace(data)}

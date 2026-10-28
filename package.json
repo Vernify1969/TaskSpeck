@@ -4,14 +4,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "demo": "node scripts/run-demo.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test --test-concurrency=1 server/api.test.js"
+    "test": "node --test --test-concurrency=1 server/api.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "vite": "^6.0.0"
   }
 }

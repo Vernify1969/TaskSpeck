@@ -2,3 +2,7 @@ node_modules/
 data/store.json
 data/tasks.json
 data/notifications.log
+data/demo/
+data/e2e/
+test-results/
+playwright-report/

@@ -280,6 +280,7 @@ export function publicUser(user) {
     lng: user.lng ?? null,
     cityId: user.cityId || '',
     demoMode: !!user.demoMode,
+    safetyGuide: !!user.safetyGuide,
     launch: launchForUser(user),
     bio: user.bio || '',
     areas: user.areas || '',
@@ -350,7 +351,7 @@ function isParty(task, user) {
 function splitPay(gross) {
   const fee = Math.round(gross * FEE_PCT) / 100;
   const tasker = Math.round((gross - fee) * 100) / 100;
-  return { gross, fee, tasker, status: 'AUTHORISED', callout: 0, partial: null };
+  return { gross, fee, tasker, status: 'AUTHORISED', callout: 0, partial: null, demo: process.env.TASKSPECK_DEMO === '1' };
 }
 
 function hoursUntilStart(task, now) {
@@ -471,6 +472,11 @@ export function publicTask(task, viewer) {
     bundle: task.requesterId === viewer?.id || isAcceptedTasker(task, viewer) ? task.bundle || null : null,
     notes: task.notes || [],
     special: task.special || [],
+    reviews: store.reviews.filter((r) => r.taskId === task.id).map((r) => ({
+      stars: r.stars,
+      text: r.text,
+      name: findUserAny(r.fromUserId)?.name || 'Demo',
+    })),
   };
 }
 
@@ -592,6 +598,7 @@ export function updateProfile(user, patch = {}) {
     user.cityId = hit.cityId;
   }
   if (patch.demoMode != null) user.demoMode = !!patch.demoMode;
+  if (patch.safetyGuide != null) user.safetyGuide = !!patch.safetyGuide;
   if (patch.notif && typeof patch.notif === 'object') {
     user.notif = { ...defaultNotif(), ...user.notif, ...pickBool(patch.notif, ['offers', 'messages', 'reminders', 'nearby', 'email', 'sms']) };
   }

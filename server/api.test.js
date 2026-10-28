@@ -531,6 +531,18 @@ test('events and hosting tasks are stored as Other, and packing stays its own ca
   assert.equal(again.savedSearches[0].cat, 'other');
 });
 
+test('demo logins stay hidden unless demo mode is on', async () => {
+  const { demoPublic } = await import('./demoAccounts.js?hidden=1');
+  const previous = process.env.TASKSPECK_DEMO;
+  delete process.env.TASKSPECK_DEMO;
+  assert.deepEqual(demoPublic(), { enabled: false, accounts: [] });
+  process.env.TASKSPECK_DEMO = '1';
+  assert.equal(demoPublic().accounts.length, 4);
+  assert.equal(demoPublic().accounts[0].password, 'demo-help-2026');
+  if (previous == null) delete process.env.TASKSPECK_DEMO;
+  else process.env.TASKSPECK_DEMO = previous;
+});
+
 test('Google and Apple sign-in are present but not required', () => {
   const providers = listAuthProviders();
   assert.equal(providers.find((p) => p.id === 'password').enabled, true);
