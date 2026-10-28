@@ -3,6 +3,7 @@ import path from 'path';
 import { hashPassword, verifyPassword, newSessionToken, hashToken } from './auth.js';
 import { deliver } from './notify.js';
 import { prohibitedReason, highRiskAnswer } from './safety.js';
+import { registeredWorkReason } from '../shared/registeredWork.js';
 import {
   resolveSuburb as resolveKnownSuburb,
   searchSuburbs,
@@ -922,6 +923,17 @@ export async function publishListing(id, meta = {}, user) {
   const nextText = meta.text != null ? String(meta.text) : row.text;
   const blocked = prohibitedReason(nextText) || highRiskAnswer(meta.answers || {});
   if (blocked) return { error: blocked, code: 400 };
+  const nextCat = meta.cat != null ? String(meta.cat) : row.cat;
+  const nextTitle = meta.title != null ? String(meta.title) : row.title;
+  const overLimit = registeredWorkReason(
+    { cat: nextCat, text: `${nextTitle || ''} ${nextText || ''}`, title: nextTitle },
+    {
+      priceNum: meta.priceNum != null && meta.priceNum !== '' ? meta.priceNum : row.priceNum,
+      budgetLabel: meta.budgetLabel != null ? meta.budgetLabel : row.budgetLabel,
+      milestones: Array.isArray(meta.milestones) ? meta.milestones : row.milestones,
+    },
+  );
+  if (overLimit) return { error: overLimit, code: 400 };
 
   const wasLive = row.published && (row.stage === 'POSTED' || row.stage === 'OFFERS_RECEIVED' || row.status === 'Open');
   const located = applyMeta(row, meta, user);
@@ -955,6 +967,11 @@ export async function placeBid(id, { taskerName, fee, message } = {}, user) {
   }
   const amount = Number(fee);
   if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) return { error: 'Enter a price above $0.', code: 400 };
+  const overLimit = registeredWorkReason(
+    { cat: row.cat, text: `${row.title || ''} ${row.text || ''}`, title: row.title },
+    { fee: amount },
+  );
+  if (overLimit) return { error: overLimit, code: 400 };
 
   const demoName = String(taskerName || '').trim();
   const asDemo = user.id === row.requesterId && DEMO_TASKERS.has(demoName);
@@ -1017,6 +1034,11 @@ export function updateBid(bidId, { fee, message } = {}, user) {
   if (fee != null) {
     const amount = Number(fee);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) return { error: 'Enter a price above $0.', code: 400 };
+    const overLimit = registeredWorkReason(
+      { cat: task.cat, text: `${task.title || ''} ${task.text || ''}`, title: task.title },
+      { fee: amount },
+    );
+    if (overLimit) return { error: overLimit, code: 400 };
     bid.fee = amount;
   }
   if (message != null) bid.message = String(message).slice(0, 1000);
@@ -1070,6 +1092,11 @@ export async function acceptBid(taskId, { bidId, taskerName, fee } = {}, user) {
   if (!bid || bid.status !== 'pending') {
     return { error: 'No pending offer matches that Tasker. It may have been withdrawn. Refresh and try again.', code: 404 };
   }
+  const overLimit = registeredWorkReason(
+    { cat: row.cat, text: `${row.title || ''} ${row.text || ''}`, title: row.title },
+    { fee: bid.fee, priceNum: row.priceNum, budgetLabel: row.budgetLabel, milestones: row.milestones },
+  );
+  if (overLimit) return { error: overLimit, code: 400 };
 
   bid.status = 'accepted';
   bid.updatedAt = iso();

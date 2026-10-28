@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>TaskSpeck prototype</title>
+<title>TaskSpeck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --canvas:#D3DCD7; --bg:#EEF2EF; --surface:#FFFFFF; --ink:#15201C; --muted:#5B6863; --line:#D9E1DD;
@@ -34,7 +34,7 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
-body{background:var(--canvas);color:var(--ink);font:16px/1.45 'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;align-items:center;-webkit-font-smoothing:antialiased}
+body{background:var(--canvas);color:var(--ink);font:16px/1.5 'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;align-items:center;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;text-align:left}
 input,textarea,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--brand);outline-offset:2px}
@@ -42,38 +42,44 @@ input,textarea,select{font:inherit;color:inherit}
 @media (min-width:500px){#app{height:min(900px,calc(100% - 32px));border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.25)}}
 .top{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:14px 16px 8px;flex:none}
 .logo{width:28px;height:28px;border-radius:9px;background:var(--gold);color:var(--on-gold);display:grid;place-items:center}
-.wordmark{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:21px;letter-spacing:-.02em;flex:1}
+.wordmark{font-weight:800;font-size:21px;letter-spacing:-.03em;flex:1;white-space:nowrap}
 .seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
 .seg button{padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
 .iconbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line)}
-.ttl{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+.ttl{font-weight:800;font-size:19px;letter-spacing:-.02em}
 #view{flex:1;overflow-y:auto;padding:8px 16px 28px;-webkit-overflow-scrolling:touch}
-.display{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:33px;line-height:1.04;letter-spacing:-.03em;margin:10px 0 16px}
-h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:20px;letter-spacing:-.015em;margin:22px 0 10px}
+.display{font-weight:800;font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.035em;margin:8px 0 12px}
+h2{font-weight:800;font-size:22px;letter-spacing:-.02em;margin:28px 0 12px}
 h3{font-size:16px;font-weight:700}
 .muted{color:var(--muted)} .small{font-size:13px} .center{text-align:center}
 .stack>*+*{margin-top:12px}
 .row{display:flex;align-items:center;gap:12px} .grow{flex:1;min-width:0}
 .wrap{display:flex;flex-wrap:wrap;gap:6px 14px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 20px;border-radius:14px;font-weight:700;width:100%;text-align:center;border:2px solid transparent}
-.btn.primary{background:var(--gold);color:var(--on-gold)}
+.btn.primary{background:var(--gold);color:var(--on-gold);box-shadow:0 8px 18px color-mix(in srgb,var(--gold) 45%,transparent)}
+.btn{transition:transform .12s ease,filter .12s ease,box-shadow .12s ease,background .12s ease}
+.btn.primary:hover{filter:brightness(1.04)}
+.btn.primary:active{transform:translateY(1px)}
+.btn.secondary:hover{border-color:var(--brand)}
 .btn.big{min-height:58px;font-size:18px}
 .btn.secondary{background:var(--surface);border-color:var(--line)}
 .btn.ghost{color:var(--brand);min-height:44px}
 .btn.danger{background:var(--bad-bg);color:var(--bad-ink)}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
 .btn+.btn{margin-top:10px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:block;width:100%}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:block;width:100%;box-shadow:0 8px 24px rgba(21,32,28,.04)}
 button.card{text-align:left}
 .card.dim{opacity:.55}
 .ask{width:100%;text-align:left;background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:16px;color:var(--muted);margin-bottom:12px;min-height:76px}
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;justify-content:center}
-.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.cat{background:hsl(var(--h) var(--tint-s) var(--tint-l));border-radius:16px;padding:10px 6px;text-align:center;font-size:14px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:8px;aspect-ratio:1/1;min-height:0;justify-content:center;width:100%}
-.cat .em{font-size:32px;line-height:1}
-.cat svg{color:var(--ink)}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 8px 12px;text-align:center;font-size:13.5px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:124px;justify-content:flex-start;width:100%;box-shadow:0 8px 20px rgba(21,32,28,.05)}
+.cat .ico{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:hsl(var(--h) var(--tint-s) var(--tint-l));color:var(--brand);flex:none}
+.cat .ico svg{width:22px;height:22px;display:block}
+.cat .em{display:none}
+.cat svg{color:var(--brand)}
 .brand{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .brandtext{display:flex;flex-direction:column;min-width:0}
 .tagline{font-size:11px;font-weight:650;color:var(--muted);line-height:1.2}
@@ -129,8 +135,8 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .kv:last-child{border-bottom:0}
 .kv span{color:var(--muted)} .kv b{text-align:right;font-weight:600}
 .kv b.none{color:var(--muted);font-weight:500}
-.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#15201C;flex:none;font-family:'Bricolage Grotesque',system-ui,sans-serif}
-.fee{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#15201C;flex:none}
+.fee{font-weight:800;font-size:26px;letter-spacing:-.03em}
 .quote{margin-top:8px;color:var(--muted);font-size:14.5px}
 .notice{border-radius:14px;padding:12px 14px;font-size:14px;background:var(--warn-bg);color:var(--warn-ink)}
 .notice.ok{background:var(--ok-bg);color:var(--ok-ink)} .notice.bad{background:var(--bad-bg);color:var(--bad-ink)} .notice.info{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
@@ -151,10 +157,10 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .stars button.on{color:var(--gold)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat{background:var(--bg);border-radius:12px;padding:10px 12px}
-.stat b{display:block;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:20px;font-weight:800}
+.stat b{display:block;font-size:20px;font-weight:800}
 .stat span{font-size:12.5px;color:var(--muted)}
-.empty{text-align:center;padding:40px 20px;color:var(--muted)}
-.empty .big{font-size:40px;margin-bottom:8px}
+.empty{text-align:center;padding:48px 24px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:20px}
+.empty .big{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 12%,var(--surface));color:var(--brand);font-size:28px}
 .dots span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin:0 3px;animation:b 1.2s infinite}
 .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
 @keyframes b{0%,80%,100%{opacity:.25}40%{opacity:1}}
@@ -164,7 +170,7 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .tog[aria-pressed="true"] .sw{background:var(--brand)} .tog[aria-pressed="true"] .sw::after{transform:translateX(18px)}
 #nav{display:flex;flex:none;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px 8px}
 #nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:12px;font-weight:700;color:var(--muted);border-radius:12px;min-height:52px;justify-content:center}
-#nav button[aria-current="page"]{color:var(--brand)}
+#nav button[aria-current="page"]{color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,transparent);box-shadow:inset 0 -2px 0 var(--gold)}
 #sheetHost{position:absolute;inset:0;z-index:20;display:none}
 #sheetHost.open{display:block}
 .back{position:absolute;inset:0;background:rgba(10,18,14,.5)}
@@ -187,7 +193,7 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .leaflet-pin{background:var(--surface);border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:16px;width:36px!important;height:36px!important;box-shadow:0 2px 6px rgba(0,0,0,.28)}
 .leaflet-container{font:inherit;background:var(--surface)}
 .leaflet-container a{color:var(--brand)}
-.map svg{position:absolute;inset:0;width:100%;height:100%}
+.map>svg{position:absolute;inset:0;width:100%;height:100%}
 .map .st{stroke:var(--line);stroke-width:.35;fill:none}
 .map .riv{stroke:var(--brand);stroke-opacity:.25;stroke-width:3.4;fill:none;stroke-linecap:round}
 .map .ring{stroke:var(--muted);stroke-opacity:.5;stroke-width:.3;stroke-dasharray:1.2 1.2;fill:none}
@@ -203,7 +209,75 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
 .card.lift{box-shadow:0 4px 14px rgba(0,0,0,.06)}
 #nav button{transition:background .12s ease,color .12s ease}
 #nav button[aria-current="page"]{background:color-mix(in srgb,var(--brand) 12%,transparent)}
-.hero-band{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 18%,var(--surface)),var(--surface));border:1px solid var(--line);border-radius:20px;padding:18px 16px;margin:4px 0 14px}
+.lede{font-size:17px;color:var(--muted);max-width:42ch;margin:0}
+.post-card{position:relative;z-index:1;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 18px 40px rgba(14,90,75,.14)}
+.post-card .ask{margin:0 0 10px;border-color:var(--line);min-height:64px}
+.post-card .btn{margin-top:0}
+.trust{display:grid;gap:10px;margin:0 0 6px}
+.trust .perk{align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 8px 20px rgba(21,32,28,.04);font-weight:600}
+.trust .perk b{display:block;font-weight:800}
+.illu{width:min(100%,300px);height:auto;display:block}
+.illu .g{fill:var(--brand)}
+.illu .y{fill:var(--gold)}
+.illu .s{fill:var(--surface)}
+.illu .line{stroke:var(--brand);fill:none;stroke-width:3;stroke-linecap:round}
+.subbar{display:flex;align-items:center;gap:10px;padding:0 16px 8px}
+@media (max-width:959px){
+  #top:has(.subbar) .top{display:none}
+  #top:has(.subbar) .subbar{padding-top:14px}
+}
+.hero{position:relative;overflow:hidden;display:grid;gap:16px;background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 18%,var(--surface)),var(--surface) 52%,color-mix(in srgb,var(--gold) 34%,var(--surface)));border:1px solid var(--line);border-radius:28px;padding:22px 18px 18px;margin:4px 0 18px;box-shadow:0 16px 40px rgba(14,90,75,.08)}
+.hero::before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;right:-40px;top:-50px;background:color-mix(in srgb,var(--gold) 55%,transparent);pointer-events:none}
+.hero::after{content:"";position:absolute;width:120px;height:120px;border-radius:40px;right:36px;bottom:-36px;background:color-mix(in srgb,var(--brand) 18%,transparent);transform:rotate(18deg);pointer-events:none}
+.hero-copy,.hero-art{position:relative;z-index:1}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:6px}
+.hero-art{display:flex;justify-content:center}
+.hero-art svg{width:min(100%,280px);height:auto}
+.ask{box-shadow:0 10px 24px rgba(21,32,28,.06)}
+.how{display:grid;grid-template-columns:1fr;gap:10px}
+.how article{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 8px 20px rgba(21,32,28,.04)}
+.how b{display:block;margin:6px 0 2px}
+.how .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--on-gold);font-weight:800;font-size:13px}
+.popular{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.popular button{text-align:left}
+.popular .price{color:var(--brand);font-weight:800;font-size:14px}
+.popular .typical{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
+.popular button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:112px}
+.site-foot{display:none}
+.desk-nav{display:none}
+@media (hover:hover){
+  .cat:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(21,32,28,.1)}
+  button.card:hover{box-shadow:0 12px 28px rgba(21,32,28,.08)}
+}
+@media (min-width:960px){
+  body{display:block;background:var(--bg);align-items:stretch}
+  #app{max-width:1120px;width:100%;height:auto;min-height:100%;max-height:none;margin:0 auto;border-radius:0;box-shadow:none;overflow:visible}
+  #view{overflow:visible;padding:8px 32px 48px}
+  #nav{display:none!important}
+  .top{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);padding:16px 32px;gap:16px}
+  .top .seg{flex:0 0 auto;order:3}
+  .desk-nav{display:flex;gap:4px;order:2}
+  .desk-nav button{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px;color:var(--muted)}
+  .desk-nav button[aria-current="page"]{background:color-mix(in srgb,var(--brand) 12%,var(--surface));color:var(--brand)}
+  .hero{grid-template-columns:1.15fr .85fr;align-items:center;padding:36px 36px 28px;min-height:340px}
+  .hero .post-card{grid-column:1 / -1}
+  .how{grid-template-columns:repeat(3,1fr)}
+  .trust{grid-template-columns:repeat(3,1fr)}
+  .popular{grid-template-columns:repeat(4,1fr)}
+  .cats{grid-template-columns:repeat(5,1fr)}
+  .read{max-width:720px}
+  #fres .stack{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  #fres .stack>*+*{margin-top:0}
+  .map{aspect-ratio:16/9;max-height:520px}
+  .brand{order:1;flex:0 1 auto}
+  .desk-nav{order:2;margin-right:auto}
+  .top .seg{order:3}
+  .top-actions{order:4}
+  .subbar{padding:0 32px 12px}
+  .auth-card{max-width:440px;margin:40px auto;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 16px 40px rgba(14,90,75,.08)}
+  .site-foot{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:22px 32px 28px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+  .site-foot b{color:var(--ink)}
+}
 </style>
 </head>
 <body>
@@ -211,13 +285,16 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   <header id="top"></header>
   <main id="view"></main>
   <nav id="nav" aria-label="Main"></nav>
+  <footer class="site-foot"><div><b>TaskSpeck</b> · Fair help, no booking fee</div><div>Everyday unlicensed jobs around inner Melbourne. Licensed trades are not offered.</div></footer>
   <div id="sheetHost"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
 <script type="module">
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { registeredWorkReason } from './shared/registeredWork.js';
 window.L = L;
+window.registeredWorkReason = registeredWorkReason;
 </script>
 <script>
 /* ---------- helpers ---------- */
@@ -275,13 +352,13 @@ const IC={
 const ic=(n,s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 const CATS={
  cleaning:{name:'Cleaning',em:'',h:185,base:200,guide:'A small clean is often a few hundred dollars. A whole home or several days costs more. Taskers set the price.'},
- furniture:{name:'Assembly',em:'',h:45,base:150,guide:'A single flat-pack is a smaller job. A house full of assembly costs more.'},
- moving:{name:'Removals',em:'',h:345,base:250,guide:'A few boxes is a small job. A whole move, including multi-day work, is priced by the Tasker.'},
+ furniture:{name:'Assembly',em:'',h:45,base:150,guide:'A single flat-pack is a smaller job. A house full of assembly costs more. Assembly over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs.'},
+ moving:{name:'Moving help',em:'',h:345,base:250,guide:'A few boxes is a small job. A whole move, including multi-day work, is priced by the Tasker.'},
  errands:{name:'Pickup & delivery',em:'',h:215,base:80,guide:'A quick pickup is small. A day of deliveries costs more.'},
  rubbish:{name:'Hard rubbish',em:'',h:100,base:180,guide:'A few items is a small load. A full clearance costs more. Hazardous waste is not allowed.'},
- home:{name:'Handyman',em:'',h:255,base:200,guide:'Small repairs vary. Larger unlicensed jobs can run to several days. Licensed trades are not offered.'},
+ home:{name:'Handyman',em:'',h:255,base:200,guide:'Small repairs vary. Larger unlicensed jobs can run to several days. Handyman work over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Licensed trades are not offered.'},
  garden:{name:'Gardening',em:'',h:120,base:160,guide:'A tidy-up is smaller. A big garden over several days costs more. Tree removal with a chainsaw is not offered.'},
- painting:{name:'Painting',em:'🖌️',h:30,base:400,guide:'One room is smaller. Several rooms or days cost more. Wet-area waterproofing is licensed and not offered.'},
+ painting:{name:'Painting',em:'',h:30,base:400,guide:'One room is smaller. Several rooms or days cost more. Painting over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Wet-area waterproofing is licensed and not offered.'},
  events:{name:'Events',em:'🎈',h:300,base:200,guide:'Help for a party or setup. Price depends on the hours and the crew.'},
  office:{name:'Office help',em:'🏢',h:210,base:180,guide:'A one-off office job. Shifts and ongoing staffing are not offered.'},
  tech:{name:'Tech setup',em:'💻',h:230,base:120,guide:'Setting up devices you already own. Electrical and TV mounting are not offered.'},
@@ -293,6 +370,8 @@ const CATS={
 };
 const FINAL=Object.keys(CATS);
 const HOME_CATS=['garden','furniture','painting','moving','cleaning','home','errands','rubbish','other'];
+const POPULAR=[['cleaning','End-of-lease clean','$180–$400'],['furniture','Furniture assembly','$80–$250'],['garden','Garden tidy','$70–$220'],['rubbish','Hard rubbish pickup','$120–$350']];
+function heroArt(){return `<svg class="illu" viewBox="0 0 320 210" role="img" aria-label="Illustration of a helper with a box and a plant"><rect class="g" x="18" y="168" width="284" height="14" rx="7" opacity=".15"/><rect class="g" x="54" y="86" width="118" height="82" rx="18"/><rect class="y" x="72" y="104" width="82" height="46" rx="10"/><circle class="y" cx="214" cy="78" r="26"/><rect class="g" x="200" y="102" width="28" height="52" rx="12"/><path class="line" d="M176 168c18-26 46-26 66 0"/><rect class="s" x="248" y="118" width="40" height="46" rx="10" stroke="var(--brand)" stroke-width="3"/><path class="g" d="M268 118c-8-26 6-44 0-62 16 16 20 38 0 62z"/></svg>`}
 const RADII=[5,10,25,50];
 const CAT_ICON={
  garden:'<path d="M12 22v-8"/><path d="M12 14c0-5-5-6-7-4 2 4 4 4 7 4z"/><path d="M12 14c0-5 5-6 7-4-2 4-4 4-7 4z"/><path d="M8 22h8"/>',
@@ -303,18 +382,18 @@ const CAT_ICON={
  home:'<path d="M14 7l3 3"/><path d="M4 20l8-8 3 3-8 8H4v-3z"/><path d="M12 12l2-2"/>',
  errands:'<path d="M6 7h15l-1.5 9h-12z"/><path d="M6 7L5 4H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
  rubbish:'<path d="M5 8h14"/><path d="M8 8V6h8v2"/><path d="M7 8l1 12h8l1-12"/>',
- events:'<path d="M12 3v3"/><path d="M5 8h14v4a7 7 0 0 1-14 0z"/><path d="M12 19v2"/>',
+ events:'<path d="M12 3v2"/><path d="M8 7h8"/><path d="M7 7c0 5 2 8 5 8s5-3 5-8"/><path d="M12 15v3"/><path d="M9 21h6"/>',
  office:'<path d="M4 20V6h10v14"/><path d="M14 10h6v10"/><path d="M8 10h2M8 14h2"/>',
  tech:'<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4"/>',
  pets:'<circle cx="8" cy="9" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="6" cy="14" r="1.6"/><circle cx="18" cy="14" r="1.6"/><path d="M9 18c1 2 5 2 6 0"/>',
- hosting:'<path d="M8 11V7a4 4 0 0 1 8 0v4"/><rect x="5" y="11" width="14" height="9" rx="2"/>',
+ hosting:'<circle cx="8" cy="14" r="3"/><path d="M11 14h8"/><path d="M16 14v3"/><path d="M19 14v2"/>',
  admin:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
  labour:'<path d="M8 13a4 4 0 1 1 8 0"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
  other:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
 };
 function catIcon(k,s=22){const d=CAT_ICON[k]||CAT_ICON.other;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`}
 const catPill=k=>{const c=CATS[k]||CATS.other;return `<span class="pill c" style="--h:${c.h}">${catIcon(k,14)} ${esc(c.name)}</span>`};
-function catGrid(keys){return keys.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}">${catIcon(k,28)}<span class="lbl">${esc(CATS[k].name)}</span></button>`).join('')}
+function catGrid(keys){return keys.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="ico">${catIcon(k,22)}</span><span class="lbl">${esc(CATS[k].name)}</span></button>`).join('')}
 function photoDrop(name,label){return `<label class="drop">${ic('camera',28)}<b>${esc(label)}</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" multiple data-in="${name}" aria-label="${esc(label)}"></label>`}
 const avatar=(n,s=44)=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return `<div class="avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 70% 82%)">${esc(n[0])}</div>`};
 const chip=(l,on,attr)=>`<button class="chip${on?' on':''}" aria-pressed="${!!on}" ${attr}>${esc(l)}</button>`;
@@ -327,7 +406,7 @@ const BLOCK=[
  [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit|air[\s-]?con|aircon|refrigerat/i,'This looks like electrical, air-conditioning or refrigeration work. '+LICENSED_MSG],
  [/\bgas\b/i,'This looks like gas work. '+LICENSED_MSG],
  [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i,'This looks like plumbing. '+LICENSED_MSG],
- [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos|renovat/i,'This looks like building, roofing or asbestos work. '+LICENSED_MSG],
+  [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos/i,'This looks like building, roofing or asbestos work. '+LICENSED_MSG],
  [/pest control|termite|pesticide/i,'Pest control that uses chemicals needs a licence. '+LICENSED_MSG],
  [/waterproof/i,'Waterproofing is licensed work. '+LICENSED_MSG],
  [/locksmith|rekey|re-key/i,'Locksmith work is licensed. '+LICENSED_MSG],
@@ -450,10 +529,11 @@ function evaluate(){
   if(a.haz==='Yes')return{risk:'HIGH_RISK',why:'Hazardous waste (chemicals, paint, gas bottles, asbestos or sharps) cannot be handled through TaskSpeck.'};
   if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'New cabling or wiring is licensed electrical work. '+LICENSED_MSG};
   if(a.hazard==='Yes')return{risk:'HIGH_RISK',why:'Restricted or hazardous items cannot be handled through TaskSpeck.'};
-  const trade=/tile|tiling|plaster|paint|patch|grout/i.test(p.text);
-  const top=p.budget&&p.budget.type==='SET'?p.budget.amount:p.budget&&p.budget.type==='RANGE'?p.budget.max:0;
-  if(trade&&top>10000)return{risk:'PROHIBITED',why:'In Victoria, this size of building work needs a registered builder. '+LICENSED_MSG};
-  if(trade&&a.trades==='Yes, more than one'&&top>10000)return{risk:'PROHIBITED',why:'Combining trades at this size can need a registered builder. '+LICENSED_MSG};
+  if(window.registeredWorkReason){
+    const amount=p.budget&&p.budget.type==='SET'?p.budget.amount:p.budget&&p.budget.type==='RANGE'?p.budget.max:0;
+    const why=window.registeredWorkReason({cat:p.cat,text:(p.title||'')+' '+(p.text||''),title:p.title},{priceNum:amount,budgetLabel:p.budget&&p.budget.label});
+    if(why)return{risk:'PROHIBITED',why};
+  }
   if(a.perm==='No, not sure')return{risk:'REVIEW_REQUIRED',why:'In an apartment, drilling or fixing to walls usually needs permission from the owner or owners corporation.'};
   if(a.furn==='No'||a.heavy==='Yes')return{risk:'REVIEW_REQUIRED',why:rv};
   const notes=[];
@@ -657,11 +737,15 @@ function root(n){S.stack=[{n}];render()}
 function back(){if(S.stack.length>1)S.stack.pop();render()}
 let toastT;
 function notify(msg){S.notifs.unshift({m:msg,t:clock()});if(S.notifs.length>50)S.notifs.pop();const t=$('#toast');t.textContent=msg;t.className='show';clearTimeout(toastT);toastT=setTimeout(()=>{t.className=''},4200)}
-function topRoot(){
+function topRoot(backTitle){
   const unread=Math.max(0,S.notifs.length-S.notifSeen);
+  const items=S.mode==='requester'?[['home','Home','home'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']]:[['find','Find Tasks','search'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']];
+  const cur=S.stack[0].n;
+  const desk=items.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" ${cur===k&&!backTitle?'aria-current="page"':''}>${ic(i,16)}<span>${l}</span></button>`).join('');
   return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee</span></span></div>
+  <nav class="desk-nav" aria-label="Sections">${desk}</nav>
   <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
-  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>`;
+  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}`;
 }
 const topBack=t=>`<div class="top"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(t||'')}</div></div>`;
 function navHtml(){
@@ -674,7 +758,7 @@ function renderAuth(){
   $('#sheetHost').innerHTML='';$('#sheetHost').className='';
   $('#top').innerHTML=`<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span></div>`;
   const mode=S.authMode||'login';
-  $('#view').innerHTML=`
+  $('#view').innerHTML=`<div class="auth-card">
     <h1 class="display" style="font-size:30px">${mode==='login'?'Welcome back':'Create your account'}</h1>
     <p class="muted">One account covers both sides. You can post tasks and make offers.</p>
     ${mode==='signup'?`<label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="name" autocomplete="name" value="${esc(S.form.name||'')}">`:''}
@@ -683,7 +767,7 @@ function renderAuth(){
     ${mode==='signup'?`<p class="muted small" style="margin-top:6px">At least 8 characters. We store a hash, not the password itself.</p><label class="f" for="ph">Phone (optional)</label><input id="ph" type="tel" data-in="phone" autocomplete="tel" value="${esc(S.form.phone||'')}">`:''}
     <button class="btn primary big" style="margin-top:16px" data-a="${mode==='login'?'doLogin':'doSignup'}">${mode==='login'?'Log in':'Create account'}</button>
     <button class="btn ghost" data-a="authMode" data-v="${mode==='login'?'signup':'login'}">${mode==='login'?'Need an account? Sign up':'Already have an account? Log in'}</button>
-    <p class="muted small" style="margin-top:14px">Google and Apple sign-in can be added later. They stay switched off until those keys are set, so you do not need them now.</p>`;
+    <p class="muted small" style="margin-top:14px">Google and Apple sign-in can be added later. They stay switched off until those keys are set, so you do not need them now.</p></div>`;
 }
 function renderShare(){
   $('#nav').style.display='none';
@@ -707,8 +791,8 @@ function render(){
   const isRoot=S.stack.length===1;
   const key=cur.n+JSON.stringify(cur.a||{})+S.stack.length;
   const v=$('#view'),keep=key===S.lastKey,y=v.scrollTop;
-  $('#top').innerHTML=isRoot?topRoot():topBack(def.title);
-  v.innerHTML=def.html;v.scrollTop=keep?y:0;S.lastKey=key;
+  $('#top').innerHTML=topRoot(isRoot?'':(def.title||''));
+  v.innerHTML=def.wide?def.html:`<div class="read">${def.html}</div>`;v.scrollTop=keep?y:0;S.lastKey=key;
   $('#nav').style.display=isRoot?'flex':'none';$('#nav').innerHTML=isRoot?navHtml():'';
   const h=$('#sheetHost');
   if(S.sheet){h.innerHTML=`<div class="back" data-a="close"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">${SHEETS[S.sheet.n](S.sheet.a||{})}</div>`;h.className='open';const sh=h.querySelector('.sheet');if(sh){sh.tabIndex=-1;sh.focus()}}
@@ -735,27 +819,43 @@ function feeBox(fee,gstOn){
   const f=calcFee(fee);
   return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="perk" style="margin-top:8px">${ic('wallet',18)} No booking fee. TaskSpeck's share comes from the Tasker.</p>`;
 }
-const empty=(em,t,s)=>`<div class="empty"><div class="big">${em}</div><h3 style="color:var(--ink)">${t}</h3><p style="margin-top:6px">${s}</p></div>`;
+const empty=(icon,t,s)=>`<div class="empty"><div class="big">${ic(icon,28)}</div><h3 style="color:var(--ink)">${t}</h3><p style="margin-top:6px">${s}</p></div>`;
 /* ---------- screens ---------- */
 const SCREENS={
 home(){
-  const t=S.task;
-  return{html:`
-  <div class="hero-band"><h1 class="display" style="margin:0;font-size:30px">What do you need help with?</h1><p class="muted small" style="margin:8px 0 0">Any size of everyday job. You choose the offer.</p></div>
-  ${S.user&&S.user.launch&&S.user.launch.open===false?`<div class="card" style="margin-bottom:12px"><h3>Coming soon to your area</h3><p class="muted small" style="margin-top:6px">TaskSpeck is open within ${esc(String(S.user.launch.radiusKm||10))} km of Melbourne CBD, around Flinders Street and Swanston Street. ${esc(S.user.suburb||'Your suburb')} is not open yet.</p><button class="btn primary" style="margin-top:10px" data-a="joinWait">Join the waitlist</button></div>`:''}
-  <button class="ask" data-a="post">Describe the job in your own words</button>
-  <button class="btn primary big" data-a="post">Post a task</button>
+  const soon=S.user&&S.user.launch&&S.user.launch.open===false;
+  return{wide:true,html:`
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Inner Melbourne</p>
+      <h1 class="display">Fair help, without a booking fee.</h1>
+      <p class="lede">Post an everyday job of any size. Nearby Taskers send a fixed price, and you pay only when the work is done.</p>
+    </div>
+    <div class="hero-art">${heroArt()}</div>
+    <div class="post-card">
+      ${soon?`<h3>Coming soon to your area</h3><p class="muted small" style="margin:6px 0 12px">TaskSpeck is open within ${esc(String(S.user.launch.radiusKm||10))} km of Melbourne CBD, around Flinders Street and Swanston Street. ${esc(S.user.suburb||'Your suburb')} is not open yet.</p><button class="btn primary" data-a="joinWait">Join the waitlist</button>`:`<button class="ask" data-a="post">Describe the job in your own words</button><button class="btn primary big" data-a="post">Post a task</button>`}
+    </div>
+  </section>
+  <div class="trust">
+    <div class="perk">${ic('wallet',22)}<span><b>No booking fee</b><span class="muted small">You pay the price you accept. TaskSpeck’s share comes from the Tasker.</span></span></div>
+    <div class="perk">${ic('shield',22)}<span><b>Payment held until done</b><span class="muted small">Money stays held until you confirm the job.</span></span></div>
+    <div class="perk">${ic('check',22)}<span><b>Checked Taskers</b><span class="muted small">Identity is checked before someone can take a job.</span></span></div>
+  </div>
+  <h2>How it works</h2>
+  <div class="how">
+    <article><span class="n">1</span><b>Post</b><span class="muted small">Describe the job and a price, or ask Taskers to quote.</span></article>
+    <article><span class="n">2</span><b>Get offers</b><span class="muted small">Taskers nearby send a fixed price. You choose who to book.</span></article>
+    <article><span class="n">3</span><b>Pay when done</b><span class="muted small">Your payment stays held until you confirm the work.</span></article>
+  </div>
+  <h2>Popular tasks</h2>
+  <p class="muted small" style="margin:-4px 0 10px">Typical ranges around inner Melbourne. A Tasker can offer more or less. These are not quotes.</p>
+  <div class="popular">${POPULAR.map(([k,name,range])=>`<button class="card" data-a="post" data-v="${k}"><span class="typical">Typical</span><b>${esc(name)}</b><span class="price">${esc(range)}</span></button>`).join('')}</div>
   ${myTaskList().length?`<h2>Your tasks</h2><div class="stack">${myTaskList().map(task=>`<button class="card" data-a="viewTask" data-v="${task.listingId||task.id}"><div class="row"><div class="grow"><h3>${esc(task.title||task.desc||'Task')}</h3><p class="muted small">${task===S.task&&(task.status==='POSTED'||task.status==='OFFERS_RECEIVED')?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(task)}</p></div>${statusPill(task.status)}</div></button>`).join('')}</div>`:''}
   ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
   <h2>What do you need?</h2>
   <div class="cats">${catGrid(HOME_CATS)}</div>
   <button class="btn secondary" style="margin-top:12px" data-a="seeCats">See all categories</button>
-  <div class="perks">
-    <div class="perk">${ic('wallet',20)} No booking fee for customers</div>
-    <div class="perk">${ic('shield',20)} Payment held until the job is done</div>
-    <div class="perk">${ic('check',20)} Checked Taskers</div>
-  </div>
-  <p class="muted small" style="margin-top:14px">${ic('shield',16)} Licensed work such as electrical, gas and plumbing is not offered.</p>
+  <p class="muted small" style="margin-top:14px">${ic('shield',16)} Licensed work such as electrical, gas and plumbing is not offered. Painting, handyman and assembly over $10,000 need a registered builder, so TaskSpeck can’t take those.</p>
   ${S.demoMode?'<p class="muted small center" style="margin-top:18px"><span class="pill warn">Demo</span> Sample people and prompts are turned on.</p>':''}`};
 },
 post(a){
@@ -776,7 +876,7 @@ post(a){
 allcats(){
   const q=(S.catQ||'').trim().toLowerCase();
   const list=FINAL.filter(k=>!q||CATS[k].name.toLowerCase().includes(q));
-  return{title:'All categories',html:`
+  return{title:'All categories',wide:true,html:`
   <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="catq" data-in="catQ" value="${esc(S.catQ||'')}" placeholder="Search categories" aria-label="Search categories" autocomplete="off"></div>
   <div class="cats" id="catgrid" style="margin-top:14px">${list.length?catGrid(list):'<p class="muted">No category matches. Licensed trades are not listed.</p>'}</div>
   <p class="muted small" style="margin-top:12px">Electrical, gas, plumbing and other licensed work are not offered.</p>`};
@@ -839,7 +939,7 @@ published(){
 },
 tasks(){return S.mode==='requester'?tasksReq():tasksTasker()},
 task(){
-  const t=S.task;if(!t)return{title:'Your task',html:empty('📋','No task yet','Post a task and it will show up here.')};
+  const t=S.task;if(!t)return{title:'Your task',html:empty('list','No task yet','Post a task and it will show up here.')};
   const st=t.status;
   if(st==='Draft')return{title:'Your task',html:taskSummary(t)+`<div class="notice" style="margin-top:12px"><b>Not published yet</b>This is still a draft. Run the safety check and publish it when you are ready.</div><button class="btn primary" style="margin-top:12px" data-a="post">Continue posting</button>`};
   if(st==='POSTED'||st==='OFFERS_RECEIVED'||st==='Open')return{title:'Your task',html:taskSummary(t)+offersBlock()};
@@ -904,7 +1004,7 @@ review(){
 turnarounds(){
   const props={};visibleHistory().forEach(h=>{(props[h.prop]=props[h.prop]||[]).push(h)});
   const names=Object.keys(props);
-  if(!names.length)return{title:'Job records',html:empty('📄','No job records yet','Completed jobs appear here with photos, checklists and costs.')};
+  if(!names.length)return{title:'Job records',html:empty('list','No job records yet','Completed jobs appear here with photos, checklists and costs.')};
   return{title:'Job records',html:`<p class="muted" style="margin-bottom:10px">A time-stamped record of each completed job: Tasker, photos, checklist and cost. Add a property or unit to a task to group jobs by property.</p><div class="stack">${names.map(n=>`<button class="card" data-a="turnaround" data-v="${esc(n)}"><div class="row"><div class="grow"><b>${esc(n)}</b><p class="muted small">${props[n].length} job${props[n].length>1?'s':''} · ${money(props[n].reduce((a,b)=>a+b.paid,0))}</p></div><span class="pill ok">Report</span></div></button>`).join('')}</div>`};
 },
 turnaround(){
@@ -982,7 +1082,7 @@ myprofile(){
   <button class="btn primary" style="margin-top:14px" data-a="seeMine">See how requesters see it</button>`};
 },
 receipts(){
-  return{title:'Receipts and invoices',html:S.receipts.length?`<p class="muted" style="margin-bottom:10px">One receipt for every paid job. Tax invoices show GST when the Tasker charges it.</p><div class="stack">${S.receipts.map((r,i)=>`<button class="card" data-a="receipt" data-v="${i}"><div class="row"><div class="grow"><b>${esc(r.title)}</b><p class="muted small">${esc(r.no)} · ${esc(r.date)} · ${esc(r.tasker)}</p></div><div class="fee" style="font-size:18px">${money(r.price+r.tip)}</div></div><span class="pill ${r.gst?'ok':''}" style="margin-top:6px">${r.gst?'Tax invoice':'Receipt'}</span></button>`).join('')}</div>`:empty('🧾','No receipts yet','A receipt appears here after each completed job.')};
+  return{title:'Receipts and invoices',html:S.receipts.length?`<p class="muted" style="margin-bottom:10px">One receipt for every paid job. Tax invoices show GST when the Tasker charges it.</p><div class="stack">${S.receipts.map((r,i)=>`<button class="card" data-a="receipt" data-v="${i}"><div class="row"><div class="grow"><b>${esc(r.title)}</b><p class="muted small">${esc(r.no)} · ${esc(r.date)} · ${esc(r.tasker)}</p></div><div class="fee" style="font-size:18px">${money(r.price+r.tip)}</div></div><span class="pill ${r.gst?'ok':''}" style="margin-top:6px">${r.gst?'Tax invoice':'Receipt'}</span></button>`).join('')}</div>`:empty('wallet','No receipts yet','A receipt appears here after each completed job.')};
 },
 receipt(){
   const r=S.receipts[S.recIdx]||S.receipts[0];if(!r)return{title:'Receipt',html:''};
@@ -1032,7 +1132,7 @@ earnings(){
 },
 payments(){
   const p=S.payment,t=S.task,o=(S.offerId&&chosen())||{name:'a Tasker'};
-  if(!p)return{title:'Payments',html:empty('💳','No payments yet','Payments appear here after you accept an offer.')+receiptsBtn()};
+  if(!p)return{title:'Payments',html:empty('wallet','No payments yet','Payments appear here after you accept an offer.')+receiptsBtn()};
   const lab={AUTHORISED:['Paid, awaiting completion','warn'],RELEASED:['Released to Tasker','ok'],REFUNDED:['Refunded','bad'],PART_REFUND:['Part refunded','warn'],PART_RELEASE:['Part released, part refunded','warn'],DISPUTED:['On hold, problem reported','bad']}[p.status];
   return{title:'Payments',html:`${receiptsBtn()}<div class="card"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">To ${esc(o.name)}</p></div><span class="pill ${lab[1]}">${lab[0]}</span></div>
   <div style="margin-top:8px">${p.status==='REFUNDED'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.gross)):p.status==='PART_RELEASE'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.partial.refund))+kv('Paid to Tasker after TaskSpeck fee',money(p.partial.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.partial.fee)):p.status==='PART_REFUND'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(Math.round((p.gross-p.callout)*100)/100))+kv('Call-out fee to Tasker',money(p.callout)):kv('Total paid',money(p.gross))+kv('Paid to Tasker after TaskSpeck fee',money(p.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.fee))}</div><p class="muted small" style="margin-top:8px">TaskSpeck's ${FEE_PCT}% comes out of the Tasker's price. You pay no booking fee.</p></div>`};
@@ -1041,10 +1141,10 @@ msgs(){
   const rows=[];
   if(S.thread&&S.task&&chosen()){const o=chosen(),last=S.thread[S.thread.length-1];rows.push(`<button class="card" data-a="openThread"><div class="row">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">Booked · ${esc(last?last.text:'Message')}</p></div></div></button>`)}
   (S.askThreads||[]).forEach((th,i)=>{const last=th.messages[th.messages.length-1];rows.push(`<button class="card" data-a="openAsk" data-v="${i}"><div class="row">${avatar(th.withName||'?')}<div class="grow"><b>${esc(th.withName||'Question')}</b><p class="muted small">${esc(th.title||'')} · ${esc(last?last.text:'Ask a question')}</p></div></div></button>`)});
-  return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+(rows.length?`<div class="stack">${rows.join('')}</div><p class="muted small" style="margin-top:10px">You can ask a question before anyone accepts. Please don’t swap phone numbers or pay cash.</p>`:empty('💬','No messages yet','Ask a question from a task, or chat here after you accept an offer. Phone numbers stay in the app.'))};
+  return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+(rows.length?`<div class="stack">${rows.join('')}</div><p class="muted small" style="margin-top:10px">You can ask a question before anyone accepts. Please don’t swap phone numbers or pay cash.</p>`:empty('chat','No messages yet','Ask a question from a task, or chat here after you accept an offer. Phone numbers stay in the app.'))};
 },
 ask(){
-  const th=S.ask;if(!th)return{title:'Question',html:empty('💬','No conversation','Open a task and tap Ask a question.')};
+  const th=S.ask;if(!th)return{title:'Question',html:empty('chat','No conversation','Open a task and tap Ask a question.')};
   return{title:th.withName||'Question',html:`
   <div class="notice"><b>Before anyone accepts</b>Ask about the task here. Please don’t swap phone numbers or arrange to pay cash. TaskSpeck can only protect a job that stays in the app.</div>
   <p class="muted small" style="margin:8px 0">${esc(th.title||'')}</p>
@@ -1095,7 +1195,7 @@ profile(){
 },
 find(){
   const f=S.find;
-  return{html:`
+  return{wide:true,html:`
   <div class="row"><h1 class="display grow" style="font-size:28px">Tasks near you</h1>
   <div class="vt" role="group" aria-label="Show tasks as">${[['list','List'],['map','Map']].map(([k,l])=>`<button data-a="fview" data-v="${k}" aria-pressed="${f.view===k}">${l}</button>`).join('')}</div></div>
   ${standingBanner()}
@@ -1113,7 +1213,7 @@ find(){
 },
 findTask(){
   PHOTO_REG.length=0;
-  const t=getFindTask(S.findId);if(!t)return{title:'Task details',html:empty('📍','Task not found','It may have been removed.')};
+  const t=getFindTask(S.findId);if(!t)return{title:'Task details',html:empty('search','Task not found','It may have been removed.')};
   const sent=S.sent.find(x=>x.tid===t.id);
   const openOnly=t.fromApi&&t.listingStatus==='Open';
   return{title:'Task details',html:`
@@ -1173,7 +1273,7 @@ account(){
   <button class="btn danger" style="margin-top:10px" data-a="deleteAccount">Delete my account</button>`};
 },
 editSent(){
-  const s=S.sent[S.editIdx];if(!s)return{title:'Edit offer',html:empty('✉️','Offer not found','It may already have been withdrawn.')};
+  const s=S.sent[S.editIdx];if(!s)return{title:'Edit offer',html:empty('chat','Offer not found','It may already have been withdrawn.')};
   return{title:'Edit offer',html:`
   <div class="card"><b>${esc(s.title)}</b><p class="muted small">${s.status==='withdrawn'?'Withdrawn':'Waiting for the requester'}</p></div>
   ${s.status==='withdrawn'?'':`<label class="f" for="efee">Your fee</label><div class="money"><span class="cur">$</span><input type="number" id="efee" data-in="editFee" min="5" value="${esc(S.form.editFee!=null?S.form.editFee:s.fee)}"></div>
@@ -1214,7 +1314,7 @@ function findResults(){
   const blocked=q&&BLOCK.find(([re])=>re.test(q));
   if(blocked)return `<div class="notice"><b>Not available on TaskSpeck</b>${esc(blocked[1])}</div>`;
   if(!l.length){
-    return empty('📍','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
+    return empty('search','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
     +(f.km<10?`<button class="btn secondary" data-a="fkm" data-v="10">Widen to 10 km</button>`:'')
     +((q||f.cat!=='all')?`<button class="btn ghost" data-a="fclear">Clear search and category</button>`:'');
   }
@@ -1252,10 +1352,10 @@ function mountJobMap(list){
 }
 function tasksReq(){
   const list=myTaskList();
-  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(list.length?`<div class="stack">${list.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div><button class="btn primary" style="margin-top:12px" data-a="post">Post another task</button>`:empty('📋','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
+  return{wide:true,html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(list.length?`<div class="stack">${list.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div><button class="btn primary" style="margin-top:12px" data-a="post">Post another task</button>`:empty('list','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
 }
 function tasksTasker(){
-  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>
+  return{wide:true,html:`<h1 class="display" style="font-size:28px">My Tasks</h1>
   ${standingBanner()}
   <div class="grid2"><div class="stat"><b>${money(S.payouts.reduce((a,r)=>a+Math.round((r.price-calcFee(r.price))*100)/100,0))}</b><span>Earnings this week</span></div><div class="stat"><b>${S.sent.filter(s=>s.status!=='withdrawn').length}</b><span>Offers waiting</span></div></div>
   <button class="card" style="margin-top:12px" data-a="earnings"><b>Earnings and payouts</b><p class="muted small">See what TaskSpeck keeps (${FEE_PCT}%) and what you receive</p></button>
@@ -1436,9 +1536,9 @@ notif(){
   return `<h2 style="margin-top:0">Notifications</h2>${r.map(([k,l])=>`<button class="tog" aria-pressed="${S.notif[k]}" data-a="ntog" data-v="${k}"><span>${l}</span><span class="sw"></span></button>`).join('')}<button class="btn ghost" data-a="close">Done</button>`;
 },
 help(){
-  return `<h2 style="margin-top:0">Help and support</h2><div class="stack"><div class="card"><b>What belongs on TaskSpeck?</b><p class="muted small">Small everyday jobs. Anything needing a licence, qualification or specialist certification does not.</p></div>
+  return `<h2 style="margin-top:0">Help and support</h2><div class="stack"><div class="card"><b>What belongs on TaskSpeck?</b><p class="muted small">Everyday unlicensed jobs of any size. Licensed work is not offered. Painting, handyman and assembly over $10,000 need a registered builder in Victoria, so TaskSpeck can’t take those.</p></div>
   <div class="card"><b>How payment works</b><p class="muted small">You pay when you accept an offer. It is held until you confirm the task is complete, or released automatically 48 hours after the Tasker marks it complete.</p></div>
-  <div class="card"><b>Contact support</b><p class="muted small">Prototype only. During the pilot we aim to reply within 1 business day. Support is not available 24/7.</p></div><button class="card" data-a="sheet" data-v="policy"><b>Cancellation and no-show policy</b></button><button class="card" data-a="sheet" data-v="disputes"><b>How disputes work</b></button></div><button class="btn ghost" data-a="close">Close</button>`;
+  <div class="card"><b>Contact support</b><p class="muted small">During the pilot we aim to reply within 1 business day. Support is not available 24/7.</p></div><button class="card" data-a="sheet" data-v="policy"><b>Cancellation and no-show policy</b></button><button class="card" data-a="sheet" data-v="disputes"><b>How disputes work</b></button></div><button class="btn ghost" data-a="close">Close</button>`;
 }
 };
 /* ---------- actions ---------- */
@@ -1694,7 +1794,8 @@ const A={
    if(t.fromApi&&t.listingStatus!=='Open'){notify('This listing is not open for bids.');return}
    if(S.sent.some(s=>s.tid===t.id&&s.status!=='withdrawn')){notify('You already sent an offer for this task.');return}
    const fee=parseFloat(S.form.fee);
-   if(!(fee>=5)||fee>15000){notify('Enter a fee between $5 and $15,000.');return}
+   if(!(fee>0)||fee>10000000){notify('Enter a price above $0.');return}
+   if(window.registeredWorkReason){const why=window.registeredWorkReason({cat:t.cat,text:(t.title||'')+' '+(t.desc||''),title:t.title},{fee});if(why){notify(why);return}}
    if(!S.form.ok)return;
    let bidId=null;
    if(t.fromApi){const data=await TaskAPI.bid(t.id,fee,meName(),S.form.omsg||'');if(data.error){notify(data.error);return}bidId=data.bid&&data.bid.id;await refreshApiListings()}

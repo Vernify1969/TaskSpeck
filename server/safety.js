@@ -10,7 +10,7 @@ const BLOCK = [
   [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit|air[\s-]?con|aircon|refrigerat/i, `This looks like electrical, air-conditioning or refrigeration work. ${LICENSED}`],
   [/\bgas\b/i, `This looks like gas work. ${LICENSED}`],
   [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i, `This looks like plumbing. ${LICENSED}`],
-  [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos|renovat/i, `This looks like building, roofing or asbestos work. ${LICENSED}`],
+  [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos/i, `This looks like building, roofing or asbestos work. ${LICENSED}`],
   [/pest control|termite|pesticide/i, `Pest control that uses chemicals needs a licence. ${LICENSED}`],
   [/waterproof/i, `Waterproofing is licensed work. ${LICENSED}`],
   [/locksmith|rekey|re-key/i, `Locksmith work is licensed. ${LICENSED}`],

@@ -390,13 +390,112 @@ test('demo offers stay off unless Demo mode is on, and large unlicensed jobs are
   const other = await db.publishListing((db.upsertListingText('Paint two rooms', null, alex)).task.id, {
     text: 'Paint two bedrooms, ground floor only', title: 'Paint two rooms', cat: 'painting', suburb: 'Carlton', budgetLabel: 'Request quotes', priceNum: 120000,
   }, alex);
-  assert.equal(other.error, undefined);
-  assert.equal(other.task.priceNum, 120000);
+  assert.equal(other.code, 400);
+  assert.match(other.error, /registered builder/);
   const licensed = await db.publishListing((db.upsertListingText('Rewire the kitchen', null, alex)).task.id, {
     text: 'Rewire the kitchen', title: 'Rewire the kitchen', cat: 'other', suburb: 'Carlton',
   }, alex);
   assert.equal(licensed.code, 400);
   assert.match(licensed.error, /doesn't offer licensed work/);
+});
+
+test('building-type jobs over $10,000 are refused, including quotes and stages', async () => {
+  const { REGISTERED_WORK_LIMIT_AUD, REGISTERED_WORK_MESSAGE } = await import('../shared/registeredWork.js');
+  assert.equal(REGISTERED_WORK_LIMIT_AUD, 10000);
+  assert.match(REGISTERED_WORK_MESSAGE, /registered builder/);
+  assert.doesNotMatch(REGISTERED_WORK_MESSAGE, /split/i);
+  db.resetStore();
+  const alex = await account('Alex', 'builder@example.com');
+  const sam = await account('Sam', 'builder-sam@example.com');
+  const limit = REGISTERED_WORK_LIMIT_AUD;
+
+  const atLimit = await db.publishListing((db.upsertListingText('Paint one bedroom', null, alex)).task.id, {
+    text: 'Paint one bedroom, ground floor only', title: 'Paint one bedroom', cat: 'painting', suburb: 'Carlton',
+    budgetLabel: `$${limit}`, priceNum: limit,
+  }, alex);
+  assert.equal(atLimit.error, undefined);
+
+  const overBudget = await db.publishListing((db.upsertListingText('Paint the hall', null, alex)).task.id, {
+    text: 'Paint the hallway, ground floor only', title: 'Paint the hall', cat: 'painting', suburb: 'Carlton',
+    budgetLabel: `$${limit + 1}`, priceNum: limit + 1,
+  }, alex);
+  assert.equal(overBudget.code, 400);
+  assert.equal(overBudget.error, REGISTERED_WORK_MESSAGE);
+
+  const handyman = await db.publishListing((db.upsertListingText('Patch a wall', null, alex)).task.id, {
+    text: 'Patch a wall mark and repaint that patch only', title: 'Patch a wall', cat: 'home', suburb: 'Richmond',
+    priceNum: 15000, budgetLabel: '$15000',
+  }, alex);
+  assert.equal(handyman.code, 400);
+  assert.match(handyman.error, /registered builder/);
+
+  const assembly = await db.publishListing((db.upsertListingText('Assemble kitchen cabinets', null, alex)).task.id, {
+    text: 'Assemble a run of kitchen cabinets', title: 'Assemble cabinets', cat: 'furniture', suburb: 'Carlton',
+    priceNum: 15000, budgetLabel: '$15000',
+  }, alex);
+  assert.equal(assembly.code, 400);
+
+  const stages = await db.publishListing((db.upsertListingText('Paint two rooms in stages', null, alex)).task.id, {
+    text: 'Paint two bedrooms, ground floor only', title: 'Paint in stages', cat: 'painting', suburb: 'Carlton',
+    budgetLabel: 'Request quotes',
+    milestones: [{ title: 'Prep', amount: 6000 }, { title: 'Paint', amount: 5000 }],
+  }, alex);
+  assert.equal(stages.code, 400);
+  assert.match(stages.error, /registered builder/);
+  assert.doesNotMatch(stages.error, /split/i);
+
+  const labelled = await db.publishListing((db.upsertListingText('Paint the study', null, alex)).task.id, {
+    text: 'Paint the study, ground floor only', title: 'Paint the study', cat: 'painting', suburb: 'Carlton',
+    budgetLabel: '$12,000',
+  }, alex);
+  assert.equal(labelled.code, 400);
+
+  const smallReno = await db.publishListing((db.upsertListingText('Renovate the study shelves', null, alex)).task.id, {
+    text: 'Renovate the study shelves, ground floor only', title: 'Shelf refresh', cat: 'other', suburb: 'Carlton',
+    budgetLabel: '$400', priceNum: 400,
+  }, alex);
+  assert.equal(smallReno.error, undefined);
+
+  const bigReno = await db.publishListing((db.upsertListingText('Renovate the study', null, alex)).task.id, {
+    text: 'Renovate the study shelves and paint them', title: 'Study renovation', cat: 'other', suburb: 'Carlton',
+    budgetLabel: '$11000', priceNum: 11000,
+  }, alex);
+  assert.equal(bigReno.code, 400);
+  assert.match(bigReno.error, /registered builder/);
+
+  const quotes = await db.publishListing((db.upsertListingText('Paint the spare room', null, alex)).task.id, {
+    text: 'Paint the spare room, ground floor only', title: 'Paint the spare room', cat: 'painting', suburb: 'Carlton',
+    budgetLabel: 'Request quotes',
+  }, alex);
+  assert.equal(quotes.error, undefined);
+  const highQuote = await db.placeBid(quotes.task.id, { fee: limit + 1 }, sam);
+  assert.equal(highQuote.code, 400);
+  assert.match(highQuote.error, /registered builder/);
+  const okQuote = await db.placeBid(quotes.task.id, { fee: limit }, sam);
+  assert.equal(okQuote.error, undefined);
+  const raised = db.updateBid(okQuote.bid.id, { fee: 12000 }, sam);
+  assert.equal(raised.code, 400);
+  assert.match(raised.error, /registered builder/);
+
+  const clean = await db.publishListing((db.upsertListingText('Vacuum the lounge', null, alex)).task.id, {
+    text: 'Vacuum the lounge', title: 'Vacuum the lounge', cat: 'cleaning', suburb: 'Carlton', budgetLabel: 'Request quotes',
+  }, alex);
+  const bigClean = await db.placeBid(clean.task.id, { fee: 15000 }, sam);
+  assert.equal(bigClean.error, undefined);
+  const recat = await db.publishListing(clean.task.id, {
+    text: 'Paint the lounge, ground floor only', title: 'Paint the lounge', cat: 'painting', suburb: 'Carlton', budgetLabel: 'Request quotes',
+  }, alex);
+  assert.equal(recat.error, undefined);
+  const accepted = await db.acceptBid(clean.task.id, { bidId: bigClean.bid.id }, alex);
+  assert.equal(accepted.code, 400);
+  assert.match(accepted.error, /registered builder/);
+  assert.doesNotMatch(accepted.error, /split/i);
+
+  const structural = await db.publishListing((db.upsertListingText('Knock out a wall', null, alex)).task.id, {
+    text: 'Knock out a wall between the rooms', title: 'Knock out a wall', cat: 'home', suburb: 'Carlton', priceNum: 500,
+  }, alex);
+  assert.equal(structural.code, 400);
+  assert.match(structural.error, /doesn't offer licensed work/);
 });
 
 test('Google and Apple sign-in are present but not required', () => {
