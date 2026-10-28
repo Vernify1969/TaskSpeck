@@ -209,7 +209,7 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .fseg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;padding:4px;background:var(--bg);border-radius:14px}
 .fseg.sortgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .catgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
-.fpick{width:100%;min-width:0;height:44px;padding:0 6px;border:1.5px solid transparent;background:transparent;border-radius:10px;font-weight:700;font-size:13px;color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center}
+.fpick{width:100%;min-width:0;height:44px;padding:0 8px;border:1.5px solid transparent;background:transparent;border-radius:10px;font-weight:700;font-size:13px;color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center}
 .fpick span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .fpick.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .catgrid .fpick{background:var(--surface);border-color:var(--line)}
@@ -1280,7 +1280,7 @@ find(){
     </section>
     <section class="filter-sec">
       <p class="filter-label">Category</p>
-      <div class="catgrid">${fpick('All',draft.cat==='all','data-a="fdcat" data-v="all"')}${FINAL.map(k=>fpick(filterCatShort(k),draft.cat===k,`data-a="fdcat" data-v="${k}"`,CATS[k].name)).join('')}</div>
+      <div class="catgrid">${fpick('All',draft.cat==='all','data-a="fdcat" data-v="all"')}${FINAL.map(k=>fpick(CATS[k].name,draft.cat===k,`data-a="fdcat" data-v="${k}"`)).join('')}</div>
     </section>
     <section class="filter-sec">
       <p class="filter-label">Sort</p>
@@ -1394,11 +1394,6 @@ function findList(){
     const distOk=f.km==null?inLaunchZone(t):t.km<=f.km;
     return distOk&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'');
   }).sort(cmp[f.sort||'closest']||cmp.closest);
-}
-function filterCatShort(id){
-  const name=(CATS[id]&&CATS[id].name)||'';
-  if(name.length<=12)return name;
-  return name.split(/\s|&/)[0]||name;
 }
 function fpick(label,on,attr,aria){
   return `<button class="fpick${on?' on':''}" aria-pressed="${on?'true':'false'}"${aria?` aria-label="${esc(aria)}"`:''} ${attr}><span>${esc(label)}</span></button>`;
