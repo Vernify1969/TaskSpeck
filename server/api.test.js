@@ -201,6 +201,29 @@ test('cancel, no-show, fix, dispute, refund and review follow the person and the
   assert.equal(taskerDecision.code, 403);
 });
 
+test('a saved search with no distance covers the launch zone', async () => {
+  db.resetStore();
+  const alex = await account('Alex', 'alex-zone@example.com');
+  const wide = await account('Wide', 'wide@example.com');
+  const near = await account('Near', 'near@example.com');
+  const open = { days: [0, 1, 2, 3, 4, 5, 6], from: '00:00', to: '23:59', km: 10, cats: [], paused: false };
+  db.updateProfile(wide, { suburb: 'Carlton', avail: open, notif: { nearby: false, email: false } });
+  db.updateProfile(near, { suburb: 'Carlton', avail: open, notif: { nearby: false, email: false } });
+  const anyZone = db.saveSearch(wide, { q: '', cat: 'all', km: null, alert: true });
+  assert.equal(anyZone.search.km, null);
+  const tight = db.saveSearch(near, { q: '', cat: 'all', km: 2, alert: true });
+  assert.equal(tight.search.km, 2);
+  const clamped = db.saveSearch(near, { km: 50, alert: false });
+  assert.equal(clamped.search.km, 10);
+  const draft = db.upsertListingText('Mow a courtyard in St Kilda', null, alex);
+  await db.publishListing(draft.task.id, {
+    text: draft.task.text, title: 'Mow a courtyard in St Kilda', cat: 'garden', budgetLabel: '$80', priceNum: 80,
+    startAt: future(48), startMin: 600, suburb: 'St Kilda',
+  }, alex);
+  assert.ok(db.listNotifications(wide).some((n) => n.kind === 'search' && /St Kilda/.test(n.body)));
+  assert.equal(db.listNotifications(near).some((n) => n.kind === 'search'), false);
+});
+
 test('people can message before an offer is accepted', async () => {
   db.resetStore();
   const alex = await account('Alex', 'alex@example.com');

@@ -713,12 +713,24 @@ export function taskerMatchesAvailability(user, task) {
   return true;
 }
 
+function savedDistanceKm(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(10, Math.max(1, Math.round(n)));
+}
+
 function searchMatches(search, task, user) {
   if (search.cat && search.cat !== 'all' && task.cat !== search.cat) return false;
-  const originLat = search.lat ?? user?.lat;
-  const originLng = search.lng ?? user?.lng;
-  const km = distanceKm(originLat, originLng, task.lat, task.lng);
-  if (km > (Number(search.km) || 10) + 0.05) return false;
+  if (search.km == null || search.km === '') {
+    const fromCentre = distanceKm(LAUNCH_CENTER.lat, LAUNCH_CENTER.lng, task.lat, task.lng);
+    if (fromCentre > launchRadiusKm() + 0.05) return false;
+  } else {
+    const originLat = search.lat ?? user?.lat;
+    const originLng = search.lng ?? user?.lng;
+    const km = distanceKm(originLat, originLng, task.lat, task.lng);
+    if (km > Number(search.km) + 0.05) return false;
+  }
   if (search.maxPrice != null && search.maxPrice !== '' && task.priceNum != null && task.priceNum > Number(search.maxPrice)) return false;
   const q = String(search.q || '').trim().toLowerCase();
   if (q) {
@@ -1581,7 +1593,7 @@ export function saveSearch(user, body = {}) {
     userId: user.id,
     q: String(body.q || '').slice(0, 120),
     cat: retireCat(String(body.cat || 'all')).slice(0, 40) || 'all',
-    km: Math.min(50, Math.max(1, Number(body.km) || 5)),
+    km: savedDistanceKm(body.km),
     sort: String(body.sort || 'closest'),
     maxPrice: body.maxPrice != null && body.maxPrice !== '' ? Number(body.maxPrice) : null,
     alert: body.alert !== false,
