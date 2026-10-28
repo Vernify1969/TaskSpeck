@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>TaskSpeck prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#D3DCD7; --bg:#EEF2EF; --surface:#FFFFFF; --ink:#15201C; --muted:#5B6863; --line:#D9E1DD;
+  --brand:#0E5A4B; --on-brand:#FFFFFF; --gold:#FFC93C; --on-gold:#1B1600;
+  --ok-bg:#DDF3E6; --ok-ink:#0B5B36; --warn-bg:#FFF0C7; --warn-ink:#6B4B00; --bad-bg:#FCE1DB; --bad-ink:#9A2A14;
+  --tint-s:80%; --tint-l:91%;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --canvas:#050908; --bg:#0B120F; --surface:#141F1A; --ink:#EAF2EE; --muted:#9DAEA6; --line:#25342D;
+    --brand:#5FD3B6; --on-brand:#06231B;
+    --ok-bg:#12382A; --ok-ink:#8BE3B4; --warn-bg:#3B2F0C; --warn-ink:#F5D57A; --bad-bg:#3D1A13; --bad-ink:#FFB4A3;
+    --tint-s:32%; --tint-l:22%;
+  }
+}
+:root[data-theme="dark"]{
+  --canvas:#050908; --bg:#0B120F; --surface:#141F1A; --ink:#EAF2EE; --muted:#9DAEA6; --line:#25342D;
+  --brand:#5FD3B6; --on-brand:#06231B;
+  --ok-bg:#12382A; --ok-ink:#8BE3B4; --warn-bg:#3B2F0C; --warn-ink:#F5D57A; --bad-bg:#3D1A13; --bad-ink:#FFB4A3;
+  --tint-s:32%; --tint-l:22%;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--canvas);color:var(--ink);font:16px/1.45 'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;justify-content:center;align-items:center;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;text-align:left}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+#app{width:100%;max-width:430px;height:100%;max-height:900px;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+@media (min-width:500px){#app{height:min(900px,calc(100% - 32px));border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.25)}}
+.top{display:flex;align-items:center;gap:10px;padding:14px 16px 8px;flex:none}
+.logo{width:28px;height:28px;border-radius:9px;background:var(--gold);color:var(--on-gold);display:grid;place-items:center}
+.wordmark{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:21px;letter-spacing:-.02em;flex:1}
+.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+.iconbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line)}
+.ttl{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em}
+#view{flex:1;overflow-y:auto;padding:8px 16px 28px;-webkit-overflow-scrolling:touch}
+.display{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:33px;line-height:1.04;letter-spacing:-.03em;margin:10px 0 16px}
+h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:20px;letter-spacing:-.015em;margin:22px 0 10px}
+h3{font-size:16px;font-weight:700}
+.muted{color:var(--muted)} .small{font-size:13px} .center{text-align:center}
+.stack>*+*{margin-top:12px}
+.row{display:flex;align-items:center;gap:12px} .grow{flex:1;min-width:0}
+.wrap{display:flex;flex-wrap:wrap;gap:6px 14px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 20px;border-radius:14px;font-weight:700;width:100%;text-align:center;border:2px solid transparent}
+.btn.primary{background:var(--gold);color:var(--on-gold)}
+.btn.big{min-height:58px;font-size:18px}
+.btn.secondary{background:var(--surface);border-color:var(--line)}
+.btn.ghost{color:var(--brand);min-height:44px}
+.btn.danger{background:var(--bad-bg);color:var(--bad-ink)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn+.btn{margin-top:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:block;width:100%}
+button.card{text-align:left}
+.card.dim{opacity:.55}
+.ask{width:100%;text-align:left;background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:16px;color:var(--muted);margin-bottom:12px;min-height:76px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;font-size:12px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;justify-content:center}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cat{background:hsl(var(--h) var(--tint-s) var(--tint-l));border-radius:16px;padding:10px 6px;text-align:center;font-size:14px;font-weight:700;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:8px;aspect-ratio:1/1;min-height:0;justify-content:center;width:100%}
+.cat .em{font-size:32px;line-height:1}
+.cat .lbl{display:block;min-height:2.4em}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:250px;overflow:auto;margin-top:10px;padding:2px}
+.slots .chip{width:100%;justify-content:center;text-align:center}
+.pick{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;font-size:16px;text-align:left;color:var(--ink);min-height:50px}
+.pick .v{font-weight:600}
+.pick .ph{color:var(--muted)}
+.pick .chev{color:var(--muted);font-size:14px}
+.pick.static .chev{display:none}
+.datepanel{max-height:430px;overflow:auto;margin-top:10px;padding:2px}
+.months{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal.dow{margin-bottom:6px}
+.cal.dow span{font-size:11px;text-align:center;color:var(--muted)}
+.months .chip,.cal .chip{width:100%;justify-content:center;text-align:center;padding-left:0;padding-right:0}
+.cal .chip{padding-top:8px;padding-bottom:8px;font-size:15px;min-height:40px}
+.chip[disabled]{opacity:.35;pointer-events:none}
+@media print{body *{visibility:hidden}.report,.report *{visibility:visible}.report{position:absolute;left:0;top:0;width:100%}}
+.calhead{display:grid;grid-template-columns:46px 1fr 1fr 46px;gap:6px;margin:12px 0 8px}
+.calhead .chip{width:100%;justify-content:center;text-align:center;padding:10px 0}
+.slots.t4{grid-template-columns:repeat(4,1fr);max-height:52vh}
+.slots.t4 .chip{padding-left:0;padding-right:0;font-size:15px}
+.sheet .months .chip{padding-top:12px;padding-bottom:12px}
+.paper{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.thumbbtn{padding:0;border:0;background:none;cursor:pointer}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.money{position:relative}
+.money .cur{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--muted);pointer-events:none}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:700;background:var(--line);color:var(--ink);white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok-ink)} .pill.warn{background:var(--warn-bg);color:var(--warn-ink)} .pill.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.pill.brand{background:var(--brand);color:var(--on-brand)}
+.pill.c{background:hsl(var(--h) var(--tint-s) var(--tint-l));color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
+.chip{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14.5px;white-space:nowrap;min-height:40px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+textarea,input[type=text],input[type=number],input[type=time],input[type=date],select{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px}
+textarea{min-height:120px;resize:vertical}
+.money input[type=number]{padding-left:34px!important}
+label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
+.kv{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv span{color:var(--muted)} .kv b{text-align:right;font-weight:600}
+.kv b.none{color:var(--muted);font-weight:500}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#15201C;flex:none;font-family:'Bricolage Grotesque',system-ui,sans-serif}
+.fee{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em}
+.quote{margin-top:8px;color:var(--muted);font-size:14.5px}
+.notice{border-radius:14px;padding:12px 14px;font-size:14px;background:var(--warn-bg);color:var(--warn-ink)}
+.notice.ok{background:var(--ok-bg);color:var(--ok-ink)} .notice.bad{background:var(--bad-bg);color:var(--bad-ink)} .notice.info{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.notice b{display:block;margin-bottom:2px}
+.steps{display:flex;gap:4px;margin:6px 0 4px}
+.steps i{flex:1;height:6px;border-radius:3px;background:var(--line)} .steps i.on{background:var(--brand)}
+.tl{list-style:none;padding:0;margin-top:6px}
+.tl li{display:flex;gap:10px;padding:6px 0;font-size:14px}
+.tl li::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--brand);margin-top:6px;flex:none}
+.tl time{color:var(--muted);margin-left:auto;font-size:12.5px;white-space:nowrap}
+.demo{border:2px dashed var(--line);border-radius:16px;padding:14px;margin-top:16px}
+.demo-h{font-weight:800;font-size:14px}
+.bubble{max-width:82%;padding:10px 13px;border-radius:16px;margin:6px 0;font-size:15px}
+.bubble.me{background:var(--brand);color:var(--on-brand);margin-left:auto;border-bottom-right-radius:4px}
+.bubble.them{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.stars{display:flex;gap:6px;justify-content:center;margin:8px 0}
+.stars button{font-size:38px;line-height:1;color:var(--line);padding:2px}
+.stars button.on{color:var(--gold)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:20px;font-weight:800}
+.stat span{font-size:12.5px;color:var(--muted)}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .big{font-size:40px;margin-bottom:8px}
+.dots span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);margin:0 3px;animation:b 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes b{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.tog{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);width:100%}
+.sw{width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.tog[aria-pressed="true"] .sw{background:var(--brand)} .tog[aria-pressed="true"] .sw::after{transform:translateX(18px)}
+#nav{display:flex;flex:none;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px 8px}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:12px;font-weight:700;color:var(--muted);border-radius:12px;min-height:52px;justify-content:center}
+#nav button[aria-current="page"]{color:var(--brand)}
+#sheetHost{position:absolute;inset:0;z-index:20;display:none}
+#sheetHost.open{display:block}
+.back{position:absolute;inset:0;background:rgba(10,18,14,.5)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow-y:auto;background:var(--bg);border-radius:24px 24px 0 0;padding:8px 18px 26px;animation:up .22s ease-out}
+.sheet::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 14px}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+#toast{position:absolute;left:12px;right:12px;top:12px;z-index:30;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:14px;font-size:14.5px;font-weight:600;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#toast.show{display:block;animation:down .25s ease-out}
+@keyframes down{from{transform:translateY(-16px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ---------- Find Tasks: search, sort, list/map ---------- */
+.fsearch{position:relative;margin:10px 0 2px}
+.fsearch>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);display:flex;pointer-events:none}
+.fsearch input{padding-left:44px;min-height:50px}
+.vt{display:inline-flex;background:var(--line);border-radius:12px;padding:3px;flex:none}
+.vt button{padding:7px 14px;border-radius:9px;font-weight:700;font-size:14px;min-height:36px;color:var(--muted)}
+.vt button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.map{position:relative;width:100%;aspect-ratio:1/1;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.map .st{stroke:var(--line);stroke-width:.35;fill:none}
+.map .riv{stroke:var(--brand);stroke-opacity:.25;stroke-width:3.4;fill:none;stroke-linecap:round}
+.map .ring{stroke:var(--muted);stroke-opacity:.5;stroke-width:.3;stroke-dasharray:1.2 1.2;fill:none}
+.map .lbl{fill:var(--muted);font-size:2.9px;font-weight:700;font-family:inherit}
+.map .you{fill:var(--brand);stroke:var(--surface);stroke-width:.9}
+.pin{position:absolute;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:hsl(var(--h) 62% 40%);display:grid;place-items:center;font-size:17px;line-height:1;border:2.5px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.3);padding:0;text-align:center}
+.pin[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px;z-index:2}
+.top-actions{display:flex;align-items:center;gap:6px;flex:none}
+.top-actions .iconbtn{position:relative}
+.badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:2px solid var(--surface)}
+button.card,button.tile,button.cat{transition:transform .12s ease,box-shadow .12s ease}
+button.card:active:not([disabled]),button.tile:active,button.cat:active{transform:scale(.985)}
+.card.lift{box-shadow:0 4px 14px rgba(0,0,0,.06)}
+#nav button{transition:background .12s ease,color .12s ease}
+#nav button[aria-current="page"]{background:color-mix(in srgb,var(--brand) 12%,transparent)}
+.hero-band{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 18%,var(--surface)),var(--surface));border:1px solid var(--line);border-radius:20px;padding:18px 16px;margin:4px 0 14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top"></header>
+  <main id="view"></main>
+  <nav id="nav" aria-label="Main"></nav>
+  <div id="sheetHost"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script>
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const escAttr=s=>esc(s).replace(/`/g,'&#96;');
+const safeImgUrl=u=>{const s=String(u||'');return/^(data:image\/|https:\/\/|blob:)/i.test(s)?s:''};
+const money=n=>'$'+(Math.round(n*100)/100).toFixed(Math.round(n*100)%100===0?0:2);
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYNAMES=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const fmtDate=d=>`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():''}`;
+const TIME_SLOTS=(()=>{const a=[];for(let m=7*60;m<=21*60;m+=30)a.push(m);return a})();
+const PHOTO_REG=[];
+const photoThumbs=imgs=>{PHOTO_REG.length=0;return `<div class="thumbs">${imgs.map(u=>{const url=safeImgUrl(u);if(!url)return '';PHOTO_REG.push(url);return `<button class="thumbbtn" data-a="photo" data-v="${PHOTO_REG.length-1}" aria-label="Enlarge photo"><img src="${url}" alt="Photo of completed work"></button>`}).join('')}</div>`};
+const recPhotos=rows=>rows.map(r=>{const imgs=r.photos&&r.photos.length?r.photos:Array.from({length:r.photoCount||0},()=>SAMPLE_PHOTO);return imgs.length?`<p class="small" style="margin:8px 0 2px"><b>${esc(r.title)}</b></p>${photoThumbs(imgs)}`:''}).join('');
+const recFixes=rows=>rows.filter(r=>r.fixes&&r.fixes.length).map(r=>`<h3 style="margin:14px 0 6px">Fixes and re-cleans</h3><p class="small" style="margin:8px 0 2px"><b>${esc(r.title)}</b></p>${r.fixes.map(f=>{const imgs=f.photos&&f.photos.length?f.photos:Array.from({length:f.photoCount||0},()=>SAMPLE_PHOTO);return`<p class="muted small" style="margin:4px 0">${esc(f.what)}: raised ${esc(f.raised)}${f.done?', fixed '+esc(f.done):', not fixed'}${f.outcome?'. '+esc(f.outcome):''}</p>${imgs.length?photoThumbs(imgs):''}`}).join('')}`).join('');
+const claimsCard=()=>{if(S.mode!=='requester')return'';const now=Date.now(),list=S.claims.filter(c=>now-c.ts<90*DAY);return`<h2>Claims record</h2><div class="card"><div class="kv"><span>Fix requests and problem reports (90 days)</span><b>${list.length}</b></div>${list.map(c=>`<div class="kv"><span>${esc(c.kind)}<br><span class="muted small">${esc(c.task)}</span></span><b>${esc(c.outcome||'Open')}</b></div>`).join('')}<p class="muted small" style="margin-top:8px">Most issues are put right with a fix. A person looks at accounts with repeated claims that are not upheld, the same way we review Tasker reliability.</p></div>`};
+const gstOf=a=>Math.round(a/11*100)/100;
+const TIPS=[5,10,20];
+const TASKERS={
+ Jordan:{bio:'Furniture assembly, moves and hard rubbish across the CBD. I bring my own tools and a ute, and I send a photo when I am done.',since:'March 2023',langs:['English','Greek'],vehicle:'White ute',areas:'Melbourne CBD, Southbank, Docklands',badges:['ID checked','ABN on file','Police check clear','Insurance on file','Safety guide done'],gst:true,photos:3,reviews:[['Maya','Quick and tidy. Built everything in 90 minutes.',5],['Tom','On time and careful in the lift.',5],['Lena','Took the old sofa away and sent the receipt.',4]]},
+ Sam:{bio:'Pickups, deliveries and flat-pack assembly. Reliable and polite, and happy to work around lift bookings.',since:'August 2024',langs:['English','Mandarin'],vehicle:'Hatchback',areas:'Melbourne CBD, Carlton, East Melbourne',badges:['ID checked','ABN on file','Safety guide done'],gst:false,photos:2,reviews:[['Ken','Collected my furniture order and carried it up to level 14.',5],['Jo','Friendly and very careful.',5]]},
+ Priya:{bio:'End-of-lease and move-in cleans, plus hard rubbish runs. I work to a checklist and send before and after photos.',since:'January 2022',langs:['English','Hindi'],vehicle:'Van',areas:'Melbourne CBD, Southbank, Docklands',badges:['ID checked','ABN on file','Police check clear','Insurance on file','Safety guide done'],gst:true,photos:4,reviews:[['Mei','The oven and balcony were spotless. Agent passed it first time.',5],['Sam','Great communication and photos.',5],['Chloe','Arrived early and finished on time.',5]]},
+ Marco:{bio:'New to TaskSpeck. Household jobs and small repairs.',since:'September 2026',langs:['English','Spanish'],vehicle:'',areas:'Melbourne CBD',badges:['ID checked'],gst:false,photos:0,reviews:[]}
+};
+const applyTip=x=>{const p=S.payouts[0],r=S.receipts[0];if(!p||!r)return;p.tip=x;r.tip=x;if(S.payment)S.payment.tip=x;const o=chosen();ev('You tipped '+(o?o.name:'your Tasker')+' '+money(x))};
+const receiptsBtn=()=>`<button class="card" style="margin-bottom:10px" data-a="receipts"><b>Receipts and invoices</b><p class="muted small">${S.receipts.length} receipt${S.receipts.length===1?'':'s'}</p></button>`;
+const DISPUTE_AIM='7 days';
+const MONTH_LONG=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const hhmm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const pickField=(label,value,ph,attr)=>`<p class="muted small" style="margin:14px 0 6px">${label}</p>${attr?`<button class="pick" ${attr}>`:`<div class="pick static">`}<span class="${value?'v':'ph'}">${esc(value||ph)}</span><span class="chev">▾</span>${attr?'</button>':'</div>'}`;
+const timeGrid=(sel,act,pre)=>`<div class="slots t4">${TIME_SLOTS.map(m=>chip(fmtTime(m),sel===hhmm(m),`data-a="${act}" data-v="${pre}${hhmm(m)}"`)).join('')}</div>`;
+const draftDateLabel=()=>{const a=S.draft.answers;if(a.date==='Flexible')return 'Flexible';if(a.date==='Custom'&&S.draft.dateValue){const[y,m,d]=S.draft.dateValue.split('-').map(Number);return fmtDate(new Date(y,m-1,d))}return S.p&&S.p.date?fmtDate(S.p.date):''};
+const draftTimeLabel=()=>{if(S.draft.timeValue){const[h,m]=S.draft.timeValue.split(':').map(Number);return fmtTime(h*60+m)}return S.p&&S.p.startMin!=null?fmtTime(S.p.startMin):''};
+const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmtTime=m=>{let h=Math.floor(m/60)%24,mi=m%60;const ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${String(mi).padStart(2,'0')} ${ap}`};
+const nextSat=()=>{const n=new Date();return addDays(n,((6-n.getDay()+7)%7)||7)};
+const clock=()=>new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+const FEE_PCT=15;
+const calcFee=a=>Math.round(a*FEE_PCT)/100; /* TaskSpeck keeps this share of the task price; the requester pays the price shown */
+const IC={
+ home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+ wallet:'<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3M17 14h.01"/>',
+ bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>'
+};
+const ic=(n,s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+const CATS={
+ furniture:{name:'Furniture',em:'🪑',h:45,base:60},moving:{name:'Moving help',em:'📦',h:345,base:70},cleaning:{name:'Cleaning',em:'🧽',h:185,base:80},
+ errands:{name:'Pickup & delivery',em:'🚚',h:215,base:50},office:{name:'Office help',em:'🏢',h:215,base:120},home:{name:'Handyman',em:'🛠️',h:255,base:90},pets:{name:'Pets & plants',em:'🐕',h:28,base:30},
+ tech:{name:'Tech setup',em:'📺',h:230,base:55},rubbish:{name:'Hard rubbish',em:'🚛',h:100,base:110},hosting:{name:'Host help',em:'🔑',h:160,base:75},events:{name:'Events',em:'🎈',h:300,base:60},other:{name:'Other',em:'✨',h:200,base:45}
+};
+const FINAL=['moving','rubbish','cleaning','furniture','errands','home'];
+const SHORT=FINAL;
+const catPill=k=>`<span class="pill c" style="--h:${CATS[k].h}">${CATS[k].em} ${CATS[k].name}</span>`;
+const avatar=(n,s=44)=>{let h=0;for(const c of n)h=(h*31+c.charCodeAt(0))%360;return `<div class="avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 70% 82%)">${esc(n[0])}</div>`};
+const chip=(l,on,attr)=>`<button class="chip${on?' on':''}" aria-pressed="${!!on}" ${attr}>${esc(l)}</button>`;
+const kv=(l,v)=>{const none=(v==='Not stated'||!v);return `<div class="kv"><span>${l}</span><b class="${none?'none':''}">${none?'Not stated':v}</b></div>`};
+/* ---------- task understanding (prototype rules; production uses the AI prompts in the spec) ---------- */
+const BLOCK=[
+ [/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank|plants?|watering)\b/i,'Pet and plant care is not available during the Melbourne CBD pilot.'],
+ [/\b(airbnb|turnover|short.?stay|key handover|linen)\b/i,'Host turnovers are not available during the Melbourne CBD pilot.'],
+ [/\b(staff|staffing|waiters?|waitress\w*|bartend\w*|barista|kitchen ?hand|promo(tional)?|receptionist|personal assistant|shifts?|roster\w*|casual (worker|staff|role)|per hour|an hour|\/ ?hr|hourly|full.?time|part.?time)\b/i,'TaskSpeck is for one-off jobs at a fixed price. Staffing, shifts, hourly roles and ongoing positions cannot be posted.'],
+ [/(mount\w*|install\w*|hang\w*|wall|connect\w*|set ?up|wir\w*|cabl\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|install\w*|wall|bracket|connect\w*|set ?up|wir\w*|cabl\w*|antenna|hdmi|soundbar)|\b(antenna|soundbar|hdmi)\b/i,'TV work can involve power points, concealed cabling or antenna points, which must be done by a licensed electrician, so TV tasks cannot be posted on TaskSpeck.'],
+ [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit/i,'This task involves electrical work and cannot be posted on TaskSpeck because it may require a licensed professional.'],
+ [/\bgas\b/i,'This task involves gas work and cannot be posted on TaskSpeck because it requires a licensed professional.'],
+ [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i,'This task involves plumbing work and cannot be posted on TaskSpeck because it may require a licensed professional.'],
+ [/\broof|gutter|demolish|demolition|load.?bearing|structural|knock (down|out) (a |the )?wall|scaffold|asbestos|renovat/i,'This task involves building or structural work and cannot be posted on TaskSpeck.'],
+ [/pest control|termite|chainsaw|tree (removal|felling)|forklift|\bcrane\b/i,'This task involves specialist or dangerous equipment and cannot be posted on TaskSpeck.'],
+ [/waterproof/i,'Waterproofing is not available during the pilot because mistakes can damage other units.'],
+ [/gas (bottle|cylinder)|syringe|\bsharps\b|paint tins?|pesticide|solvent|fireworks|car batter(y|ies)|\bfuel\b|oil drum/i,'Hazardous waste such as chemicals, gas bottles, batteries and sharps cannot be handled through TaskSpeck.'],
+ [/\bweapons?\b|firearm|\bguns?\b|ammunition|hazardous|chemical|\bdrugs?\b/i,'This task involves items or materials that cannot be handled through TaskSpeck.'],
+ [/medic(ation|ine|al)|\bnurs(e|ing)|aged care|disability care|personal care|\bwound|injection/i,'Medical and professional care tasks cannot be posted on TaskSpeck.'],
+ [/babysit|child ?care|\btutor\w*|school pick ?up|\bnanny|(look|mind|watch) after (my |the )?(kids|children|baby|toddler)/i,'Childcare cannot be arranged through TaskSpeck.'],
+ [/security guard|bodyguard|legal advice|lawyer|conveyanc|tax return|financial advice|\binvest/i,'Security, legal and financial services cannot be posted on TaskSpeck because they may require registration.']
+];
+const RULES=[
+ ['furniture',/assembl|flat.?pack|ikea|put together/i],
+ ['rubbish',/\b(rubbish|hard rubbish|junk|tip run|dump|skip|take away|haul away|dispos\w*|old (mattress|sofa|couch|fridge|furniture|bed|wardrobe|desk|tv|tvs|television))\b/i],
+ ['cleaning',/\b(clean\w*|vacuum\w*|mop\w*|sweep\w*)\b/i],
+ ['moving',/\b(boxes|carry|move|moving|unload|load|unpack\w*|pack)\b/i],
+ ['events',/\b(event|party|chairs|tables|decorations|balloons)\b/i],
+ ['errands',/\b(grocer\w*|coles|woolworths|aldi|pick ?up|collect|return\w*|parcel|errand|queue|deliver\w*|courier|mail|post office|shop)\b/i],
+ ['home',/\b(paint\w*|hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
+];
+function parseWhen(t){
+  const s=t.toLowerCase(),now=new Date();let date=null;
+  if(/\btoday\b/.test(s))date=now;
+  else if(/\btomorrow\b/.test(s))date=addDays(now,1);
+  else{const i=DAYNAMES.findIndex(n=>new RegExp('\\b'+n+'\\b').test(s));
+    if(i>-1)date=addDays(now,((i-now.getDay()+7)%7)||7);
+    else if(/\bweekend\b/.test(s))date=nextSat();}
+  let part=null,startMin=null;const m=s.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
+  if(m){let h=(+m[1])%12;if(m[3]==='pm')h+=12;startMin=h*60+(+m[2]||0);}
+  else if(/\bmorning\b/.test(s))part='Morning';else if(/\bafternoon\b/.test(s))part='Afternoon';else if(/\bevening\b/.test(s))part='Evening';
+  return{date,part,startMin};
+}
+function parseDur(s){
+  let m=s.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/);
+  if(m)return{label:`About ${m[1]} hour${m[1]==='1'?'':'s'}`,min:Math.round(+m[1]*60)};
+  m=s.toLowerCase().match(/(\d+)\s*(?:minutes?|mins?)\b/);
+  if(m)return{label:`About ${m[1]} minutes`,min:+m[1]};
+  return null;
+}
+function parseBudget(s){
+  const m=s.match(/\$\s?(\d+)(?:\s?(?:-|–|to)\s?\$?(\d+))?/i);
+  if(!m)return{type:'OPEN',label:'Open to offers'};
+  if(m[2])return{type:'RANGE',min:+m[1],max:+m[2],label:`$${m[1]}–$${m[2]}`};
+  return{type:'SET',amount:+m[1],label:`$${m[1]}`};
+}
+function makeTitle(t){
+  let s=t.trim().split(/[.\n]/)[0];
+  s=s.replace(/^(hi|hello|hey)[, ]+/i,'')
+   .replace(/^(i|we)\s+(need|want|would like|am looking for)\s+(someone|somebody|a person|help)?\s*(to|with)?\s*/i,'')
+   .replace(/^(can|could|would)\s+(someone|anyone|somebody)\s+(please\s+)?/i,'')
+   .replace(/^please\s+/i,'')
+   .replace(/\s+(for\s+)?\$\s?\d+.*$/i,'')
+   .replace(/\s+(today|tomorrow|this weekend|on\s+\w+day|\w+day)\b.*$/i,'')
+   .replace(/\s+(at\s+)?\d{1,2}(:\d{2})?\s*(am|pm)\b.*$/i,'').trim();
+  if(!s)s=t.trim().slice(0,60);
+  s=s[0].toUpperCase()+s.slice(1);
+  return s.length>64?s.slice(0,61)+'…':s;
+}
+function parse(t){
+  const b=BLOCK.find(([re])=>re.test(t));const w=parseWhen(t);let cat='other';
+  for(const[c,re]of RULES){if(re.test(t)){cat=c;break;}}
+  return{text:t.trim(),title:makeTitle(t),cat,blocked:b?b[1]:null,date:w.date,part:w.part,startMin:w.startMin,duration:parseDur(t),budget:parseBudget(t),materials:/grocer/i.test(t)?'Groceries':null};
+}
+function questionsFor(p){
+  const q=[];
+  if(!p.duration)q.push({id:'duration',q:'How long do you expect the task to take?',o:['Under 30 minutes','30–60 minutes','1–2 hours','2–4 hours','Not sure']});
+  const t=p.text;
+  const inHome=p.cat!=='errands'||/apartment|my place|home|door|level|upstairs|deliver it|bring (it|them)/i.test(t);
+  if(inHome){
+    q.push({id:'home',q:'Will someone be home during the job?',o:['Yes, I will be home','Someone else will be home','No, access by key or code']});
+    q.push({id:'pets',q:'Are there pets at the property?',o:['No','Yes, friendly','Yes, may be aggressive']});
+  }
+  if(p.cat==='cleaning')q.push({id:'bio',q:'Is there mould, a pest infestation, needles or another biohazard?',o:['No','Yes']});
+  if(p.cat==='furniture')q.push({id:'furn',q:'Is this ordinary household furniture?',o:['Yes','No']});
+  if(p.cat==='home'&&/paint|hang|mount|shel(f|ves)|picture/i.test(t))q.push({id:'height',q:'Does the task require working at significant height?',o:['No','Yes']});
+  if(p.cat==='moving'||(p.cat==='home'&&/rearrange|organi[sz]e|garage/i.test(t)))q.push({id:'heavy',q:'Are any items unusually heavy or hazardous?',o:['No','Yes']});
+  if(p.cat==='errands'&&/deliver|courier|stock|supplies|pick ?up|collect/i.test(t))q.push({id:'vehicle',q:'Is a van or ute needed?',o:['No','Yes']});
+  if(p.cat==='rubbish'){
+    q.push({id:'size',q:'How much needs to go?',o:['A few items','Up to a van load','More than a van load']});
+    q.push({id:'ewaste',q:'Are any items electrical or battery powered, such as a TV, fridge or heater?',o:['No','Yes']});
+    q.push({id:'haz',q:'Does the load include chemicals, paint, gas bottles, asbestos or sharps?',o:['No','Yes']});
+  }
+  if(['moving','furniture','rubbish'].includes(p.cat)||/deliver|parcel/i.test(t))q.push({id:'access',q:'Does your building need a lift or loading dock booking?',o:['No','Yes, already booked','Yes, still to book']});
+  if(p.cat==='home'&&/tile|tiling|plaster|paint|patch|grout/i.test(t)){
+    q.push({id:'trades',q:'Does the job involve more than one trade, such as plastering and painting?',o:['No, one trade','Yes, more than one']});
+    q.push({id:'wet',q:'Is the work in a bathroom, laundry or other wet area?',o:['No','Yes']});
+    q.push({id:'old',q:'Was the building built before 2004?',o:['No','Yes','Not sure']});
+  }
+  if(p.cat==='home'&&/mount|hang|shel(f|ves)|bracket|picture/i.test(t))q.push({id:'perm',q:'Do you have permission to drill or fix items to the walls?',o:['Yes','No, not sure']});
+  if(p.cat==='errands'&&/grocer|coles|woolworths|aldi/i.test(t))q.push({id:'order',q:'Have you already placed the grocery order?',o:['Yes','Not yet']});
+  else if(p.cat==='errands'&&/deliver|pick ?up|parcel|collect/i.test(t))q.push({id:'hazard',q:'Does the item contain restricted or hazardous material?',o:['No','Yes']});
+  return q;
+}
+function eff(){
+  const p={...S.p},a=S.draft.answers;
+  if(a.date&&a.date!=='Custom'){if(a.date==='Today')p.date=new Date();else if(a.date==='Tomorrow')p.date=addDays(new Date(),1);else if(a.date==='This weekend')p.date=nextSat();else p.flexible=true;}
+  if(a.duration){const M={'Under 30 minutes':30,'30–60 minutes':60,'1–2 hours':120,'2–4 hours':240,'Not sure':null};p.duration={label:a.duration,min:M[a.duration]||90};}
+  if(S.draft.budgetMode==='set'&&parseFloat(S.draft.budgetAmt)>0){const v=Math.round(parseFloat(S.draft.budgetAmt));p.budget={type:'SET',amount:v,label:'$'+v};}
+  else if(S.draft.budgetTouched){p.budget={type:'OPEN',label:'Open to offers'};}
+  if(a.date==='Custom'&&S.draft.dateValue){const[yy,mm,dd]=S.draft.dateValue.split('-').map(Number);p.date=new Date(yy,mm-1,dd);p.flexible=false;}
+  if(a.part==='Time'&&S.draft.timeValue){const[hh,mi]=S.draft.timeValue.split(':').map(Number);p.startMin=hh*60+mi;p.part=null;}
+  else if(a.part){p.part=a.part==='Anytime'?null:a.part;p.startMin=null;}
+  return p;
+}
+function evaluate(){
+  const p=eff(),a=S.draft.answers,rv='We need to check a few details before this task can be posted.';
+  const reparsed=parse(p.text||'');p.blocked=reparsed.blocked;
+  if(p.blocked)return{risk:'PROHIBITED',why:p.blocked};
+  if(p.cat==='other')return{risk:'REVIEW_REQUIRED',why:rv};
+  if(a.height==='Yes')return{risk:'HIGH_RISK',why:'Work at significant height cannot be posted automatically because of the safety risk.'};
+  if(/\b(every (day|week|fortnight|month)|each (day|week|month)|weekly|fortnightly|daily|ongoing|regular(ly)?)\b/i.test(p.text))return{risk:'REVIEW_REQUIRED',why:'Regular repeat work for the same person can start to look like employment, so we need to check it before posting.'};
+  if(p.cat==='cleaning'&&/\b(office|offices|commercial|workplace|retail|shop|cafe|restaurant|common areas?|lobby|strata)\b/i.test(p.text))return{risk:'REVIEW_REQUIRED',why:'Office and commercial cleaning is limited to one-off jobs and needs a check first, because regular commercial cleaning can look like employment.'};
+  if(a.bio==='Yes')return{risk:'HIGH_RISK',why:'Mould, pest infestations, needles and other biohazards need a specialist cleaner and cannot be posted on TaskSpeck.'};
+  if(a.wet==='Yes')return{risk:'HIGH_RISK',why:'Wet-area work involves waterproofing and cannot be posted during the pilot.'};
+  if(a.haz==='Yes')return{risk:'HIGH_RISK',why:'Hazardous waste (chemicals, paint, gas bottles, asbestos or sharps) cannot be handled through TaskSpeck.'};
+  if(a.size==='More than a van load')return{risk:'REVIEW_REQUIRED',why:'Loads larger than a van need a manual check before posting.'};
+  if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'New cabling or wiring inside walls must be done by a licensed professional.'};
+  if(a.hazard==='Yes')return{risk:'HIGH_RISK',why:'Restricted or hazardous items cannot be handled through TaskSpeck.'};
+  const trade=p.cat==='home'&&/tile|tiling|plaster|paint|patch|grout/i.test(p.text);
+  const top=p.budget.type==='SET'?p.budget.amount:p.budget.type==='RANGE'?p.budget.max:0;
+  if(trade&&top>10000)return{risk:'REVIEW_REQUIRED',why:'Painting, plastering and tiling jobs over $10,000 need a registered builder in Victoria, so this one needs a manual check.'};
+  if(trade&&a.trades==='Yes, more than one')return{risk:'REVIEW_REQUIRED',why:'Jobs combining trades can need a registered builder once the total passes $10,000, so we need to check the scope.'};
+  if(a.perm==='No, not sure')return{risk:'REVIEW_REQUIRED',why:'In an apartment, drilling or fixing to walls usually needs permission from the owner or owners corporation.'};
+  if(a.furn==='No'||a.heavy==='Yes')return{risk:'REVIEW_REQUIRED',why:rv};
+  const notes=[];
+  if(p.cat==='rubbish'){notes.push('Waste must go to an authorised facility. Your Tasker should send a drop-off photo or receipt. Illegal dumping is an offence.');if(a.ewaste==='Yes')notes.push('Electrical items are banned from landfill in Victoria and must go to an e-waste or recycling drop-off.');}
+  if(a.pets==='Yes, may be aggressive')notes.push('Please secure any animals before the Tasker arrives. The Tasker can decline the job if it is not safe.');
+  if(a.home==='No, access by key or code')notes.push('Share access details only through the app, after you accept an offer.');
+  if(a.home==='Someone else will be home')notes.push('Let the person at home know the Tasker is coming and when.');
+  if(a.vehicle==='Yes')notes.push('A Tasker with a van or ute is needed. Agree loading help and access with your Tasker.');
+  if(a.old==='Yes'||a.old==='Not sure')notes.push('Older buildings can contain asbestos or lead paint. Do not sand, drill or cut into walls or ceilings until this has been checked.');
+  if(a.access==='Yes, still to book')notes.push('Book the lift or loading dock with your building before the task date and share the confirmation with your Tasker.');
+  if(a.access==='Yes, already booked')notes.push('Lift or loading dock is booked. Share the booking details with your Tasker.');
+  if(/paint/i.test(p.text))notes.push('Ground-level work only. No work at significant height.');
+  return{risk:notes.length?'MEDIUM_RISK':'LOW_RISK',notes};
+}
+const whenLabel=t=>{const d=t.date?fmtDate(t.date):(t.flexible?'Flexible':'Not stated');const tm=t.startMin!=null?fmtTime(t.startMin):'';return tm?`${d}, ${tm}`:d};
+/* ---------- state ---------- */
+const BASE_STATUS=['POSTED','OFFERS_RECEIVED','ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED'];
+const SEED_HISTORY=[
+ {prop:'Unit 1204, 200 Spencer St',title:'End-of-lease clean for a one-bedroom apartment',cat:'cleaning',tasker:'Priya',date:'Fri 2 Oct',paid:220,photoCount:3,check:'9 of 9',fixes:[{what:'Oven or kitchen',raised:'Sat 3 Oct',done:'Sun 4 Oct',photoCount:2,outcome:'Fixed and confirmed'}]},
+ {prop:'Unit 1204, 200 Spencer St',title:'Remove left-behind furniture',cat:'rubbish',tasker:'Jordan',date:'Sat 3 Oct',paid:180,photoCount:2,check:null},
+ {prop:'Unit 1204, 200 Spencer St',title:'Patch and paint two wall marks',cat:'home',tasker:'Marco',date:'Sun 4 Oct',paid:150,photoCount:2,check:null},
+ {prop:'Unit 906, 88 Flinders Ln',title:'End-of-lease clean for a studio',cat:'cleaning',tasker:'Sam',date:'Mon 5 Oct',paid:160,photoCount:3,check:'9 of 9'},
+ {prop:'Unit 906, 88 Flinders Ln',title:'Remove old sofa and mattress',cat:'rubbish',tasker:'Jordan',date:'Mon 5 Oct',paid:120,photoCount:1,check:null}
+];
+const S={
+  mode:'requester',stack:[{n:'home'}],draft:{text:'',answers:{},listingId:null},p:null,form:{},apiListings:[],
+  task:null,offers:[],sort:'new',offerId:null,events:[],payment:null,agreement:null,dispute:null,change:null,flags:{},thread:null,proof:[],checklist:[],fix:null,agent:false,history:SEED_HISTORY.map(x=>({...x,seed:true})),propSel:null,incidents:[],myStrikes:[],claims:[],tprof:{bio:'',langs:['English'],vehicle:'',areas:'Melbourne CBD',photos:[]},receipts:[],rcptNo:1000,notifs:[],notifSeen:0,qtGst:false,idc:{type:null,front:false,selfie:false,status:'idle',consent:false,police:'idle'},recIdx:0,invIdx:0,profName:null,payouts:[{title:'Assemble a flat-pack bookshelf',date:'Mon 5 Oct',price:80},{title:'Collect a furniture order and deliver it',date:'Tue 6 Oct',price:90}],tk:{abn:false,ins:false,veh:false,safety:false,gst:false,abnNum:'',police:false},
+  sent:[],find:{km:5,cat:'all',sort:'closest',view:'list',q:'',pin:null,fopen:false},findId:null,saved:{},verified:false,sheet:null,timers:[],lastKey:'',
+  avail:{days:[1,2,3,4,5,6],from:'09:00',to:'17:00',km:3,cats:['furniture','moving','errands','rubbish'],paused:false},
+  notif:{offers:true,messages:true,reminders:true,nearby:false},trusted:{name:'',on:false}
+};
+const ev=l=>S.events.push({l,t:clock()});
+/* ---------- backend listing API (Vite middleware on :5173) ---------- */
+const TaskAPI={
+  async draft(text,id){const r=await fetch('/api/tasks/draft',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,id:id??null})});if(!r.ok)throw new Error('Could not save draft');return r.json()},
+  async publish(id,meta){const r=await fetch(`/api/tasks/${id}/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});if(!r.ok)throw new Error('Could not publish listing');return r.json()},
+  async bid(id,fee,taskerName){const r=await fetch(`/api/tasks/${id}/bids`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fee,taskerName})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Bid rejected');return data},
+  async list(){const r=await fetch('/api/tasks');if(!r.ok)throw new Error('Could not load listings');return r.json()},
+  sync(listingId,action,body){if(!listingId)return Promise.resolve();return fetch(`/api/tasks/${listingId}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).catch(()=>{})}
+};
+let draftSaveT;
+function queueDraftSave(){clearTimeout(draftSaveT);draftSaveT=setTimeout(()=>{TaskAPI.draft(S.draft.text||'',S.draft.listingId).then(d=>{if(d.task&&d.task.id)S.draft.listingId=d.task.id}).catch(()=>{})},450)}
+async function refreshApiListings(){try{const data=await TaskAPI.list();S.apiListings=data.tasks||[];const r=$('#fres');if(r)r.innerHTML=findResults()}catch{/* dev server warming */}}
+function apiToNear(row){const p=parse(row.text||'');const st=row.status||'Open';const off=row.bidCount??(row.bids?row.bids.filter(b=>b.status==='pending').length:0);let cond='Live listing from a local requester';if(st==='Assigned'&&row.bid)cond=`Assigned · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(st==='Started')cond='Tasker has started';else if(st==='Completed')cond='Awaiting requester approval';else if(st==='PaymentReleased')cond='Payment released';return{id:row.id,fromApi:true,listingStatus:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',km:0.35,date:'Flexible',t:'10:00',d:90,budget:'Open to offers',offers:off+(row.bid?1:0),posted:'Just now',suburb:'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:'Alex',r:4.8,n:1}}}
+function allFindTasks(){return [...(S.apiListings||[]).map(apiToNear),...NEAR]}
+function getFindTask(id){return allFindTasks().find(x=>x.id===+id)||null}
+const TERMINAL_STATUS=new Set(['COMPLETED','CANCELLED','NO_SHOW','RESOLVED','EXPIRED']);
+const ACTIVE_ASSIGNMENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','FIX_REQUESTED','FIX_DONE','DISPUTED']);
+const ALLOWED_TRANSITIONS={
+ POSTED:['OFFERS_RECEIVED','UNDER_REVIEW','CANCELLED'],
+ OFFERS_RECEIVED:['ACCEPTED','CANCELLED','UNDER_REVIEW'],
+ ACCEPTED:['PAYMENT_CONFIRMED','CANCELLED'],
+ PAYMENT_CONFIRMED:['UPCOMING','CANCELLED'],
+ UPCOMING:['TASK_STARTED','CANCELLED','NO_SHOW'],
+ TASK_STARTED:['TASKER_COMPLETED','CANCELLED','DISPUTED','FIX_REQUESTED'],
+ TASKER_COMPLETED:['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED','FIX_REQUESTED','DISPUTED'],
+ FIX_REQUESTED:['FIX_DONE','DISPUTED'],
+ FIX_DONE:['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED','DISPUTED'],
+ REQUESTER_CONFIRMED:['PAYMENT_RELEASED','COMPLETED'],
+ PAYMENT_RELEASED:['COMPLETED'],
+ DISPUTED:['RESOLVED'],
+ NO_SHOW:['OFFERS_RECEIVED'],
+ RESOLVED:['COMPLETED'],
+ UNDER_REVIEW:['POSTED','CANCELLED']
+};
+function setStatus(next){
+ if(!S.task)return;
+ const cur=S.task.status,allowed=ALLOWED_TRANSITIONS[cur];
+ if(allowed&&!allowed.includes(next)&&cur!==next)console.warn('Task status skip',cur,'→',next);
+ S.task.status=next;
+}
+function hasLiveTask(){return S.task&&!TERMINAL_STATUS.has(S.task.status)&&S.task.status!=='UNDER_REVIEW'}
+function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
+function themeCycle(){const el=document.documentElement,cur=el.dataset.theme||'auto';const next=cur==='auto'?'light':cur==='light'?'dark':'auto';if(next==='auto')delete el.dataset.theme;else el.dataset.theme=next;try{localStorage.setItem('ts-theme',next)}catch(e){}render()}
+themeInit();
+const NEAR=[
+ {id:1,title:'Assemble my desk and bookshelf',cat:'furniture',km:0.4,date:'Saturday',t:'10:00',d:120,budget:'$80',offers:2,posted:'12 min ago',suburb:'Melbourne CBD',indoor:true,desc:'Two flat-pack pieces, all parts and instructions in the box. Lift access, 12th floor.',cond:'Ordinary household furniture. Screwdriver provided.',req:{name:'Maya',r:4.8,n:12}},
+ {id:2,title:'End-of-lease clean for a one-bedroom apartment',cat:'cleaning',km:0.8,date:'Saturday',t:'09:00',d:180,budget:'$220',offers:1,posted:'40 min ago',suburb:'Southbank',indoor:true,desc:'Vacate clean to hand the apartment back. Kitchen, bathroom, floors, inside windows, oven and balcony.',cond:'Cleaning supplies provided. Lift booked.',req:{name:'Mei',r:4.8,n:3}},
+ {id:3,title:'Collect a parcel from the post office',cat:'errands',km:0.6,date:'Monday',t:'12:30',d:30,budget:'Open to offers',offers:0,posted:'1 hr ago',suburb:'Melbourne CBD',indoor:false,desc:'Collect one small parcel and bring it to my apartment lobby. Card and ID will be provided.',cond:'Small, non-hazardous item.',req:{name:'Elena',r:4.9,n:27}},
+ {id:4,title:'Hang a mirror and two shelves',cat:'home',km:1.1,date:'Saturday',t:'09:30',d:90,budget:'$90–$120',offers:3,posted:'2 hrs ago',suburb:'Docklands',indoor:true,desc:'One large mirror and two floating shelves. Brackets supplied. Owner has approved fixing to the wall. Ground-level work only.',cond:'Owner permission confirmed. Own drill needed.',req:{name:'Dave',r:4.7,n:9}},
+ {id:5,title:'Help carry boxes from the lobby to level 18',cat:'moving',km:0.9,date:'Sunday',t:'14:00',d:60,budget:'$60',offers:1,posted:'3 hrs ago',suburb:'Melbourne CBD',indoor:true,desc:'About 25 boxes, none unusually heavy. Loading dock and lift are booked.',cond:'Lift booking confirmed for 2 PM to 3 PM.',req:{name:'Chloe',r:5,n:6}},
+ {id:6,title:'Move-in clean for a studio apartment',cat:'cleaning',km:1.4,date:'Friday',t:'11:00',d:120,budget:'Open to offers',offers:0,posted:'5 hrs ago',suburb:'Carlton',indoor:true,desc:'Standard clean before I move in: kitchen, bathroom, floors. Vacuum and mop provided.',cond:'Cleaning supplies provided.',req:{name:'Sam',r:4.6,n:3}},
+ {id:7,photoCount:2,title:'Remove left-behind furniture after tenants left',cat:'rubbish',km:0.7,date:'Saturday',t:'11:00',d:90,budget:'$180',offers:0,posted:'Yesterday',suburb:'Melbourne CBD',indoor:true,desc:'Two chairs, a bookcase and a double mattress left in a vacant apartment. Van or ute needed. Lift booked.',cond:'No electrical items or hazardous waste. Drop-off receipt required.',req:{name:'Jordan (property manager)',r:4.9,n:41}},
+ {id:9,photoCount:2,title:'Remove my old sofa and mattress',cat:'rubbish',km:0.5,date:'Saturday',t:'10:00',d:90,budget:'$120',offers:2,posted:'20 min ago',suburb:'Melbourne CBD',indoor:true,desc:'One three-seat sofa and a double mattress on level 9. Lift booked. Needs a van or ute.',cond:'No electrical items or hazardous waste. Drop-off receipt required.',req:{name:'Lena',r:4.9,n:7}},
+ {id:10,photoCount:2,title:'Patch and paint a hole in my lounge wall',cat:'home',km:0.9,date:'Sunday',t:'10:00',d:120,budget:'$150',offers:1,posted:'1 hr ago',suburb:'Southbank',indoor:true,desc:'Fist-sized hole in plasterboard. Patch, sand and paint one wall. Paint supplied.',cond:'Built after 2004. Ground-level work only. Owner permission confirmed.',req:{name:'Jo',r:4.7,n:5}},
+ {id:12,title:'Collect furniture-store order and deliver to my apartment',cat:'errands',km:1.2,date:'Sunday',t:'11:00',d:90,budget:'$90',offers:2,posted:'4 hrs ago',suburb:'Southbank',indoor:false,desc:'Collect two flat boxes (about 25 kg each) and bring them to level 14. Van or ute needed.',cond:'Order number provided. Lift booked.',req:{name:'Ken',r:4.6,n:6}}
+];
+const GUIDE={furniture:'Typical assembly jobs run $80-$200.',cleaning:'End-of-lease cleans typically run $120-$360.'};
+const PH={
+ all:'For example: I need someone to assemble my new desk on Saturday.',
+ moving:'For example: Help carry boxes from the loading dock to my apartment on Sunday.',
+ rubbish:'For example: Remove my old sofa and mattress on Saturday.',
+ cleaning:'For example: End-of-lease clean for my one-bedroom apartment on Saturday.',
+ furniture:'For example: I need someone to assemble my new desk on Saturday.',
+ errands:'For example: Collect a furniture order and deliver it to my apartment on Sunday.',
+ home:'For example: Patch and paint a hole in my lounge wall on Sunday.'
+};
+const EX={
+ all:['I need someone to assemble my new desk on Saturday.','End-of-lease clean for my one-bedroom apartment on Saturday.','Remove my old sofa and mattress on Saturday.','Help carry boxes from the loading dock to my apartment.'],
+ rubbish:['Remove my old sofa and mattress on Saturday.','Take away left-behind furniture from a vacant apartment.'],
+ errands:['Collect a furniture order and deliver it to my apartment.','Pick up a parcel from the post office.','Collect my groceries from Coles and bring them to my apartment.'],
+ home:['Patch and paint a hole in my lounge wall.','Hang a mirror in my hallway on Saturday.','Fix a loose door handle.'],
+ cleaning:['End-of-lease clean for my one-bedroom apartment on Saturday.','Move-in clean for a studio apartment before I arrive.'],
+ moving:['Help carry light boxes from the loading dock to my apartment.','Move boxes from my apartment to a storage cage.'],
+ furniture:['I need someone to assemble my new desk on Saturday.','Assemble a flat-pack bookshelf and a bed frame.'],
+ other:['Help me sort my wardrobe.','Help me with something not listed.']
+};
+function makeOffers(t){
+  const base=t.budget.type==='SET'?t.budget.amount:t.budget.type==='RANGE'?Math.round((t.budget.min+t.budget.max)/2):CATS[t.cat].base;
+  const dur=(t.duration&&t.duration.min)||90,d=t.date||nextSat(),dl=fmtDate(d);
+  const st=t.startMin!=null?[0,0,0,0].map(()=>t.startMin):(t.part==='Morning'?[540,570,600,510]:t.part==='Afternoon'?[780,840,810,900]:t.part==='Evening'?[1080,1110,1050,1140]:[600,660,570,840]);
+  const mk=(i,name,mult,km,rating,done,comp,canc,ver,msg,cats,repeat,reply)=>({id:i,name,fee:Math.max(10,Math.round(base*mult/5)*5),km,rating,done,comp,canc,ver,msg,cats,repeat,reply,age:['2 years','8 months','3 years','5 months'][i-1],when:`${dl}, ${fmtTime(st[i-1])} – ${fmtTime(st[i-1]+dur)}`,start:st[i-1]});
+  return[
+   mk(1,'Jordan',1,0.6,4.9,83,99,1,true,'Hi! I have done plenty of jobs like this nearby and can bring my own basic tools.',['Furniture','Household','Moving'],14,'Usually replies within 10 minutes'),
+   mk(2,'Sam',.85,1.8,4.8,41,97,3,true,'Happy to help. I can do it at the time suggested.',['Pickup & delivery','Furniture'],6,'Usually replies within 30 minutes'),
+   mk(3,'Priya',1.2,0.4,4.9,127,98,2,true,'I am nearby and free then, so no travel time.',['Cleaning','Hard rubbish','Pickup & delivery'],31,'Usually replies within 5 minutes'),
+   mk(4,'Marco',.95,1.2,4.6,12,92,8,false,'Available. Let me know if you would like any details confirmed.',['Household'],1,'Usually replies within an hour')
+  ];
+}
+function scheduleOffers(){
+  S.timers.forEach(clearTimeout);S.timers=[];
+  const all=makeOffers(S.task);
+  if(S.task.preferred){all.sort((a,b)=>(b.name===S.task.preferred)-(a.name===S.task.preferred));const pr=all.find(o=>o.name===S.task.preferred);if(pr){pr.prev=true;if(S.task.preferredFee)pr.fee=S.task.preferredFee;pr.msg='Happy to do this again.'}}
+  all.forEach((o,i)=>S.timers.push(setTimeout(()=>{
+    if(!S.task||!['POSTED','OFFERS_RECEIVED'].includes(S.task.status))return;
+    S.offers.push(o);setStatus('OFFERS_RECEIVED');ev(`Offer received from ${o.name}`);
+    notify(`${o.name} has offered ${money(o.fee)} for "${S.task.title}", ${o.when}.`);
+    if(['task','published','home','tasks'].includes(S.stack[S.stack.length-1].n))render();
+  },2200*(i+1))));
+}
+const chosen=()=>S.offers.find(o=>o.id===S.offerId);
+const PROMISE=`<div class="notice ok" style="margin-top:12px"><b>Price promise</b>You pay the price shown. No booking fee and no hidden charges. Your payment is held until the job is done.</div>`;
+const PROOF_REQ={rubbish:'Disposal receipt or drop-off photo',cleaning:'After photos',furniture:'Photo of the finished assembly',home:'After photo'};
+const proofLabel=()=>PROOF_REQ[S.task&&S.task.cat]||null;
+const SAMPLE_PHOTO='data:image/svg+xml,'+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='160' height='160' fill='#E8EFEA'/><rect x='38' y='22' width='84' height='116' rx='6' fill='#fff' stroke='#9BB3A5'/><g stroke='#9BB3A5' stroke-width='4'><path d='M52 46h56M52 64h56M52 82h40M52 100h56'/></g></svg>");
+const SAMPLE_ITEM='data:image/svg+xml,'+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='160' height='160' fill='#EDE7DD'/><rect x='24' y='70' width='112' height='46' rx='10' fill='#B88A5A'/><rect x='34' y='48' width='92' height='34' rx='10' fill='#C9A074'/><rect x='18' y='84' width='20' height='40' rx='8' fill='#A5784A'/><rect x='122' y='84' width='20' height='40' rx='8' fill='#A5784A'/></svg>");
+const thumbs=()=>S.proof&&S.proof.length?`<div class="thumbs">${S.proof.map(x=>{const u=safeImgUrl(x.url);return u?`<img src="${u}" alt="${esc(x.name)}">`:''}).join('')}</div>`:'';
+const startAt=()=>{const t=S.task;if(!t||!t.date)return null;const d=new Date(t.date);const m=t.startMin!=null?t.startMin:540;d.setHours(Math.floor(m/60),m%60,0,0);return d};
+const hoursToStart=()=>{const d=startAt();return d?(d-new Date())/36e5:Infinity};
+const claimOutcome=x=>{const c=S.claims.find(c=>S.task&&c.task===S.task.title&&!c.outcome);if(c)c.outcome=x;const fl=S.task&&S.task.fixLog&&S.task.fixLog[S.task.fixLog.length-1];if(fl&&!fl.outcome)fl.outcome=x};
+const archiveTask=over=>{const t=S.task,o=chosen();if(!t||!o||t.archived||!S.payment)return;t.archived=true;const gross=over&&over.paid!=null?over.paid:S.payment.gross;S.payouts.unshift({title:t.title+(over&&over.note?' ('+over.note+')':''),date:fmtDate(new Date()),price:gross,gst:!!S.tk.gst,tip:0});S.receipts.unshift({no:'R-'+(++S.rcptNo),date:fmtDate(new Date()),title:t.title,tasker:o.name,gst:!!(TASKERS[o.name]&&TASKERS[o.name].gst),price:gross,tip:0,method:'Visa ending 4242',prop:(t.prop||'').trim()});S.history.unshift({prop:(t.prop||'').trim()||'My jobs',title:t.title,cat:t.cat,tasker:o.name,date:fmtDate(new Date()),paid:gross,photos:S.proof.map(x=>x.url),check:isVacate()?S.checklist.filter(Boolean).length+' of '+VACATE_LIST.length:null,note:over&&over.note?over.note:null,fixes:(t.fixLog||[]).map(x=>({...x}))})};
+const visibleHistory=()=>S.history.filter(h=>S.agent||!h.seed);
+const DAY=864e5;
+const tRate=()=>{const now=Date.now(),recent=S.myStrikes.filter(x=>now-x.ts<90*DAY),fails=recent.length,open=recent.filter(x=>!x.reviewed).length,accepted=18+S.payouts.length+fails;return{fails,open,accepted,rate:fails/accepted}};
+const tStanding=()=>{const r=tRate();return r.open>=2&&r.rate>0.05?{state:'review',...r}:{state:'good',...r}};
+const standingBanner=()=>{const st=tStanding();if(st.state==='good')return'';return`<button class="notice bad" style="text-align:left;width:100%;margin:8px 0" data-a="reliability"><b>Account under review</b>We will contact you about your reliability record. New offers are on hold until the review is done. You can still finish jobs you have accepted. Tap for details.</button>`};
+const calloutFee=()=>S.payment?Math.round(S.payment.gross*20)/100:0;
+const isVacate=()=>!!(S.task&&S.task.cat==='cleaning'&&/end.?of.?lease|vacate|move.?out|bond|hand ?back/i.test((S.task.title||'')+' '+(S.task.desc||'')));
+const VACATE_LIST=['Kitchen: oven, rangehood, benchtops, cupboards inside','Bathroom: shower, screen, tiles, toilet, mirror','Floors vacuumed and mopped','Carpets: steam clean receipt if the agent requires it','Windows and sills (inside)','Wardrobes and drawers','Light fittings and switches','Walls: marks wiped off','Balcony swept and wiped'];
+/* ---------- navigation & rendering ---------- */
+function go(n,a={}){S.stack.push({n,a});render()}
+function root(n){S.stack=[{n}];render()}
+function back(){if(S.stack.length>1)S.stack.pop();render()}
+let toastT;
+function notify(msg){S.notifs.unshift({m:msg,t:clock()});if(S.notifs.length>50)S.notifs.pop();const t=$('#toast');t.textContent=msg;t.className='show';clearTimeout(toastT);toastT=setTimeout(()=>{t.className=''},4200)}
+function topRoot(){
+  const unread=Math.max(0,S.notifs.length-S.notifSeen);
+  return `<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span>
+  <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
+  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>`;
+}
+const topBack=t=>`<div class="top"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(t||'')}</div></div>`;
+function navHtml(){
+  const items=S.mode==='requester'?[['home','Home','home'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']]:[['find','Find Tasks','search'],['tasks','My Tasks','list'],['msgs','Messages','chat'],['profile','Profile','user']];
+  const cur=S.stack[0].n;
+  return items.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}${l}</button>`).join('');
+}
+function render(){
+  const cur=S.stack[S.stack.length-1];
+  const def=SCREENS[cur.n](cur.a||{});
+  const isRoot=S.stack.length===1;
+  const key=cur.n+JSON.stringify(cur.a||{})+S.stack.length;
+  const v=$('#view'),keep=key===S.lastKey,y=v.scrollTop;
+  $('#top').innerHTML=isRoot?topRoot():topBack(def.title);
+  v.innerHTML=def.html;v.scrollTop=keep?y:0;S.lastKey=key;
+  $('#nav').style.display=isRoot?'flex':'none';$('#nav').innerHTML=isRoot?navHtml():'';
+  const h=$('#sheetHost');
+  if(S.sheet){h.innerHTML=`<div class="back" data-a="close"></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">${SHEETS[S.sheet.n](S.sheet.a||{})}</div>`;h.className='open';const sh=h.querySelector('.sheet');if(sh){sh.tabIndex=-1;sh.focus()}}
+  else{h.innerHTML='';h.className=''}
+  if(def.after)def.after();
+}
+const openSheet=(n,a)=>{S.sheet={n,a};render()};
+const closeSheet=()=>{S.sheet=null;render()};
+/* ---------- shared fragments ---------- */
+const STATUS={
+ POSTED:['Posted',''],OFFERS_RECEIVED:['Offers received','brand'],ACCEPTED:['Upcoming','ok'],PAYMENT_CONFIRMED:['Upcoming','ok'],UPCOMING:['Upcoming','ok'],
+ TASK_STARTED:['In progress','brand'],TASKER_COMPLETED:['Needs your confirmation','warn'],REQUESTER_CONFIRMED:['Completed','ok'],PAYMENT_RELEASED:['Completed','ok'],COMPLETED:['Completed','ok'],
+ CANCELLED:['Cancelled','bad'],FIX_REQUESTED:['Fix requested','warn'],FIX_DONE:['Needs your confirmation','warn'],DISPUTED:['Problem reported','bad'],RESOLVED:['Resolved','ok'],NO_SHOW:['No-show reported','bad'],EXPIRED:['Expired',''],UNDER_REVIEW:['Under review','warn']
+};
+const statusPill=s=>`<span class="pill ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+const verBadge=o=>o.ver?'<span class="pill ok">Identity verified</span>':'<span class="pill">Email and phone verified</span>';
+function taskSummary(t){
+  return `<div class="card"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:19px">${esc(t.title)}</h3>${statusPill(t.status)}</div>
+  <div style="margin:8px 0">${catPill(t.cat)}</div>
+  ${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Location','Melbourne CBD (approximate)')}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>`;
+}
+function feeBox(fee,gstOn){
+  const f=calcFee(fee);
+  return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="muted small" style="margin:6px 2px 0">TaskSpeck keeps ${FEE_PCT}% of the task price from the Tasker. It is not added to your price.</p>`;
+}
+const empty=(em,t,s)=>`<div class="empty"><div class="big">${em}</div><h3 style="color:var(--ink)">${t}</h3><p style="margin-top:6px">${s}</p></div>`;
+/* ---------- screens ---------- */
+const SCREENS={
+home(){
+  const t=S.task;
+  return{html:`
+  <div class="hero-band"><p class="muted small" style="margin:0 0 4px">Melbourne CBD · Fixed-price jobs</p><h1 class="display" style="margin:0;font-size:30px">What do you need help with?</h1><p class="muted small" style="margin:8px 0 0">Post once, compare offers, pay when you are ready.</p></div>
+  <button class="ask" data-a="post">Describe the job in your own words</button>
+  <button class="btn primary big" data-a="post">Post a task</button>
+  <div class="tiles">
+    <button class="tile" data-a="mode" data-v="tasker">${ic('search')}Find Tasks</button>
+    <button class="tile" data-a="tab" data-v="tasks">${ic('list')}My Tasks</button>
+    <button class="tile" data-a="tab" data-v="msgs">${ic('chat')}Messages</button>
+    <button class="tile" data-a="payments">${ic('wallet')}Payments</button>
+  </div>
+  ${t?`<h2>Your task</h2><button class="card" data-a="viewTask"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${t.status==='POSTED'||t.status==='OFFERS_RECEIVED'?S.offers.length+' offer'+(S.offers.length===1?'':'s')+' so far':whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`:''}
+  ${visibleHistory().length?`<button class="card" style="margin:12px 0" data-a="turnarounds"><b>Job records</b><p class="muted small">Photos, checklists and costs for your completed jobs</p></button>`:''}
+  <h2>What do you need?</h2>
+  <div class="cats">${SHORT.map(k=>`<button class="cat" style="--h:${CATS[k].h}" data-a="post" data-v="${k}"><span class="em">${CATS[k].em}</span><span class="lbl">${CATS[k].name}</span></button>`).join('')}</div>
+  <div class="notice info" style="margin-top:20px"><b>Melbourne CBD pilot</b>Small jobs only. No electrical (including TV work), gas, plumbing, childcare or other licensed work. Pets, host turnovers and office jobs are not available yet. Check lift and loading dock rules with your building first.</div>
+  <p class="muted small center" style="margin-top:18px">TaskSpeck is a working name. Prototype only: no real payments, people or data.</p>`};
+},
+post(a){
+  const cat=a.cat;const ex=EX[cat||'all'];
+  return{title:cat?CATS[cat].name:'Post a task',html:`
+  <h1 class="display" style="font-size:28px">What do you need help with?</h1>
+  <textarea id="pt" data-in="text" placeholder="${esc(PH[cat||'all']||PH.all)}" aria-label="Describe your task">${esc(S.draft.text)}</textarea>
+  <p class="muted small" style="margin:14px 0 8px">Your budget</p>
+  <div class="chips">${chip('Open to offers',S.draft.budgetMode!=='set','data-a="bmode" data-v="open"')}${chip('I have a budget',S.draft.budgetMode==='set','data-a="bmode" data-v="set"')}</div>
+  ${S.draft.budgetMode==='set'?`<label class="f" for="bamt">Budget</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="bamt" data-in="bamt" min="1" value="${esc(S.draft.budgetAmt||'')}" placeholder="80"></div>`:`<p class="muted small" style="margin-top:8px">Taskers will make fixed-price offers and you choose.</p>`}
+  ${GUIDE[cat]?`<p class="muted small" style="margin-top:6px">${GUIDE[cat]} A guide only: Taskers can offer more or less.</p>`:''}
+  <p class="muted small" style="margin:14px 0 4px">Photos (optional)</p>
+  <p class="muted small" style="margin:0 0 8px">Photos help Taskers price accurately, especially for hard rubbish, moving and handyman jobs.</p>
+  <input type="file" accept="image/*" multiple data-in="postPhoto" style="margin-bottom:8px">
+  ${(S.draft.photos||[]).length?`<div class="thumbs">${S.draft.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Your photo"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmPostPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
+  <button class="btn secondary" style="margin-top:6px" data-a="samplePostPhoto">Use a sample photo</button>
+  <p class="muted small" style="margin:12px 0 8px">Tap an example to try it</p>
+  <div class="stack">${ex.map((e,i)=>`<button class="card" style="padding:12px 14px;font-size:15px" data-a="ex" data-v="${i}|${cat||'all'}">${esc(e)}</button>`).join('')}</div>
+  <button class="btn primary big" style="margin-top:18px" data-a="analyse">Continue</button>
+  <div class="notice info" style="margin-top:16px">Include what, where and roughly when. We will only ask about anything important that is missing.</div>`};
+},
+understood(){
+  const p=eff(),qs=questionsFor(S.p),a=S.draft.answers;
+  const title=S.form.title!=null?S.form.title:p.title;
+  return{title:'Check your task',html:`
+  <p class="muted" style="margin-bottom:10px">We have tidied this up. Change anything that is not right.</p>
+  <label class="f" for="ti" style="margin-top:0">Title</label>
+  <input type="text" id="ti" data-in="title" value="${esc(title)}">
+  <div class="card" style="margin-top:14px">
+    <div class="kv"><span>Category</span><b>${catPill(p.cat)}</b></div>
+    ${kv('When',whenLabel(p))}${kv('Duration',p.duration?p.duration.label:'Not stated')}${kv('Budget',p.budget.label)}
+    ${kv('Location','Melbourne CBD (approximate)')}${kv('Photos',(S.draft.photos||[]).length?(S.draft.photos||[]).length+' attached':'None')}${kv('Materials',p.materials||'Not stated')}
+  </div>
+  <button class="btn ghost" data-a="editText">Edit my description</button>
+  <label class="f" for="prop">Property or unit (optional, for your records)</label><input type="text" id="prop" data-in="prop" placeholder="e.g. Unit 1204, 200 Spencer St" value="${esc(S.form.prop||'')}">
+  <h2 style="margin-top:8px">When do you need it?</h2>
+  ${pickField('Date',draftDateLabel(),'Choose a date','data-a="dpick"')}
+  
+  ${pickField('Time',draftTimeLabel(),'Choose a time (optional)','data-a="times"')}
+  
+  ${qs.length?`<h2 style="margin-top:8px">A few quick questions</h2>`+qs.map(q=>`<div style="margin-bottom:16px"><p style="font-weight:600;margin-bottom:8px">${q.q}</p><div class="chips">${q.o.map(o=>chip(o,a[q.id]===o,`data-a="ans" data-v="${q.id}|${o}"`)).join('')}</div></div>`).join(''):''}
+  <button class="btn primary big" data-a="check">Check my task</button>`};
+},
+result(){
+  const r=evaluate();S.result=r;const p=eff();
+  const edit=`<button class="btn secondary" data-a="editTask">Edit task</button><button class="btn ghost" data-a="cancelDraft">Cancel</button>`;
+  let body;
+  if(r.risk==='PROHIBITED')body=`<div class="notice bad"><b>This task cannot be posted</b>${esc(r.why)}</div>${edit}`;
+  else if(r.risk==='HIGH_RISK')body=`<div class="notice bad"><b>This task cannot be posted automatically</b>${esc(r.why)}</div>${edit}`;
+  else if(r.risk==='REVIEW_REQUIRED')body=`<div class="notice"><b>We need to check a few details</b>${esc(r.why)} You will get a notification once it has been looked at.</div><button class="btn primary" style="margin-top:14px" data-a="sendReview">Send for review</button>${edit}`;
+  else body=`<div class="notice ok"><b>Safety check passed</b>${r.risk==='MEDIUM_RISK'?'We added a few safety notes to your task:':'This looks like a simple everyday task.'}${(r.notes||[]).map(n=>`<div style="margin-top:6px">• ${esc(n)}</div>`).join('')}</div><button class="btn primary big" style="margin-top:14px" data-a="toPreview">Continue</button>`;
+  return{title:'Safety check',html:`<div class="card" style="margin-bottom:14px"><h3>${esc(S.form.title!=null?S.form.title:p.title)}</h3><p class="muted small" style="margin-top:4px">${esc(p.text)}</p></div>${body}`};
+},
+preview(){
+  const t=buildTask();S.pending=t;
+  if(S.form.addr==null)S.form.addr='Apt 1204, 200 Spencer St, Melbourne VIC 3000';
+  return{title:'Preview',html:`
+  <p class="muted" style="margin-bottom:10px">This is what nearby Taskers will see.</p>
+  <div class="card"><h3 style="font-size:19px">${esc(t.title)}</h3><div style="margin:8px 0" class="wrap">${catPill(t.cat)}<span class="pill ok">Safety check passed</span></div>
+  <p style="margin:6px 0 10px">${esc(t.desc)}</p>
+  ${kv('Distance','Shown to Taskers as approximate')}${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Materials',t.materials||'Not stated')}
+  ${t.special.length?kv('Special conditions',esc(t.special.join('. '))):''}${t.notes.length?kv('Safety notes',esc(t.notes.join(' '))):''}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>
+  <label class="f" for="ad">Your exact address (kept private)</label>
+  <input type="text" id="ad" data-in="addr" value="${esc(S.form.addr)}">
+  <p class="muted small" style="margin-top:6px">Only your suburb is public. The exact address is shared with the Tasker you choose, after you accept and pay.</p>
+  <button class="btn primary big" style="margin-top:18px" data-a="publish">Publish task</button>
+  <button class="btn ghost" data-a="editTask">Edit</button>`};
+},
+published(){
+  const n=S.offers.length;
+  return{title:'Task published',html:`
+  <div class="center" style="padding:24px 0 8px"><div class="logo" style="width:64px;height:64px;border-radius:20px;margin:0 auto 14px">${ic('check',34)}</div>
+  <h1 class="display" style="font-size:28px;margin:0 0 8px">Your task is live</h1><p class="muted">Nearby Taskers can see it now. You choose who does it.</p></div>
+  ${n?`<div class="notice ok"><b>${n} offer${n>1?'s':''} so far</b>Compare them whenever you are ready.</div>`:`<div class="card center"><p class="dots"><span></span><span></span><span></span></p><p class="muted small" style="margin-top:8px">Waiting for offers. We will send a notification for each one.</p></div>`}
+  <button class="btn primary big" style="margin-top:16px" data-a="viewTask">${n?'See offers':'View my task'}</button>
+  <button class="btn ghost" data-a="home">Back to home</button>`};
+},
+tasks(){return S.mode==='requester'?tasksReq():tasksTasker()},
+task(){
+  const t=S.task;if(!t)return{title:'Your task',html:empty('📋','No task yet','Post a task and it will show up here.')};
+  const st=t.status;
+  if(st==='POSTED'||st==='OFFERS_RECEIVED')return{title:'Your task',html:taskSummary(t)+offersBlock()};
+  if(st==='UNDER_REVIEW')return{title:'Your task',html:taskSummary(t)+`<div class="notice" style="margin-top:14px"><b>Under review</b>We are checking a few details before this task can be posted.</div>`};
+  return{title:'Your task',html:activeBlock()};
+},
+offer(){
+  const o=chosen();if(!o)return{title:'Offer',html:''};const f=calcFee(o.fee);
+  return{title:o.name+"'s offer",html:`
+  <div class="row">${avatar(o.name,56)}<div class="grow"><h3 style="font-size:20px">${esc(o.name)}</h3><div style="margin-top:4px">${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
+  <button class="chip" style="margin-top:10px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>
+  <div class="card" style="margin-top:14px"><b>Proposed time</b><p>${esc(o.when)}</p><p class="muted small" style="margin-top:4px">${o.km} km away</p>${o.msg?`<p class="quote">“${esc(o.msg)}”</p>`:''}</div>
+  <div class="grid2" style="margin-top:12px">
+   <div class="stat"><b>★ ${o.rating}</b><span>Rating</span></div><div class="stat"><b>${o.done}</b><span>Tasks completed</span></div>
+   <div class="stat"><b>${o.comp}%</b><span>Completion rate</span></div><div class="stat"><b>${o.canc}%</b><span>Cancellation rate</span></div>
+  </div>
+  <div class="card" style="margin-top:12px">${kv('Account age',o.age)}${kv('Repeat customers',String(o.repeat))}${kv('Response reliability',o.reply)}<div class="kv"><span>Task history</span><b>${o.cats.join(', ')}</b></div></div>
+  <div class="notice info" style="margin-top:12px"><b>What verification means</b>${o.ver?'Identity verified means a third-party provider has checked who this person is.':'This person has verified their email and phone number.'} It does not mean they are qualified, licensed or insured, and it is not an endorsement by TaskSpeck.</div>
+  <button class="btn primary big" style="margin-top:16px" data-a="accept">Accept offer</button>
+  <button class="btn ghost" data-a="decline">Decline offer</button>`};
+},
+confirm(){
+  const o=chosen(),t=S.task;
+  return{title:'Confirm task',html:`
+  <div class="card">${kv('Task',esc(t.title))}${kv('Tasker',esc(o.name))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Time',o.when.split(', ')[1])}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Agreed fee',money(o.fee))}${kv('Location','Exact address shown privately after confirmation')}</div>
+  <h2>What you will pay</h2>${feeBox(o.fee,(TASKERS[o.name]||{}).gst)}
+  ${PROMISE}${isVacate()?'<div class="notice info" style="margin-top:10px"><b>Re-clean promise</b>If your agent\'s inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</div>':''}<button class="btn ghost" style="margin-bottom:6px" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>
+  <button class="btn primary big" data-a="toPay">Accept and pay ${money(o.fee)}</button>`};
+},
+pay(){
+  const o=chosen();
+  return{title:'Payment',html:`
+  ${feeBox(o.fee,(TASKERS[o.name]||{}).gst)}
+  <h2>Pay with</h2>
+  <div class="card row"><div class="logo" style="background:var(--line);color:var(--ink)">${ic('wallet',16)}</div><div class="grow"><b>Visa ending 4242</b><p class="muted small">Demo card</p></div>${ic('check',18)}</div>
+  <div class="notice info" style="margin-top:12px">Card details are handled by the payment provider. TaskSpeck does not store card numbers. Your payment is authorised now and released to ${esc(o.name)} after you confirm the task is done.</div>
+  <button class="btn primary big" style="margin-top:16px" id="paybtn" data-a="pay">Pay ${money(o.fee)}</button>
+  <p class="muted small center" style="margin-top:10px">Prototype: no real payment is taken.</p>`};
+},
+agreement(){
+  const t=S.task,o=chosen(),g=S.agreement;
+  return{title:'Task agreement',html:`
+  <div class="row" style="margin-bottom:10px"><span class="pill ok">Version ${g.version}</span><span class="muted small">Both parties can see this</span></div>
+  <div class="card">${kv('Requester','Alex')}${kv('Tasker',esc(o.name))}${kv('Task',esc(t.title))}${kv('Scope',esc(t.desc))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Start time',g.start)}${kv('Duration',g.dur)}${kv('Location',esc(S.form.addr||'Shared privately'))}${kv('Agreed fee',money(g.fee))}${kv('Materials',t.materials||'Not stated')}${kv('Conditions',esc((t.special.concat(t.notes)).join(' ')||'None stated'))}${kv('Payment',S.payment?S.payment.status==='RELEASED'?'Released':S.payment.status==='REFUNDED'?'Refunded':'Paid, awaiting completion':'Pending')}
+  <div class="kv"><span>Confirmed by</span><b>Alex ✓ ${esc(o.name)} ✓</b></div></div>
+  <h2>Version history</h2><div class="card">${g.history.map(h=>`<div class="kv"><span>v${h.v}</span><b>${esc(h.note)}</b></div>`).join('')}</div>
+  <p class="muted small" style="margin-top:8px">Earlier versions are kept and cannot be edited.</p>`};
+},
+review(){
+  const o=chosen(),f=S.form;const cats=['Communication','Reliability','Respect','Task accuracy'];
+  return{title:'Leave a review',html:`
+  <div class="center"><div style="display:flex;justify-content:center">${avatar(o.name,64)}</div><h2 style="margin-top:10px">How was ${esc(o.name)}?</h2></div>
+  <div class="stars" role="group" aria-label="Star rating">${[1,2,3,4,5].map(n=>`<button class="${(f.stars||0)>=n?'on':''}" data-a="star" data-v="${n}" aria-label="${n} star${n>1?'s':''}">★</button>`).join('')}</div>
+  <p class="muted small center">What went well? (optional)</p>
+  <div class="chips" style="justify-content:center;margin:8px 0 14px">${cats.map(c=>chip(c,(f.good||[]).includes(c),`data-a="good" data-v="${c}"`)).join('')}</div>
+  <textarea data-in="review" placeholder="Add a short note (optional)" aria-label="Written review">${esc(f.review||'')}</textarea>
+  <p class="muted small" style="margin-top:8px">You can review ${esc(o.name)} because this task was completed and paid for. Reviews are only from real jobs, and critical reviews stay up unless they break our rules.</p>
+  <p class="muted small" style="margin:14px 0 6px">Add a tip for ${esc(o.name)} (optional)</p><div class="chips">${chip('No tip',!f.tip,'data-a="tip" data-v="0"')}${TIPS.map(x=>chip('$'+x,f.tip===x,`data-a="tip" data-v="${x}"`)).join('')}</div><p class="muted small" style="margin-top:6px">100% of your tip goes to ${esc(o.name)}. TaskSpeck takes nothing from tips.</p>
+  <button class="btn primary big" style="margin-top:14px" data-a="submitReview">Submit review</button>`};
+},
+turnarounds(){
+  const props={};visibleHistory().forEach(h=>{(props[h.prop]=props[h.prop]||[]).push(h)});
+  const names=Object.keys(props);
+  if(!names.length)return{title:'Job records',html:empty('📄','No job records yet','Completed jobs appear here with photos, checklists and costs.')};
+  return{title:'Job records',html:`<p class="muted" style="margin-bottom:10px">A time-stamped record of each completed job: Tasker, photos, checklist and cost. Add a property or unit to a task to group jobs by property.</p><div class="stack">${names.map(n=>`<button class="card" data-a="turnaround" data-v="${esc(n)}"><div class="row"><div class="grow"><b>${esc(n)}</b><p class="muted small">${props[n].length} job${props[n].length>1?'s':''} · ${money(props[n].reduce((a,b)=>a+b.paid,0))}</p></div><span class="pill ok">Report</span></div></button>`).join('')}</div>`};
+},
+turnaround(){
+  PHOTO_REG.length=0;
+  const n=S.propSel,rows=visibleHistory().filter(h=>h.prop===n),total=rows.reduce((a,b)=>a+b.paid,0);
+  return{title:'Job record',html:`<div class="report">
+  <p class="muted small" style="margin:0 0 2px">Job record</p><h2 style="margin-top:0">${esc(n)}</h2><p class="muted small">Report date: ${fmtDate(new Date())} · Prepared in TaskSpeck</p>
+  <div class="card" style="margin-top:10px">${rows.map(r=>`<div class="kv"><span>${esc(r.title)}<br><span class="muted small">${esc(r.tasker)} · ${esc(r.date)}${r.check?' · Checklist '+esc(r.check):''}${r.note?' · '+esc(r.note):''}</span></span><b>${money(r.paid)}</b></div><div style="margin:-2px 0 8px"><button class="chip" data-a="rebook" data-v="${S.history.indexOf(r)}">Book again</button></div>`).join('')}<div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div></div>
+  <h3 style="margin:14px 0 6px">Photos</h3>${recPhotos(rows)}${recFixes(rows)}
+  <p class="muted small" style="margin-top:12px">Amounts are what the requester paid. Taskers' tax invoices will be available in the real app. Photos and checklists are time-stamped records of the work. This record does not guarantee a bond outcome: the agent and landlord decide that.</p></div>
+  <button class="btn primary" style="margin-top:12px" data-a="recPreview">Preview record</button><button class="btn secondary" data-a="printReport">Print or save as PDF</button><button class="btn secondary" data-a="copyReport">Copy a text summary</button>`};
+},
+recpreview(){
+  PHOTO_REG.length=0;
+  const n=S.propSel,rows=visibleHistory().filter(h=>h.prop===n),total=rows.reduce((a,b)=>a+b.paid,0);
+  return{title:'Preview',html:`<p class="muted small" style="margin-bottom:8px">This is how your record looks when printed or saved as a PDF.</p>
+  <div class="paper report">
+   <div class="row" style="align-items:flex-start"><div class="grow"><p class="muted small" style="margin:0">Job record</p><h2 style="margin:2px 0 0">${esc(n)}</h2></div><b style="font-size:13px">TaskSpeck</b></div>
+   <p class="muted small" style="margin:6px 0 10px">Prepared for Alex · ${fmtDate(new Date())}</p>
+   ${rows.map(r=>`<div class="kv" style="align-items:flex-start"><span><b>${esc(r.title)}</b><br><span class="muted small">${esc(r.tasker)} · ${esc(r.date)}${r.check?' · Checklist '+esc(r.check):''}${r.note?' · '+esc(r.note):''}</span></span><b>${money(r.paid)}</b></div>`).join('')}
+   <div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div>
+   <h3 style="margin:14px 0 6px">Photos</h3>${recPhotos(rows)}${recFixes(rows)}
+   <p class="muted small" style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">Time-stamped record of the work. It does not guarantee a bond outcome: the agent and landlord decide that. Page 1 of 1</p>
+  </div>
+  <button class="btn primary" style="margin-top:12px" data-a="printReport">Print or save as PDF</button><button class="btn secondary" data-a="copyReport">Copy a text summary</button>`};
+},
+safetyguide(){
+  const sec=(t,items)=>`<div class="card" style="margin-bottom:10px"><b>${t}</b><ul class="muted small" style="margin:6px 0 0 18px">${items.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  return{title:'Tasker safety guide',html:`<p class="muted" style="margin-bottom:10px">A five-minute read. You can leave any job that feels unsafe, with no penalty.</p>
+  ${sec('Before you go',['Read the task and building access notes.','Tell someone where you are working.','Keep your phone charged and the app open for check-ins.'])}
+  ${sec('At the door',['Check who you are meeting.','Do not go in if you feel unsafe.','Ask for items to be brought to the doorway where you can.'])}
+  ${sec('During the job',['Stay in the agreed areas.','Take your proof photos.','Never accept cash off the app or share your personal number.'])}
+  ${sec('Say no and leave if',['Someone is aggressive, harassing or seems intoxicated.','There are hazards: asbestos, mould, chemicals, sharps or unsafe wiring.','The load is too heavy for one person. Ask for a second person or decline.'])}
+  ${sec('Never do',['Electrical, gas or plumbing work, or TV mounting.','Work at height beyond a safe ladder reach.','Hazardous waste removal.'])}
+  ${sec('If something goes wrong',['Step out and call 000 if anyone is in danger.','Tap SOS in the app.','Report it afterwards so we can review it.'])}
+  <label class="card" style="display:flex;gap:10px;align-items:center;margin-top:6px"><input type="checkbox" data-in="sgOk" ${S.form.sgOk?'checked':''}><span class="small">I have read the Tasker safety guide.</span></label>
+  <button class="btn primary" style="margin-top:12px" data-a="sgDone">Finish</button>`};
+},
+reliability(){
+  const st=tStanding(),now=Date.now(),list=S.myStrikes.filter(x=>now-x.ts<90*DAY).sort((a,b)=>b.ts-a.ts);
+  return{title:'Reliability record',html:`<div class="card"><div class="row"><div class="grow"><b>Your reliability</b><p class="muted small" style="margin:2px 0 0">${st.fails} no-show or late cancellation${st.fails===1?'':'s'} in ${st.accepted} accepted jobs (${(st.rate*100).toFixed(1)}%)</p></div><span class="pill ${st.state==='good'?'ok':'bad'}">${st.state==='good'?'Good standing':'Under review'}</span></div></div>
+  <div class="card" style="margin-top:12px"><b>How it works</b><ul class="muted small" style="margin:6px 0 0 18px"><li>We look at the pattern, not single mistakes.</li><li>Your record is the share of accepted jobs that end in a no-show or a cancellation within 24 hours of the start.</li><li>If more than 1 in 20 accepted jobs end that way, a person reviews your account. They talk to you first, and may put new offers on hold if the pattern continues.</li><li>Incidents older than 90 days drop off.</li></ul></div>
+  <div class="card" style="margin-top:12px"><b>What counts</b><ul class="muted small" style="margin:6px 0 0 18px"><li>A no-show: you do not arrive.</li><li>Cancelling within 24 hours of the start.</li></ul><b style="display:block;margin-top:10px">What never counts</b><ul class="muted small" style="margin:6px 0 0 18px"><li>Leaving a job because you feel unsafe.</li><li>A cancellation caused by the requester, such as a wrong address or a refused change.</li><li>An emergency you tell us about.</li><li>A date or time change both sides agree to.</li></ul></div>
+  <h2>Incidents</h2>${list.length?list.map(x=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><b>${esc(x.kind)}</b><p class="muted small">${esc(x.task)} · ${fmtDate(new Date(x.ts))}${x.reviewed?' · Reviewed':''}</p></div>${x.appeal?'<span class="pill">Appeal sent</span>':`<button class="chip" data-a="appeal" data-v="${S.myStrikes.indexOf(x)}">Appeal</button>`}</div></div>`).join(''):'<p class="muted">No incidents. Keep it up.</p>'}
+  <p class="muted small" style="margin-top:8px">Draft pilot policy. To be confirmed by a solicitor before launch.</p>
+  <div class="demo"><div class="demo-h">Prototype controls</div><p class="muted small" style="margin:2px 0 10px">These stand in for real events so you can see each stage.</p><button class="btn secondary" data-a="strikeSim" data-v="Late cancellation">Simulate: I cancelled within 24 hours</button><button class="btn secondary" data-a="strikeSim" data-v="No-show">Simulate: I did not arrive (no-show)</button><button class="btn secondary" data-a="reviewDone">Support finishes the review (reinstated)</button><button class="btn secondary" data-a="strikeClear">Clear the record</button></div>`};
+},
+taskerprofile(){
+  PHOTO_REG.length=0;
+  const n=S.profName,you=n==='You',o=S.offers.find(x=>x.name===n)||{rating:'New',done:0,comp:100,canc:0,repeat:0,reply:'New to TaskSpeck',cats:[]};
+  const T=you?{bio:S.tprof.bio,since:'2026',langs:S.tprof.langs,vehicle:S.tprof.vehicle,areas:S.tprof.areas,badges:[S.verified&&'ID checked',S.tk.abn&&'ABN on file',S.tk.police&&'Police check clear',S.tk.ins&&'Insurance on file',S.tk.safety&&'Safety guide done'].filter(Boolean),photos:0,reviews:[]}:(TASKERS[n]||{bio:'',since:'2026',langs:['English'],vehicle:'',areas:'Melbourne CBD',badges:[],photos:0,reviews:[]});
+  const works=you?S.tprof.photos:Array.from({length:T.photos||0},(_,i)=>i%2?SAMPLE_ITEM:SAMPLE_PHOTO);
+  return{title:you?'How requesters see you':n,html:`<div class="row">${avatar(n==='You'?'Y':n,64)}<div class="grow"><h2 style="margin:0">${you?'Your profile':esc(n)}</h2><p class="muted small">★ ${o.rating} · ${o.done} tasks · Member since ${esc(T.since)}</p></div></div>
+  <div class="wrap" style="margin:10px 0">${T.badges.length?T.badges.map(b=>`<span class="pill ok">${esc(b)}</span>`).join(''):'<span class="pill">No checks completed yet</span>'}</div>
+  <div class="notice info"><b>Demo profile</b>Badges here are examples. In the real app each badge only shows after that check is done.</div>
+  <div class="card" style="margin-top:12px"><b>About</b><p class="muted small" style="margin-top:4px">${esc(T.bio||'No description yet.')}</p></div>
+  <div class="grid2" style="margin-top:12px"><div class="stat"><b>${o.comp}%</b><span>Completed</span></div><div class="stat"><b>${o.canc}%</b><span>Cancelled or no-show</span></div><div class="stat"><b>${o.repeat}</b><span>Repeat customers</span></div><div class="stat"><b style="font-size:15px">${esc(o.reply)}</b><span>Response</span></div></div>
+  <div class="card" style="margin-top:12px">${kv('Services',esc((o.cats&&o.cats.length?o.cats:['Household']).join(', ')))}${kv('Areas',esc(T.areas||'Melbourne CBD'))}${kv('Languages',esc((T.langs||['English']).join(', ')))}${T.vehicle?kv('Vehicle',esc(T.vehicle)):''}</div>
+  ${works.length?`<h3 style="margin:14px 0 6px">Past work</h3>${photoThumbs(works)}`:''}
+  <h3 style="margin:14px 0 6px">Reviews</h3>${T.reviews.length?T.reviews.map(r=>`<div class="card" style="margin-bottom:8px"><div class="row"><b class="grow">${esc(r[0])}</b><span class="small">${'★'.repeat(r[2])}</span></div><p class="muted small" style="margin-top:4px">${esc(r[1])}</p></div>`).join(''):'<p class="muted">No reviews yet.</p>'}`};
+},
+myprofile(){
+  const t=S.tprof,items=[['ID check',S.verified],['Police check',S.tk.police],['ABN',S.tk.abn],['Insurance',S.tk.ins],['Safety guide',S.tk.safety],['About you',t.bio.length>20],['Vehicle',t.vehicle.length>0],['Past-work photos',t.photos.length>0]],n=items.filter(x=>x[1]).length;
+  return{title:'My public profile',html:`<div class="card"><div class="row"><div class="grow"><b>Profile strength</b><p class="muted small" style="margin:2px 0 0">${n} of ${items.length} done. Stronger profiles win more jobs.</p></div><span class="pill ${n>=6?'ok':'warn'}">${Math.round(n/items.length*100)}%</span></div><div class="steps" style="margin-top:10px">${items.map(x=>`<i class="${x[1]?'on':''}"></i>`).join('')}</div><p class="muted small" style="margin-top:6px">Still to do: ${items.filter(x=>!x[1]).map(x=>x[0]).join(', ')||'nothing, well done'}</p></div>
+  <label class="f" for="tpb">About you</label><textarea id="tpb" data-in="tpbio" style="min-height:90px" placeholder="What you do, how you work, your tools">${esc(t.bio)}</textarea>
+  <p class="muted small" style="margin:12px 0 6px">Languages</p><div class="chips">${['English','Mandarin','Hindi','Greek','Spanish','Vietnamese','Other'].map(l=>chip(l,t.langs.includes(l),`data-a="tlang" data-v="${l}"`)).join('')}</div>
+  <label class="f" for="tpv">Vehicle (optional)</label><input type="text" id="tpv" data-in="tpveh" value="${esc(t.vehicle)}" placeholder="e.g. white ute">
+  <label class="f" for="tpa">Areas you cover</label><input type="text" id="tpa" data-in="tpareas" value="${esc(t.areas)}">
+  <p class="muted small" style="margin:14px 0 6px">Past-work photos</p><input type="file" accept="image/*" multiple data-in="tpPhoto" style="margin-bottom:8px">
+  ${t.photos.length?`<div class="thumbs">${t.photos.map((u,i)=>`<span style="position:relative"><img src="${u}" alt="Past work"><button class="chip" style="position:absolute;top:-6px;right:-6px;padding:2px 8px;min-height:0;width:auto" data-a="rmWorkPhoto" data-v="${i}" aria-label="Remove photo">✕</button></span>`).join('')}</div>`:''}
+  <button class="btn secondary" style="margin-top:6px" data-a="sampleWorkPhoto">Use a sample photo</button>
+  <button class="btn primary" style="margin-top:14px" data-a="seeMine">See how requesters see it</button>`};
+},
+receipts(){
+  return{title:'Receipts and invoices',html:S.receipts.length?`<p class="muted" style="margin-bottom:10px">One receipt for every paid job. Tax invoices show GST when the Tasker charges it.</p><div class="stack">${S.receipts.map((r,i)=>`<button class="card" data-a="receipt" data-v="${i}"><div class="row"><div class="grow"><b>${esc(r.title)}</b><p class="muted small">${esc(r.no)} · ${esc(r.date)} · ${esc(r.tasker)}</p></div><div class="fee" style="font-size:18px">${money(r.price+r.tip)}</div></div><span class="pill ${r.gst?'ok':''}" style="margin-top:6px">${r.gst?'Tax invoice':'Receipt'}</span></button>`).join('')}</div>`:empty('🧾','No receipts yet','A receipt appears here after each completed job.')};
+},
+receipt(){
+  const r=S.receipts[S.recIdx]||S.receipts[0];if(!r)return{title:'Receipt',html:''};
+  return{title:r.gst?'Tax invoice':'Receipt',html:`<div class="paper report">
+  <div class="row" style="align-items:flex-start"><div class="grow"><p class="muted small" style="margin:0">${r.gst?'Tax invoice':'Receipt'}</p><h2 style="margin:2px 0 0">${esc(r.no)}</h2></div><b style="font-size:13px">TaskSpeck</b></div>
+  <p class="muted small" style="margin:6px 0 10px">Date ${esc(r.date)}</p>
+  ${kv('Supplier',esc(r.tasker)+(r.gst?' · ABN on file (demo)':''))}${kv('Recipient','Alex')}${r.prop?kv('Property',esc(r.prop)):''}
+  <div class="card" style="margin-top:10px">${kv('Task',esc(r.title))}${kv('Price'+(r.gst?' (incl. GST)':''),money(r.price))}${r.gst?kv('GST included (10%)',money(gstOf(r.price))):kv('GST','Not charged')}${kv('Booking fee',money(0))}${r.tip?kv('Tip (100% to the Tasker)',money(r.tip)):''}<div class="kv"><span><b>Total paid</b></span><b style="font-size:19px">${money(r.price+r.tip)}</b></div>${kv('Paid with',esc(r.method))}</div>
+  <p class="muted small" style="margin-top:10px">TaskSpeck keeps ${FEE_PCT}% from the Tasker's price. It was not added to your total. ${r.gst?'Tax invoice issued through TaskSpeck for the supplier. Demo only: confirm the format with an accountant.':'This is a receipt, not a tax invoice, because the supplier does not charge GST.'}</p></div>
+  <button class="btn primary" style="margin-top:12px" data-a="printReport">Print or save as PDF</button>`};
+},
+invoice(){
+  const r=S.payouts[S.invIdx]||S.payouts[0];if(!r)return{title:'Invoice',html:''};
+  const g=!!r.gst,fee=calcFee(r.price),net=Math.round((r.price-fee)*100)/100;
+  return{title:g?'Tax invoice':'Invoice',html:`<div class="paper report">
+  <div class="row" style="align-items:flex-start"><div class="grow"><p class="muted small" style="margin:0">${g?'Tax invoice to the requester':'Invoice to the requester'}</p><h2 style="margin:2px 0 0">${esc(r.title)}</h2></div><b style="font-size:13px">TaskSpeck</b></div>
+  <p class="muted small" style="margin:6px 0 10px">Date ${esc(r.date)}</p>
+  ${kv('Supplier','You'+(g?' · ABN '+esc(S.tk.abnNum||'not entered'):''))}
+  <div class="card" style="margin-top:10px">${kv('Task price'+(g?' (incl. GST)':''),money(r.price))}${g?kv('GST included (10%)',money(gstOf(r.price))):kv('GST','Not charged (not registered)')}${r.tip?kv('Tip',money(r.tip)):''}</div>
+  <h3 style="margin:14px 0 6px">TaskSpeck fee statement</h3>
+  <div class="card">${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(fee))}${S.qtGst?kv('GST included in the fee',money(gstOf(fee))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(net+r.tip)}</b></div></div>
+  <p class="muted small" style="margin-top:10px">${g?'Remember to pay the GST in your price to the ATO.':'You only need to charge GST if your turnover is $75,000 or more.'} Demo only: check the layout and your GST position with an accountant.</p></div>
+  <button class="btn primary" style="margin-top:12px" data-a="printReport">Print or save as PDF</button>`};
+},
+notifs(){
+  S.notifSeen=S.notifs.length;
+  return{title:'Notifications',html:`<div class="notice info"><b>Demo</b>This list shows what would be sent as push notifications. Real push notifications need Apple and Google push services in the real app.</div><div class="stack" style="margin-top:10px">${S.notifs.length?S.notifs.map(n=>`<div class="card"><p>${esc(n.m)}</p><p class="muted small">${n.t}</p></div>`).join(''):'<p class="muted">Nothing yet.</p>'}</div>`};
+},
+idcheck(){
+  const c=S.idc;
+  return{title:'Verify your identity',html:`<div class="notice info"><b>Demo</b>In the real app this uses an ID verification provider and a police check provider. Nothing is sent from this prototype.</div>
+  ${S.verified?`<div class="notice ok" style="margin-top:10px"><b>Identity verified</b>Your ID and selfie matched.</div>`:`<h2>1. Identity</h2><p class="muted small" style="margin-bottom:6px">Choose an ID</p><div class="chips">${['Driver licence','Passport','Proof of age card'].map(x=>chip(x,c.type===x,`data-a="idsel" data-v="${x}"`)).join('')}</div>
+  <button class="btn secondary" style="margin-top:10px" data-a="idfront">${c.front?'ID photo added ✓':'Add a photo of your ID (sample)'}</button><button class="btn secondary" style="margin-top:8px" data-a="idselfie">${c.selfie?'Selfie added ✓':'Take a selfie (sample)'}</button>
+  <button class="btn primary" style="margin-top:12px" data-a="idsubmit" ${c.status==='checking'?'disabled':''}>${c.status==='checking'?'Checking…':'Submit for checking'}</button>`}
+  <h2>2. Police check</h2>${S.tk.police?`<div class="notice ok"><b>Police check clear</b>The result is stored as a badge only. Details are not shown to requesters.</div>`:`<p class="muted small" style="margin-bottom:8px">Tasker work takes place in people's homes, so a national police check is required before your first job.</p><label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-in="idConsent" ${c.consent?'checked':''}><span class="small">I consent to a police check being requested.</span></label><button class="btn primary" style="margin-top:10px" data-a="policereq" ${c.police==='requested'?'disabled':''}>${c.police==='requested'?'Requested… waiting for the result':'Request police check'}</button>`}`};
+},
+earnings(){
+  const rows=S.payouts,net=r=>Math.round((r.price-calcFee(r.price))*100)/100,total=rows.reduce((a,r)=>a+net(r)+(r.tip||0),0),fees=rows.reduce((a,r)=>a+calcFee(r.price),0),tips=rows.reduce((a,r)=>a+(r.tip||0),0),gst=rows.filter(r=>r.gst).reduce((a,r)=>a+gstOf(r.price),0);
+  return{title:'Earnings and payouts',html:`<div class="grid2"><div class="stat"><b>${money(Math.round(total*100)/100)}</b><span>You received</span></div><div class="stat"><b>${money(Math.round(fees*100)/100)}</b><span>TaskSpeck kept (${FEE_PCT}%)</span></div></div>
+  <div class="notice info" style="margin-top:12px"><b>How it works</b>TaskSpeck keeps ${FEE_PCT}% of each task price. You receive the other ${100-FEE_PCT}%${tips?', plus 100% of tips':''}. The requester pays no booking fee, and nothing else is deducted.</div>
+  <div class="card" style="margin-top:12px"><b>Tax settings</b>
+   <div class="chips" style="margin-top:8px">${chip('I am registered for GST',S.tk.gst,'data-a="gstTog"')}</div>
+   ${S.tk.gst?`<label class="f" for="abnn">ABN</label><input type="text" id="abnn" data-in="abnNum" inputmode="numeric" value="${esc(S.tk.abnNum)}" placeholder="11 digit ABN"><p class="muted small" style="margin-top:6px">Prices you enter include GST. GST included in your payouts so far: ${money(Math.round(gst*100)/100)}. You pay it to the ATO.</p>`:'<p class="muted small" style="margin-top:6px">You only have to register once your turnover reaches $75,000. Ask your accountant.</p>'}
+   <p class="muted small" style="margin:10px 0 6px">Prototype control</p><div class="chips">${chip('TaskSpeck is registered for GST',S.qtGst,'data-a="qtGstTog"')}</div></div>
+  <h2>Payouts</h2>${rows.length?rows.map((r,i)=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><h3>${esc(r.title)}</h3><p class="muted small">${esc(r.date)}</p></div><div class="fee" style="font-size:20px">${money(Math.round((net(r)+(r.tip||0))*100)/100)}</div></div><div style="margin-top:8px">${kv('Task price',money(r.price))}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(r.price)))}${r.tip?kv('Tip (100% yours)','+'+money(r.tip)):''}${kv('You receive',money(Math.round((net(r)+(r.tip||0))*100)/100))}</div><button class="chip" style="margin-top:8px;width:auto" data-a="invoice" data-v="${i}">View invoice</button></div>`).join(''):'<p class="muted">No payouts yet.</p>'}`};
+},
+payments(){
+  const p=S.payment,t=S.task,o=(S.offerId&&chosen())||{name:'a Tasker'};
+  if(!p)return{title:'Payments',html:empty('💳','No payments yet','Payments appear here after you accept an offer.')+receiptsBtn()};
+  const lab={AUTHORISED:['Paid, awaiting completion','warn'],RELEASED:['Released to Tasker','ok'],REFUNDED:['Refunded','bad'],PART_REFUND:['Part refunded','warn'],PART_RELEASE:['Part released, part refunded','warn'],DISPUTED:['On hold, problem reported','bad']}[p.status];
+  return{title:'Payments',html:`${receiptsBtn()}<div class="card"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">To ${esc(o.name)}</p></div><span class="pill ${lab[1]}">${lab[0]}</span></div>
+  <div style="margin-top:8px">${p.status==='REFUNDED'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.gross)):p.status==='PART_RELEASE'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(p.partial.refund))+kv('Paid to Tasker after TaskSpeck fee',money(p.partial.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.partial.fee)):p.status==='PART_REFUND'?kv('Total paid',money(p.gross))+kv('Refunded to you',money(Math.round((p.gross-p.callout)*100)/100))+kv('Call-out fee to Tasker',money(p.callout)):kv('Total paid',money(p.gross))+kv('Paid to Tasker after TaskSpeck fee',money(p.tasker))+kv('TaskSpeck fee ('+FEE_PCT+'%, paid by Tasker)',money(p.fee))}</div><p class="muted small" style="margin-top:8px">TaskSpeck's ${FEE_PCT}% comes out of the Tasker's price. You pay no booking fee.</p></div>`};
+},
+msgs(){
+  if(!S.thread)return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+empty('💬','No messages yet','Chat opens as soon as an offer is accepted. Phone numbers stay private.')};
+  const o=chosen(),last=S.thread[S.thread.length-1];
+  return{html:`<h1 class="display" style="font-size:28px">Messages</h1><button class="card" data-a="openThread"><div class="row">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(last.text)}</p></div></div></button>`};
+},
+thread(){
+  const o=chosen();const quick=["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."];
+  return{title:o.name,html:`
+  <div id="msgs">${S.thread.map(m=>m.sys?`<div class="notice" style="margin:10px 0"><b>Keep your transaction inside TaskSpeck</b>Payments made outside TaskSpeck may not be covered by platform protections.</div>`:`<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
+  <div class="chips scroll" style="margin-top:12px">${quick.map((q,i)=>`<button class="chip" data-a="quick" data-v="${i}">${esc(q)}</button>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Message ${esc(o.name)}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="send">Send</button></div>
+  <div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="report">Report</button><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="block">Block</button></div>
+  <p class="muted small" style="margin-top:6px">Try sending “Can I pay cash instead?” to see the off-platform notice.</p>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
+},
+profile(){
+  return{html:`
+  <div class="row" style="margin-bottom:12px">${avatar('Alex',64)}<div class="grow"><h1 class="display" style="font-size:26px;margin:0">Alex</h1><p class="muted">Melbourne CBD · New member</p></div></div>
+  <div class="grid2"><div class="stat"><b>0</b><span>Tasks completed</span></div><div class="stat"><b>—</b><span>Rating (no reviews yet)</span></div></div>
+  <h2>Verification</h2>
+  <div class="card">
+   <div class="kv"><span>Basic</span><b>Email and phone ✓</b></div>
+   <div class="kv"><span>Identity verified</span><b>${S.verified?'Verified ✓':'Not yet'}</b></div>
+   <div class="kv"><span>Enhanced</span><b class="none">Only if a task needs it</b></div>
+   ${S.verified?'':`<button class="btn secondary" style="margin-top:10px" data-a="verify">Verify identity</button>`}
+  </div>
+  <div class="notice info" style="margin-top:10px">Verification confirms who someone is. It does not mean they are qualified, licensed or insured, and it is not an endorsement by TaskSpeck.</div>
+  ${S.mode==='tasker'?`<h2>Tasker checklist</h2><div class="card">${[['id','ID check',S.verified],['police','Police check',S.tk.police],['safety','Safety guide (5 minutes)',S.tk.safety],['abn','ABN',S.tk.abn],['ins','Public liability insurance',S.tk.ins],['veh','Vehicle (moving and hard rubbish)',S.tk.veh]].map(([k,l,v])=>`<div class="kv"><span>${l}</span>${v?'<b>Added ✓</b>':`<button class="chip" data-a="${k==='id'||k==='police'?'verify':k==='safety'?'safetyguide':'tk'}" data-v="${k}">Add</button>`}</div>`).join('')}<p class="muted small" style="margin-top:8px">Moving, hard rubbish and handyman jobs need insurance on file. We review new Taskers as quickly as we can.</p></div>`:''}
+  ${claimsCard()}
+  <h2>Settings</h2>
+  <div class="stack">
+   ${S.mode==='tasker'?`<button class="card" data-a="avail">Availability and travel distance</button><button class="card" data-a="earnings">Earnings and payouts</button><button class="card" data-a="myprofile">My public profile</button><button class="card" data-a="reliability">Reliability record<span class="pill ${tStanding().state==='good'?'ok':'bad'}" style="float:right">${tStanding().state==='good'?'Good standing':'Under review'}</span></button>`:''}
+   <button class="card" data-a="agentTog">I manage rentals (agent or landlord)<span class="pill ${S.agent?'ok':''}" style="float:right">${S.agent?'On':'Off'}</span></button>
+   <button class="card" data-a="turnarounds">Job records</button>
+   <button class="card" data-a="notifs">Notifications<span class="pill${S.notifs.length-S.notifSeen>0?' brand':''}" style="float:right">${S.notifs.length-S.notifSeen>0?S.notifs.length-S.notifSeen+' new':'All read'}</span></button>
+   <button class="card" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>
+   <button class="card" data-a="sheet" data-v="safety">Safety Centre</button>
+   <button class="card" data-a="sheet" data-v="trusted">Trusted contact</button>
+   <button class="card" data-a="sheet" data-v="notif">Notifications</button>
+   <button class="card" data-a="sheet" data-v="help">Help and support</button>
+  </div>
+  <p class="muted small" style="margin-top:16px">TaskSpeck is a marketplace that connects people. Taskers are not employees of TaskSpeck. Legal wording is a placeholder until reviewed by Australian legal counsel.</p>`};
+},
+find(){
+  const f=S.find;
+  return{html:`
+  <div class="row"><h1 class="display grow" style="font-size:28px">Tasks near you</h1>
+  <div class="vt" role="group" aria-label="Show tasks as">${[['list','List'],['map','Map']].map(([k,l])=>`<button data-a="fview" data-v="${k}" aria-pressed="${f.view===k}">${l}</button>`).join('')}</div></div>
+  ${standingBanner()}
+  ${S.tk.safety?'':`<button class="notice" style="text-align:left;width:100%;margin:8px 0" data-a="safetyguide"><b>Complete the 5-minute safety guide</b>Required before your first job. Tap to start.</button>`}
+  <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks, e.g. old sofa" aria-label="Search tasks" autocomplete="off"></div>
+  <button class="chip" style="margin-top:10px" data-a="ffilt" aria-expanded="${!!f.fopen}">Filters: ${f.km} km · ${f.cat==='all'?'All categories':CATS[f.cat].name} ${f.fopen?'▴':'▾'}</button>
+  ${f.fopen?`<p class="muted small" style="margin:12px 0 6px">Distance</p>
+  <div class="chips scroll">${[1,2,3,5,10].map(k=>chip(k+' km',f.km===k,`data-a="fkm" data-v="${k}"`)).join('')}</div>
+  <p class="muted small" style="margin:12px 0 6px">Category</p>
+  <div class="chips scroll">${chip('All',f.cat==='all','data-a="fcat" data-v="all"')}${FINAL.map(k=>chip(CATS[k].name,f.cat===k,`data-a="fcat" data-v="${k}"`)).join('')}</div>`:''}
+  <div class="chips scroll" style="margin-top:10px">${SORTS.map(([k,l])=>chip(l,(f.sort||'closest')===k,`data-a="fsort" data-v="${k}"`)).join('')}</div>
+  <div id="fres" style="margin-top:14px">${findResults()}</div>`,after(){refreshApiListings()}};
+},
+findTask(){
+  PHOTO_REG.length=0;
+  const t=getFindTask(S.findId);if(!t)return{title:'Task details',html:empty('📍','Task not found','It may have been removed.')};
+  const sent=S.sent.find(x=>x.tid===t.id);
+  const openOnly=t.fromApi&&t.listingStatus==='Open';
+  return{title:'Task details',html:`
+  <div class="card"><h3 style="font-size:20px">${esc(t.title)}</h3><div class="wrap" style="margin:8px 0">${catPill(t.cat)}<span class="pill">${t.km} km away</span>${t.fromApi?`<span class="pill ${openOnly?'ok':'warn'}">${esc(t.listingStatus)}</span>`:''}</div>
+  <p style="margin:6px 0 10px">${esc(t.desc)}</p>
+  ${kv('Date',t.date)}${kv('Time',fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1]))}${kv('Duration',t.d<60?t.d+' minutes':t.d/60+' hour'+(t.d>60?'s':''))}${kv('Budget',t.budget)}${kv('Area',t.suburb+' (approximate)')}${kv('Special conditions',t.cond)}${kv('Posted',t.posted)}${kv('Offers so far',String(t.offers))}${(t.photoCount||0)>0?`<p class="muted small" style="margin:8px 0 2px">Photos from the requester</p>${photoThumbs(Array.from({length:t.photoCount},()=>SAMPLE_ITEM))}`:''}</div>
+  <div class="card row" style="margin-top:12px">${avatar(t.req.name)}<div class="grow"><b>${esc(t.req.name)}</b><p class="muted small">★ ${t.req.r} · ${t.req.n} tasks posted</p></div><span class="pill ok">Identity verified</span></div>
+  <p class="muted small" style="margin:10px 2px">Exact address is shared only if your offer is accepted.</p>
+  ${!openOnly&&t.fromApi?`<div class="notice ok"><b>${esc(t.listingStatus)}</b>This listing is no longer open for new bids.</div>`:sent?`<div class="notice ok"><b>Bid sent</b>You offered ${money(sent.fee)}. Waiting for the requester to accept.</div>`:`<button class="btn primary big" data-a="makeOffer">Make an offer</button>`}
+  <div class="row" style="margin-top:6px"><button class="btn secondary" data-a="save">${S.saved[t.id]?'Saved ✓':'Save task'}</button><button class="btn secondary" data-a="sheet" data-v="report">Report</button></div>`};
+},
+makeOffer(){
+  const t=getFindTask(S.findId),f=S.form;if(!t)return{title:'Make an offer',html:''};
+  return{title:'Make an offer',html:`
+  <div class="card"><b>${esc(t.title)}</b><p class="muted small">${esc(t.date)}, ${fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1])} · Budget ${esc(t.budget)}</p></div>
+  <label class="f" for="fee">${S.tk.gst?'Your price (includes GST)':'Your fee'}</label><div class="money"><span class="cur">$</span><input type="number" inputmode="decimal" id="fee" data-in="fee" min="1" value="${esc(f.fee||'')}" placeholder="45"></div>
+  <div id="feesum" style="margin-top:8px"></div>
+  <label class="f">When can you do it?</label>
+  ${pickField('Date',t.date,'',null)}
+  ${pickField('Start time',fmtTime(+(f.start||t.t).split(':')[0]*60+ +(f.start||t.t).split(':')[1]),'Choose a time','data-a="otimes"')}
+  
+  <p class="muted small" style="margin:12px 0 6px">How long will it take?</p>
+  <div class="chips">${[30,60,90,120,180,240].map(m=>chip(m<60?m+' min':(m/60)+' hr'+(m>60?'s':''),(f.dur||t.d)===m,`data-a="odur" data-v="${m}"`)).join('')}</div>
+  <p class="muted small" style="margin:8px 2px">Finish about ${fmtTime(+(f.start||t.t).split(':')[0]*60+ +(f.start||t.t).split(':')[1]+(f.dur||t.d))}</p>
+  <label class="f" for="ms">Message (optional)</label><textarea id="ms" data-in="omsg" style="min-height:80px" placeholder="A short note to the requester">${esc(f.omsg||'')}</textarea>
+  <div class="notice info" style="margin-top:12px"><b>Fair-work rules (read before you offer)</b><ul class="muted small" style="margin:6px 0 0 18px"><li>Payment is held, then released when the requester confirms, or automatically 48 hours after you mark the job complete.</li><li>One free fix per job, within 48 hours, only for the agreed scope. Extras are a new paid task.</li><li>You can respond to a fix request with your own photos. If it is not fair, we review both sides and decide, and you can still be paid.</li><li>If the requester caused the problem, we can decide on extra payment.</li><li>We aim to decide disputes within ${DISPUTE_AIM} of having both sides' information.</li></ul></div>
+  <label class="tog" style="border:0;gap:12px;justify-content:flex-start;margin-top:8px"><input type="checkbox" data-in="ok" ${f.ok?'checked':''} style="width:22px;height:22px;flex:none"><span>I understand the task description and conditions shown above.</span></label>
+  <p class="muted small" style="margin:8px 2px">Taskers are independent: you set a fixed price for the job, choose how and when you do it, and bring your own tools. Hourly roles and shifts are not available. If you hold a student visa, you are responsible for staying within your work-hour limit (48 hours per fortnight while your course is in session). All paid work counts.</p>
+  <button class="btn primary big" id="sendOffer" data-a="sendOffer" style="margin-top:12px">Send offer</button>`,after(){INP.fee()}};
+},
+avail(){
+  const a=S.avail;
+  return{title:'Availability',html:`
+  <button class="tog" aria-pressed="${a.paused}" data-a="apause"><span><b>Pause availability</b><br><span class="muted small">Hide me from new tasks</span></span><span class="sw"></span></button>
+  <h2>Days</h2><div class="chips">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i)=>chip(d,a.days.includes(i),`data-a="aday" data-v="${i}"`)).join('')}</div>
+  ${pickField('From',fmtTime(+a.from.split(':')[0]*60+ +a.from.split(':')[1]),'Choose a time','data-a="atimes" data-v="from"')}
+  
+  ${pickField('To',fmtTime(+a.to.split(':')[0]*60+ +a.to.split(':')[1]),'Choose a time','data-a="atimes" data-v="to"')}
+  
+  <h2>Maximum travel distance</h2><div class="chips">${[1,2,5,10,20].map(k=>chip(k+' km',a.km===k,`data-a="akm" data-v="${k}"`)).join('')}</div>
+  <h2>Preferred categories</h2><div class="chips">${FINAL.map(k=>chip(CATS[k].name,a.cats.includes(k),`data-a="acat" data-v="${k}"`)).join('')}</div>
+  <button class="btn primary" style="margin-top:18px" data-a="asave">Save availability</button>`};
+}
+};
+function taskCard(t){
+  const dur=t.d<60?t.d+' min':t.d/60+(t.d>60?' hrs':' hr');
+  return `<button class="card lift" data-a="openFind" data-v="${t.id}"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:17px">${esc(t.title)}</h3><span class="fee" style="font-size:18px">${t.budget.startsWith('$')?t.budget.split(' ')[0]:''}</span></div>
+  <div class="wrap" style="margin:6px 0">${catPill(t.cat)}${t.fromApi?`<span class="pill ${t.listingStatus==='Open'?'ok':'warn'}">${esc(t.listingStatus)}</span>`:''}${postedMins(t.posted)<=180?'<span class="pill ok">New</span>':''}</div>
+  <div class="wrap muted small"><span>${t.km} km away</span><span>${t.date}</span><span>${fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1])}</span><span>${dur}</span></div>
+  <div class="wrap muted small" style="margin-top:4px"><span>${t.budget.startsWith('$')?'Budget '+t.budget:'Open to offers'}</span><span>${t.offers} offer${t.offers===1?'':'s'}</span><span><b>Posted ${t.posted}</b></span></div></button>`;
+}
+/* ---------- Find Tasks helpers: search, sort, map ---------- */
+const SORTS=[['closest','Closest'],['newest','Newest']];
+const SORT_NOTE={closest:'Nearest first.',newest:'Most recently posted first.'};
+const STOP=new Set('the and for with need needs someone please help want who can get have that this from near any some one two out off its you your are was has but not too very just like also into onto over'.split(' '));
+const postedMins=p=>/min/.test(p)?parseInt(p):/hr/.test(p)?parseInt(p)*60:1440;
+function findMatch(t,q){
+  q=q.trim().toLowerCase();if(!q)return true;
+  const hit=RULES.find(([,re])=>re.test(q));
+  const words=q.split(/[^a-z0-9]+/).filter(w=>w.length>2&&!STOP.has(w)).map(w=>w.replace(/(ing|ed|s)$/,''));
+  const hay=(t.title+' '+t.desc+' '+t.suburb+' '+CATS[t.cat].name).toLowerCase();
+  if(hit)return t.cat===hit[0];
+  return words.some(w=>w.length>2&&hay.includes(w));
+}
+function findList(){
+  const f=S.find;
+  const cmp={closest:(a,b)=>a.km-b.km,newest:(a,b)=>postedMins(a.posted)-postedMins(b.posted)};
+  return allFindTasks().filter(t=>t.km<=f.km&&(f.cat==='all'||t.cat===f.cat)&&findMatch(t,f.q||'')).sort(cmp[f.sort||'closest']);
+}
+function findResults(){
+  const f=S.find,q=(f.q||'').trim(),l=findList();
+  const blocked=q&&BLOCK.find(([re])=>re.test(q));
+  if(blocked)return `<div class="notice"><b>Not available on TaskSpeck</b>${esc(blocked[1])}</div>`;
+  if(!l.length){
+    return empty('📍','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
+    +(f.km<10?`<button class="btn secondary" data-a="fkm" data-v="10">Widen to 10 km</button>`:'')
+    +((q||f.cat!=='all')?`<button class="btn ghost" data-a="fclear">Clear search and category</button>`:'');
+  }
+  const hit=q?RULES.find(([,re])=>re.test(q)):null;
+  const head=`<p class="muted small" style="margin-bottom:10px">${l.length} task${l.length===1?'':'s'}${hit?' · matched to '+CATS[hit[0]].name:''} · ${SORT_NOTE[f.sort||'closest']}</p>`;
+  return head+(f.view==='map'?mapHtml(l):`<div class="stack">${l.map(taskCard).join('')}</div>`);
+}
+function mapHtml(l){
+  const f=S.find,R=42,scale=Math.max(1,Math.max(...l.map(t=>t.km))*1.2);
+  const DIR={'Southbank':90,'Docklands':195,'Carlton':270,'East Melbourne':330};
+  const pos=t=>{
+    const base=DIR[t.suburb],deg=base==null?(t.id*137.5)%360:base+((t.id*53)%50)-25,a=deg*Math.PI/180,r=Math.max(7,t.km/scale*R);
+    return{x:50+r*Math.cos(a),y:50+r*Math.sin(a)};
+  };
+  const vs=[8,19,31,43,55,67,79,91].map(x=>`<line class="st" x1="${x}" y1="0" x2="${x}" y2="100"/>`).join('');
+  const hs=[9,22,35,47,71,84,95].map(y=>`<line class="st" x1="0" y1="${y}" x2="100" y2="${y}"/>`).join('');
+  const rings=[0.5,1,2,5,10].filter(k=>k<=scale).map(k=>{const r=k/scale*R;return `<circle class="ring" cx="50" cy="50" r="${r.toFixed(1)}"/><text class="lbl" x="50" y="${(50-r-0.8).toFixed(1)}" text-anchor="middle">${k} km</text>`}).join('');
+  const P=l.map(t=>pos(t));
+  for(let it=0;it<60;it++){let moved=false;
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+      let dx=P[j].x-P[i].x,dy=P[j].y-P[i].y,d=Math.hypot(dx,dy);
+      if(d<11){if(d<.01){dx=1;dy=0;d=1}const push=(11-d)/2,ux=dx/d,uy=dy/d;P[i].x-=ux*push;P[i].y-=uy*push;P[j].x+=ux*push;P[j].y+=uy*push;moved=true}
+    }
+    P.forEach(q=>{q.x=Math.min(93,Math.max(7,q.x));q.y=Math.min(93,Math.max(7,q.y))});
+    if(!moved)break}
+  const pins=l.map((t,i)=>{const p=P[i];return `<button class="pin" style="--h:${CATS[t.cat].h};left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%" data-a="fpin" data-v="${t.id}" aria-pressed="${f.pin===t.id}" aria-label="${esc(t.title)}, ${esc(t.budget)}, ${t.km} km away">${CATS[t.cat].em}</button>`}).join('');
+  const sel=l.find(t=>t.id===f.pin);
+  return `<div class="map"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">${vs}${hs}<path class="riv" d="M-2 64 C18 58 30 70 52 63 S86 56 102 60"/>${rings}<text class="lbl" x="50" y="75" text-anchor="middle">Southbank</text><text class="lbl" x="3" y="43">Docklands</text><text class="lbl" x="50" y="8" text-anchor="middle">Carlton</text><circle class="you" cx="50" cy="50" r="2.2"/></svg>${pins}</div>
+  <div class="wrap muted small" style="margin:8px 0 12px"><span><i style="width:10px;height:10px;border-radius:50%;background:var(--brand);display:inline-block;margin-right:6px"></i>You (approximate)</span><span>Pin colour shows the category</span></div>
+  ${sel?taskCard(sel):'<p class="muted small" style="margin-bottom:10px">Tap a pin to preview the task.</p>'}
+  <p class="muted small" style="margin-top:12px">Illustrative map for the prototype. Pins show approximate areas only, and the exact address is shared only if your offer is accepted. The real app uses a live map.</p>`;
+}
+function tasksReq(){
+  const t=S.task;
+  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(t?`<button class="card" data-a="viewTask"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`:empty('📋','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
+}
+function tasksTasker(){
+  return{html:`<h1 class="display" style="font-size:28px">My Tasks</h1>
+  ${standingBanner()}
+  <div class="grid2"><div class="stat"><b>${money(S.payouts.reduce((a,r)=>a+Math.round((r.price-calcFee(r.price))*100)/100,0))}</b><span>Earnings this week</span></div><div class="stat"><b>${S.sent.length}</b><span>Offers sent</span></div></div>
+  <button class="card" style="margin-top:12px" data-a="earnings"><b>Earnings and payouts</b><p class="muted small">See what TaskSpeck keeps (${FEE_PCT}%) and what you receive</p></button>
+  <h2>Offers sent</h2>${S.sent.length?S.sent.map(s=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><h3>${esc(s.title)}</h3><p class="muted small">${esc(s.date)}, ${esc(s.time)}</p></div><div class="fee" style="font-size:20px">${money(s.fee)}</div></div><p class="muted small" style="margin-top:6px">You receive ${money(Math.round((s.fee-calcFee(s.fee))*100)/100)} after TaskSpeck keeps ${FEE_PCT}%</p><span class="pill" style="margin-top:8px">Waiting for the requester</span></div>`).join(''):`<p class="muted">Nothing yet. Find a task nearby and make an offer.</p><button class="btn secondary" style="margin-top:10px" data-a="tab" data-v="find">Find tasks</button>`}
+  <h2>Active and upcoming</h2><p class="muted">No active tasks.</p>`};
+}
+function offersBlock(){
+  const t=S.task;let list=[...S.offers];
+  if(S.sort==='price')list.sort((a,b)=>a.fee-b.fee);else if(S.sort==='near')list.sort((a,b)=>a.km-b.km);
+  return `<h2>${list.length?list.length+' offer'+(list.length>1?'s':''):'Offers'}</h2>
+  ${list.length?`<div class="chips" style="margin-bottom:12px">${chip('Newest',S.sort==='new','data-a="sort" data-v="new"')}${chip('Lowest price',S.sort==='price','data-a="sort" data-v="price"')}${chip('Nearest',S.sort==='near','data-a="sort" data-v="near"')}</div>
+  <div class="stack">${list.map(o=>`<button class="card ${o.declined?'dim':''}" data-a="offer" data-v="${o.id}">
+    <div class="row">${avatar(o.name)}<div class="grow"><b style="font-size:17px">${esc(o.name)}</b><div style="margin-top:3px">${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
+    <div class="wrap small" style="margin-top:10px"><span>★ ${o.rating}</span><span>${o.done} tasks</span><span>${o.comp}% completed</span><span>${o.canc}% cancelled</span><span>${o.km} km away</span></div>
+    <p style="margin-top:8px;font-weight:600;font-size:14.5px">${esc(o.when)}</p>${o.msg?`<p class="quote">“${esc(o.msg)}”</p>`:''}${o.declined?'<p class="small muted" style="margin-top:6px">Declined</p>':''}</button>`).join('')}</div>
+  <p class="muted small" style="margin-top:12px">Offers are shown in the order you choose. You make the final call.</p>`
+  :`<div class="card center"><p class="dots"><span></span><span></span><span></span></p><p class="muted small" style="margin-top:8px">Waiting for offers. The task stays open for 7 days.</p></div>`}
+  <div class="notice info" style="margin-top:14px">Your exact address stays private until you accept an offer.</div>${PROMISE}`;
+}
+const STEPS=[['Accepted and paid',['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING']],['Started',['TASK_STARTED']],['Marked complete',['TASKER_COMPLETED']],['Payment released',['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED']]];
+function activeBlock(){
+  const t=S.task,o=chosen(),st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
+  let h=taskSummary(t);
+  h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
+  if(idx>=0)h+=`<div class="steps" aria-label="Progress" style="margin-top:14px">${STEPS.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div><p class="small"><b>${STEPS[idx][0]}</b>${f.onway&&st==='UPCOMING'&&!f.arrived?' · '+esc(o.name)+' is on the way':''}</p>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','errands'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
+  if(st==='TASK_STARTED')h+=`<div class="card" style="margin-top:12px"><b>${f.checkin?esc(o.name)+' confirmed all OK':'Waiting for '+esc(o.name)+"'s safety check-in"}</b><p class="muted small" style="margin:4px 0 0">When a Tasker arrives, and again if a job runs long, we ask "All OK?". If there is no answer, support is notified. We cannot promise immediate contact, so call 000 in an emergency.</p></div>${f.missed?`<div class="notice bad" style="margin-top:10px"><b>No answer to the safety check-in</b>Support has been notified. We cannot promise immediate contact. If you are worried, call 000 or tap SOS.</div>`:''}`;
+  if(st==='UPCOMING')h+=`<div class="card" style="margin-top:12px"><b>${f.confirmed?esc(o.name)+' has confirmed they will be there':'Waiting for '+esc(o.name)+' to confirm'}</b><p class="muted small" style="margin:4px 0 0">Taskers confirm 24 hours before the start and tap "On my way". If they have not checked in 15 minutes after the start time, you get a full refund and a quick re-match.</p></div><button class="btn secondary" style="margin-top:10px" data-a="noshow">${esc(o.name)} has not arrived: refund and re-match</button><p class="muted small center" style="margin-top:4px">In the real app this button unlocks 15 minutes after the start time.</p>`;
+  if(st==='FIX_REQUESTED'&&S.fix)h+=`<div class="notice" style="margin-top:14px"><b>${isVacate()?'Re-clean':'Fix'} requested</b>${esc(S.fix.what)}${S.fix.text?': '+esc(S.fix.text):''}. ${esc(o.name)} has 48 hours to put it right. Your payment stays on hold.</div>`;
+  if(st==='FIX_DONE')h+=`<div class="card" style="margin-top:14px"><b>${esc(o.name)} says it is fixed.</b><p class="muted small" style="margin:4px 0 8px">Check the new photos, then confirm or tell us it is still not right.</p>${thumbs()}</div><button class="btn primary big" style="margin-top:12px" data-a="confirmDone">Confirm it is fixed</button><button class="btn secondary" data-a="sheet" data-v="report">Still not right: report a problem</button>`;
+  if(st==='RESOLVED'){const p=S.payment;h+=`<div class="notice ok" style="margin-top:14px"><b>Decision made</b>${p.status==='REFUNDED'?'You have been refunded in full.':p.status==='PART_RELEASE'?`${money(p.partial.tasker)} was paid to ${esc(o.name)} after TaskSpeck's fee, and ${money(p.partial.refund)} was refunded to you.`:'Payment was released to '+esc(o.name)+'.'}</div><button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`}
+  if(st==='NO_SHOW')h+=`<div class="notice bad" style="margin-top:14px"><b>No-show confirmed</b>${esc(o.name)} did not arrive. You have been refunded in full. We recorded it on ${esc(o.name)}'s reliability record. Repeated no-shows lead to a review of their account.</div><button class="btn primary big" style="margin-top:12px" data-a="rematch">Find another Tasker</button>`;
+  if(S.change)h+=`<div class="notice" style="margin-top:14px"><b>${esc(o.name)} requests a change</b>+30 minutes and +${money(15)} because the job is bigger than described.</div><button class="btn primary" style="margin-top:10px" data-a="sheet" data-v="change">Review change</button>`;
+  if(st==='TASKER_COMPLETED')h+=`<div class="card" style="margin-top:14px"><b>${esc(o.name)} says the task is complete.</b><p class="muted small" style="margin:4px 0 10px">“All done, everything is as described in the task.”</p>${S.proof.length?`<p class="small" style="margin:8px 0 4px"><b>${esc(proofLabel()||'Completion photo')}</b></p>${thumbs()}`:'<div class="card" style="text-align:center;padding:26px;background:var(--bg)">No completion photo supplied</div>'}${isVacate()?`<p class="small" style="margin:10px 0 4px"><b>Vacate checklist: ${S.checklist.filter(Boolean).length} of ${VACATE_LIST.length} done</b></p><ul class="muted small" style="margin:0 0 0 18px">${VACATE_LIST.map((x,i)=>`<li>${S.checklist[i]?'✓':'•'} ${esc(x)}</li>`).join('')}</ul>`:''}<p class="muted small" style="margin-top:8px">Your payment is held. If you do nothing it is released automatically 48 hours after completion. Something wrong? Tell us within 48 hours.</p></div><button class="btn primary big" style="margin-top:12px" data-a="confirmDone">Confirm completion</button>${t.fixUsed?'<p class="muted small" style="margin:8px 0">The free fix for this job has been used. For anything else, use Report a problem.</p>':`<button class="btn secondary" data-a="sheet" data-v="fix">${isVacate()?'Agent found issues? Request a free re-clean':'Not quite right? Ask for a fix'}</button>`}<button class="btn secondary" data-a="sheet" data-v="report">Report a problem</button>`;
+  if(['PAYMENT_RELEASED','COMPLETED','REQUESTER_CONFIRMED'].includes(st))h+=`<div class="notice ok" style="margin-top:14px"><b>Payment released</b>${money(S.payment.tasker)} has gone to ${esc(o.name)}. TaskSpeck kept ${FEE_PCT}% (${money(S.payment.fee)}) of the ${money(S.payment.gross)} price from the Tasker. You paid nothing extra.</div>${t.reviewed?'':`<button class="btn primary" style="margin-top:12px" data-a="toReview">Leave a review</button>`}<button class="btn secondary" style="margin-top:8px" data-a="bookAgain">Book ${esc(o.name)} again</button><button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`;
+  if(S.dispute&&st==='DISPUTED'){const d=['OPEN','EVIDENCE_REQUESTED','UNDER_REVIEW','RESOLVED'];h+=`<div class="notice bad" style="margin-top:14px"><b>${S.dispute.reason}</b>Your payment stays on hold while we review both sides: the agreement, messages and photos. We aim to decide within ${DISPUTE_AIM} of having both sides' information, and will tell you if it will take longer.${S.dispute.taskerPhotos?`<p class="small" style="margin:8px 0 2px"><b>${esc(o.name)}'s photos</b></p><div class="thumbs">${S.dispute.taskerPhotos.map(u=>`<img src="${u}" alt="Photo from the Tasker">`).join('')}</div>`:''}<div class="steps" style="margin-top:8px">${d.map((x,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</div><span class="small">Status: Open</span><br><button class="chip" style="margin-top:8px;width:auto" data-a="sheet" data-v="disputes">How disputes work</button></div>`;}
+  if(st==='CANCELLED')h+=`<div class="notice bad" style="margin-top:14px"><b>Task cancelled</b>${S.payment&&S.payment.callout?'Your payment is being refunded, minus a call-out fee of '+money(S.payment.callout)+' paid to the Tasker.':'Your payment is being refunded in full.'}</div>`;
+  h+=`<div class="stack" style="margin-top:14px"><button class="card" data-a="agreementScreen">View agreement <span class="pill" style="float:right">v${S.agreement.version}</span></button>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card"><b>Location shared with ${esc(o.name)}</b><p class="muted small">${esc(S.form.addr||'Address')} · only ${esc(o.name)} can see it</p></div><button class="card" data-a="sheet" data-v="safety">${ic('shield',18)} Safety Centre</button><button class="btn danger" style="margin-top:8px" data-a="sheet" data-v="sos">SOS: I need help now</button>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="sheet" data-v="cancel">Cancel task</button><button class="btn ghost" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>`;
+  h+='</div>';
+  h+=demoPanel();
+  h+=`<h2>Timeline</h2><ol class="tl">${S.events.map(e=>`<li>${esc(e.l)}<time>${e.t}</time></li>`).join('')}</ol>`;
+  return h;
+}
+function demoPanel(){
+  const st=S.task.status,f=S.flags,o=chosen();let b='';
+  if(st==='UPCOMING'){
+    if(!f.confirmed)b+=`<button class="btn secondary" data-a="demo" data-v="confirm">${esc(o.name)}: Confirm attendance (24 hours before)</button>`;
+    else b+=!f.onway?`<button class="btn secondary" data-a="demo" data-v="onway">${esc(o.name)}: I am on my way</button>`:`<button class="btn secondary" data-a="demo" data-v="arrived">${esc(o.name)}: I have arrived</button>`;
+  }else if(st==='TASK_STARTED'){const pl=proofLabel();
+    if(!f.checkin&&!f.missed)b+=`<button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="checkin">${esc(o.name)}: Answer the safety check-in (All OK)</button><button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="nocheckin">Skip ahead: ${esc(o.name)} does not answer</button>`;
+    if(isVacate())b+=`<p class="small" style="margin:6px 0"><b>Vacate checklist</b> (every item must be ticked)</p><div class="stack">${VACATE_LIST.map((x,i)=>`<label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-in="vc${i}" ${S.checklist[i]?'checked':''}><span class="small">${esc(x)}</span></label>`).join('')}</div><button class="btn secondary" style="margin:8px 0" data-a="tickAll">Tick all (demo)</button>`;
+    if(pl)b+=`<p class="small" style="margin:6px 0"><b>Proof required:</b> ${esc(pl)}</p><input type="file" accept="image/*" multiple data-in="proofFile" style="margin:4px 0 8px">${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button>`;
+    b+=`<button class="btn secondary" data-a="demo" data-v="complete">${esc(o.name)}: Mark task complete</button>`;
+  }else if(st==='TASKER_COMPLETED')b+=`<button class="btn secondary" data-a="demo" data-v="autorelease">Skip ahead 48 hours (automatic release)</button>`;
+  else if(st==='FIX_REQUESTED')b+=`<p class="small" style="margin:6px 0"><b>New photo of the fix required</b></p><input type="file" accept="image/*" multiple data-in="proofFile" style="margin:4px 0 8px">${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button><button class="btn secondary" data-a="demo" data-v="fixed">${esc(o.name)}: Mark as fixed</button><button class="btn secondary" data-a="demo" data-v="nofix">Skip ahead 48 hours (no fix made)</button><p class="small" style="margin:10px 0 6px"><b>Or respond if the request is not fair</b></p><div class="chips">${['The work matches the agreed scope','Access was blocked','Extra mess or items were left','Other'].map(x=>chip(x,S.form.tr===x,`data-a="trChip" data-v="${x}"`)).join('')}</div><button class="btn secondary" style="margin-top:8px" data-a="demo" data-v="disagree">${esc(o.name)}: Disagree and send my photos</button>`;
+  else if(st==='DISPUTED')b+=`<p class="small" style="margin:6px 0"><b>Support decision</b> (a person decides in the real app)</p><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="refund">Full refund to the requester</button><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="partial">Part payment: Tasker 50%, requester 50% back</button><button class="btn secondary" data-a="decide" data-v="full">Pay the Tasker in full</button>`;
+  if((st==='UPCOMING'||st==='TASK_STARTED')&&!S.change&&S.agreement.version===1)b+=`<button class="btn secondary" data-a="demo" data-v="change">${esc(o.name)}: Request a change</button>`;
+  if(!b)return '';
+  return `<div class="demo"><div class="demo-h">Prototype controls</div><p class="muted small" style="margin:2px 0 10px">These stand in for what the Tasker does on their own phone.</p>${b}</div>`;
+}
+function buildTask(){
+  const p=eff(),r=evaluate(),a=S.draft.answers,special=[];
+  if(a.order)special.push(a.order==='Yes'?'Grocery order already placed':'Grocery order not yet placed');
+  if(a.home)special.push(a.home);
+  if(a.pets&&a.pets!=='No')special.push('Pets at the property: '+a.pets.replace('Yes, ',''));
+  return{title:S.form.title!=null&&S.form.title.trim()?S.form.title.trim():p.title,cat:p.cat,desc:p.text,date:p.date,flexible:p.flexible,part:p.part,startMin:p.startMin,duration:p.duration,budget:p.budget,materials:p.materials,special,notes:r.notes||[],risk:r.risk,prop:(S.form.prop||'').trim(),photos:(S.draft.photos||[]).slice(),preferred:(S.draft.preferred&&S.draft.preferred.name)||null,preferredFee:(S.draft.preferred&&S.draft.preferred.fee)||null};
+}
+/* ---------- sheets ---------- */
+const REP_REQ=['Task not completed','Partially completed','Different task completed','Damage','Tasker did not arrive','Tasker arrived but could not complete task','Payment issue','Safety issue','Other'];
+const SHEETS={
+report(){
+  const fromTask=S.task&&['UPCOMING','TASK_STARTED','TASKER_COMPLETED','FIX_DONE','FIX_REQUESTED','ACCEPTED','PAYMENT_CONFIRMED'].includes(S.task.status)&&S.stack[S.stack.length-1].n==='task';
+  if(!fromTask)return `<h2 style="margin-top:0">Report</h2><p class="muted" style="margin-bottom:12px">Tell us what happened. We will review it.</p><div class="chips">${['Abusive behaviour','Suspicious request','Off-platform payment request','Safety concern','Other'].map(x=>chip(x,S.form.rep===x,`data-a="rep" data-v="${x}"`)).join('')}</div><button class="btn primary" style="margin-top:16px" data-a="repSimple">Send report</button>`;
+  return `<h2 style="margin-top:0">Report a problem</h2><div class="stack" style="margin-bottom:12px">${REP_REQ.map(x=>chip(x,S.form.rep===x,`data-a="rep" data-v="${x}"`)).join(' ')}</div>
+  <textarea data-in="repText" placeholder="Describe what happened (optional)" style="min-height:80px">${esc(S.form.repText||'')}</textarea>
+  <p class="muted small" style="margin:6px 0">The agreement, messages and photos are attached automatically. <button class="chip" style="width:auto" data-a="sheet" data-v="disputes">How disputes work</button></p><button class="btn primary" data-a="repSubmit">Submit report</button>`;
+},
+block(){return `<h2 style="margin-top:0">Block ${esc(S.thread?chosen().name:'this user')}?</h2><p class="muted">They will not be able to message you or see your tasks. You can undo this in Settings.</p><button class="btn danger" style="margin-top:14px" data-a="blockOk">Block user</button><button class="btn ghost" data-a="close">Not now</button>`},
+cancel(){
+  const h=hoursToStart(),late=h<24&&h!==Infinity,fee=late?calloutFee():0,o=chosen();
+  const refund=S.payment?Math.round((S.payment.gross-fee)*100)/100:0;
+  return `<h2 style="margin-top:0">Cancel this task?</h2><div class="notice">${late?`This task starts in under 24 hours, so ${esc(o.name)} receives a call-out fee of ${money(fee)}. You are refunded ${money(refund)}.`:'The task starts in more than 24 hours, so you are refunded in full.'} Cancelling often can affect your reliability statistics on your profile.</div>
+  <button class="btn ghost" style="margin-top:6px" data-a="sheet" data-v="policy">See the full policy</button>
+  <p style="font-weight:600;margin:14px 0 8px">Reason</p><div class="chips">${['Changed plans','Task no longer required','Tasker unavailable','Requester unavailable','Emergency','Other'].map(x=>chip(x,S.form.why===x,`data-a="why" data-v="${x}"`)).join('')}</div>
+  <button class="btn danger" style="margin-top:16px" data-a="cancelOk">Cancel task</button><button class="btn ghost" data-a="close">Keep task</button>`;
+},
+photo(a){return `<img src="${PHOTO_REG[a.i]}" alt="Photo of completed work" style="width:100%;border-radius:14px;margin-top:6px"><button class="btn ghost" data-a="close">Close</button>`},
+datepick(){
+  const now=new Date(),cy=now.getFullYear(),cm=now.getMonth(),d0=S.draft.dateValue?S.draft.dateValue.split('-').map(Number):null;
+  const Y=S.draft.calY!=null?S.draft.calY:(d0?d0[0]:cy),M=S.draft.calM!=null?S.draft.calM:(d0?d0[1]-1:cm);
+  const sel=S.draft.dateValue,today=isoDate(now),tmr=isoDate(addDays(now,1)),view=S.draft.calView||'days';
+  const canPrev=!(Y===cy&&M===cm),canNext=!(Y===cy+4&&M===11);
+  let body='';
+  if(view==='months')body=`<div class="months">${MONTHS.map((m,i)=>chip(m,M===i,`data-a="cmonth" data-v="${i}"${(Y===cy&&i<cm)?' disabled':''}`)).join('')}</div>`;
+  else if(view==='years')body=`<div class="chips">${[0,1,2,3,4].map(i=>chip(String(cy+i),Y===cy+i,`data-a="cyear" data-v="${cy+i}"`)).join('')}</div>`;
+  else{
+    const off=(new Date(Y,M,1).getDay()+6)%7,dim=new Date(Y,M+1,0).getDate();let cells='';for(let i=0;i<off;i++)cells+='<span></span>';
+    for(let day=1;day<=dim;day++){const v=isoDate(new Date(Y,M,day));cells+=chip(String(day),sel===v,`data-a="dslot" data-v="${v}"${v<today?' disabled':''}`)}
+    body=`<div class="cal dow">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cal">${cells}</div>`;
+  }
+  return `<h2 style="margin-top:0">Choose a date</h2>
+  <div class="chips">${chip('Today',sel===today,`data-a="dslot" data-v="${today}"`)}${chip('Tomorrow',sel===tmr,`data-a="dslot" data-v="${tmr}"`)}${chip('Flexible',S.draft.answers.date==='Flexible','data-a="dslot" data-v="flex"')}</div>
+  <div class="calhead"><button class="chip" data-a="calmove" data-v="-1" aria-label="Previous month"${canPrev?'':' disabled'}>‹</button><button class="chip${view==='months'?' on':''}" data-a="calview" data-v="months">${MONTH_LONG[M]} ▾</button><button class="chip${view==='years'?' on':''}" data-a="calview" data-v="years">${Y} ▾</button><button class="chip" data-a="calmove" data-v="1" aria-label="Next month"${canNext?'':' disabled'}>›</button></div>
+  ${body}`;
+},
+timepick(){return `<h2 style="margin-top:0">Choose a start time</h2>${timeGrid(S.draft.timeValue,'slot','')}`},
+ostart(){const t=getFindTask(S.findId)||{t:'09:00'};return `<h2 style="margin-top:0">Choose your start time</h2>${timeGrid(S.form.start||t.t,'oslot','')}`},
+apick(a){const k=a.k;return `<h2 style="margin-top:0">${k==='from'?'Available from':'Available until'}</h2>${timeGrid(k==='from'?S.avail.from:S.avail.to,'aslot',k+'|')}`},
+fix(){
+  const vac=isVacate();
+  return `<h2 style="margin-top:0">${vac?'Request a free re-clean':'Ask the Tasker to fix it'}</h2><p class="muted" style="margin-bottom:10px">${vac?'Tell us what the agent or you found. Your Tasker returns within 48 hours at no extra cost.':'Your Tasker has 48 hours to put it right. Your payment stays on hold.'}</p>
+  <div class="chips">${(vac?['Oven or kitchen','Bathroom','Floors or carpets','Windows','Marks on walls','Other']:['Not finished','Not as described','Items missing','Mess left behind','Other']).map(x=>chip(x,S.form.fix===x,`data-a="fixWhat" data-v="${x}"`)).join('')}</div>
+  <textarea data-in="fixText" placeholder="What needs fixing? (optional)" style="min-height:80px;margin-top:10px">${esc(S.form.fixText||'')}</textarea>
+  <button class="btn primary" style="margin-top:12px" data-a="fixSend">Send request</button>
+  <p class="muted small" style="margin-top:8px">${vac?'We cannot guarantee your bond, because the agent and landlord decide that. This is a re-clean promise, not a bond guarantee.':'If it is not fixed, we review both sides and decide. See How disputes work.'}</p>`;
+},
+disputes(){
+  return `<h2 style="margin-top:0">How disputes work</h2><div class="stack">
+  <div class="card"><b>1. Talk and fix first</b><p class="muted small">Most problems are put right by the one free fix (or re-clean). The Tasker has 48 hours and can reply with their own photos.</p></div>
+  <div class="card"><b>2. Tell us what happened</b><p class="muted small">If it is not fixed or not agreed, report a problem. Each side can add photos and a short account. Please reply promptly. If one side does not reply, we may decide with what we have.</p></div>
+  <div class="card"><b>3. The payment stays on hold</b><p class="muted small">While we review, the payment is held. Nothing is paid out until a decision is made.</p></div>
+  <div class="card"><b>4. We decide</b><p class="muted small">We review the agreement, messages, checklist and photos, and decide: full refund, part payment or full payment. We aim to decide within ${DISPUTE_AIM} of having both sides' information, and will tell you if it will take longer.</p></div>
+  <div class="card"><b>What we cannot do</b><p class="muted small">We are not a court, a tribunal or an emergency service. Injury, serious damage or criminal matters may need police, an insurer or a lawyer. Our decision does not remove your legal rights: you can still use a tribunal such as VCAT, or a court.</p></div>
+  <div class="card"><b>Respectful behaviour</b><p class="muted small">Abuse or threats towards the other side or our team can end the process and lead to action on the account.</p></div></div>
+  <p class="muted small" style="margin-top:10px">Draft pilot policy. The terms must give TaskSpeck the right to hold the payment and decide disputes, acting reasonably. To be confirmed by a solicitor before launch.</p><button class="btn ghost" data-a="close">Close</button>`;
+},
+policy(){
+  return `<h2 style="margin-top:0">Cancellation and no-show policy</h2><div class="stack">
+  <div class="card"><b>You cancel</b><p class="muted small">More than 24 hours before the start: full refund. Within 24 hours: the Tasker receives a call-out fee of 20% of the task price and the rest is refunded.</p></div>
+  <div class="card"><b>Tasker cancels or does not arrive</b><p class="muted small">Full refund and a quick re-match. Repeated no-shows or late cancellations pause a Tasker's account.</p></div>
+  <div class="card"><b>A problem with the work</b><p class="muted small">Tell us within 48 hours of completion. One free fix per job, for the agreed scope only; extras are a new paid task. Your payment stays on hold while the Tasker has 48 hours to put it right, and the Tasker can respond with their own photos. If it is not fixed or the request is disputed, we review both sides and decide: full payment, part payment or a refund. See How disputes work.</p></div>
+  <div class="card"><b>Re-clean promise (vacate cleans)</b><p class="muted small">If your agent's inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</p></div>
+  <div class="card"><b>When payment is released</b><p class="muted small">Your payment is held until you confirm. If you do nothing, it is released automatically 48 hours after the Tasker marks the job complete.</p></div>
+  <button class="card" data-a="sheet" data-v="disputes"><b>How disputes work</b><p class="muted small">What we can decide, how long it takes, and your legal rights.</p></button>
+  <div class="card"><b>Price changes</b><p class="muted small">The price only changes if you approve a change request.</p></div></div>
+  <p class="muted small" style="margin-top:10px">Draft pilot policy. To be confirmed by a solicitor before launch.</p><button class="btn ghost" data-a="close">Close</button>`;
+},
+change(){
+  const o=chosen();
+  return `<h2 style="margin-top:0">Change request</h2><div class="card">${kv('Original task',esc(S.task.title))}${kv('Requested change','Extra time and fee')}${kv('Additional time','+30 minutes')}${kv('Additional fee','+'+money(15))}${kv('Reason','The job is bigger than the listing described')}</div>
+  <p class="muted small" style="margin:8px 0">Extra you would pay: ${money(15)}. Nothing changes unless you accept.</p>
+  <button class="btn primary" data-a="chgOk">Accept change</button><button class="btn secondary" data-a="chgNo">Reject change</button>`;
+},
+safety(){
+  const live=S.task&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(S.task.status);
+  return `<h2 style="margin-top:0">Safety Centre</h2>
+  ${live?`<button class="btn danger" data-a="sheet" data-v="sos">SOS: I need help now</button><button class="card" style="margin-top:10px" data-a="sheet" data-v="safeexit"><b>I feel unsafe: leave this job</b><p class="muted small">No fee, no penalty, full refund.</p></button>`:''}
+  <div class="stack" style="margin-top:10px">
+  <button class="card" data-a="sheet" data-v="report">Report an issue</button><button class="card" data-a="sheet" data-v="block">Block user</button>
+  <button class="card" data-a="sheet" data-v="help">Contact support</button><button class="card" data-a="sheet" data-v="trusted">Share task details with a trusted contact</button></div>
+  ${S.incidents.length?`<h3 style="margin:14px 0 6px">Your safety reports</h3><div class="card">${S.incidents.map(i=>`<div class="kv"><span>${esc(i.kind)}<br><span class="muted small">${esc(i.task||'')}${i.who?' · '+esc(i.who):''}</span></span><b>${i.when}</b></div>`).join('')}<p class="muted small" style="margin-top:6px">We review every report. We cannot promise a response time.</p></div>`:''}
+  <div class="notice bad" style="margin-top:14px"><b>In an emergency, call 000</b>TaskSpeck does not provide emergency response and cannot promise a response time. Contact local emergency services first.</div>
+  <a class="btn danger" style="margin-top:10px;text-decoration:none" href="tel:000">Call 000</a>`;
+},
+sos(){
+  return `<h2 style="margin-top:0">Emergency help</h2><div class="notice bad"><b>In an emergency, call 000 first.</b>TaskSpeck does not provide emergency response and cannot promise a response time.</div>
+  <a class="btn danger" style="margin-top:10px;text-decoration:none" href="tel:000">Call 000</a>
+  <button class="btn secondary" style="margin-top:10px" data-a="sosAlert">Alert TaskSpeck support${S.trusted.on?' and my trusted contact':''}</button>
+  <p class="muted small" style="margin-top:8px">We share your task, the Tasker's details and your approximate location. ${S.trusted.on&&S.trusted.name?'Your trusted contact, '+esc(S.trusted.name)+', is notified.':'Turn on a trusted contact in the Safety Centre to notify someone you know.'}</p><button class="btn ghost" data-a="close">Close</button>`;
+},
+safeexit(){
+  return `<h2 style="margin-top:0">Leave this job safely</h2><div class="notice ok"><b>No fee, no penalty, full refund.</b>You can leave any job that feels unsafe. We will record what happened and review it.</div>
+  <p style="font-weight:600;margin:14px 0 8px">What happened?</p><div class="chips">${['I felt unsafe','Aggressive or inappropriate behaviour','Unsafe conditions','Other'].map(x=>chip(x,S.form.sx===x,`data-a="sx" data-v="${x}"`)).join('')}</div>
+  <button class="btn danger" style="margin-top:16px" data-a="safeExitOk">Leave the job</button><button class="btn ghost" data-a="close">Stay</button>`;
+},
+trusted(){
+  return `<h2 style="margin-top:0">Trusted contact</h2><p class="muted" style="margin-bottom:10px">Optional. We only share details when you turn it on for a task.</p>
+  <label class="f" for="tc" style="margin-top:0">Contact name</label><input type="text" id="tc" data-in="tcname" value="${esc(S.trusted.name)}" placeholder="Name">
+  <button class="tog" style="margin-top:10px" aria-pressed="${S.trusted.on}" data-a="tcToggle"><span>Share task details during active tasks<br><span class="muted small">Names, location, start time and expected finish</span></span><span class="sw"></span></button>
+  <button class="btn primary" style="margin-top:14px" data-a="tcSave">Save</button>`;
+},
+notif(){
+  const r=[['offers','New offers and acceptance'],['messages','Messages'],['reminders','Task reminders'],['nearby','New nearby tasks']];
+  return `<h2 style="margin-top:0">Notifications</h2>${r.map(([k,l])=>`<button class="tog" aria-pressed="${S.notif[k]}" data-a="ntog" data-v="${k}"><span>${l}</span><span class="sw"></span></button>`).join('')}<button class="btn ghost" data-a="close">Done</button>`;
+},
+help(){
+  return `<h2 style="margin-top:0">Help and support</h2><div class="stack"><div class="card"><b>What belongs on TaskSpeck?</b><p class="muted small">Small everyday jobs. Anything needing a licence, qualification or specialist certification does not.</p></div>
+  <div class="card"><b>How payment works</b><p class="muted small">You pay when you accept an offer. It is held until you confirm the task is complete, or released automatically 48 hours after the Tasker marks it complete.</p></div>
+  <div class="card"><b>Contact support</b><p class="muted small">Prototype only. During the pilot we aim to reply within 1 business day. Support is not available 24/7.</p></div><button class="card" data-a="sheet" data-v="policy"><b>Cancellation and no-show policy</b></button><button class="card" data-a="sheet" data-v="disputes"><b>How disputes work</b></button></div><button class="btn ghost" data-a="close">Close</button>`;
+}
+};
+/* ---------- actions ---------- */
+const INP={
+ fee(){
+   const v=parseFloat(S.form.fee),ok=v>0&&S.form.ok,b=$('#sendOffer'),s=$('#feesum');
+   if(b)b.disabled=!ok;
+   if(s)s.innerHTML=v>0?`<div class="card">${kv('Task price (the requester pays this)',money(v))}${S.tk.gst?kv('Includes GST (you pay this to the ATO)',money(gstOf(v))):''}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(v)))}${S.qtGst?kv('GST included in TaskSpeck’s fee',money(gstOf(calcFee(v)))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(Math.round((v-calcFee(v))*100)/100)}</b></div></div><p class="muted small" style="margin:6px 2px 0">The requester pays no booking fee. Nothing else is deducted.</p>`:`<div class="notice info">TaskSpeck keeps ${FEE_PCT}% of your price. Enter your price to see what you receive. The requester pays no booking fee.</div>`;
+ },
+ ok(){INP.fee()},
+ fq(){const r=$('#fres');if(r)r.innerHTML=findResults()}
+};
+async function publishTask(){
+  const check=evaluate(),built=buildTask();
+  if(check.risk==='PROHIBITED'||check.risk==='HIGH_RISK'){notify('This task cannot be published. Edit it and run the safety check again.');go('result');return}
+  if(hasLiveTask()){notify('Your previous task was replaced. Finish or cancel it first in a full app — prototype allows one live task.');}
+  const t={...built,risk:check.risk,notes:check.notes||[]};S.pending=t;
+  const listingId=S.draft.listingId;
+  if(listingId){try{await TaskAPI.publish(listingId,{text:built.desc,title:built.title,cat:built.cat});await refreshApiListings()}catch(e){console.warn('[listing]',e)}}
+  S.draft.photos=[];S.draft.preferred=null;S.draft.budgetMode='open';S.draft.budgetAmt='';S.draft.budgetTouched=false;S.draft.dateValue='';S.draft.timeValue='';S.draft.showTimes=false;S.draft.showDates=false;S.draft.calY=null;S.draft.calM=null;S.draft.listingId=null;
+  S.task={...t,id:'T-'+Math.floor(1000+Math.random()*9000),status:'POSTED',listingId};
+  S.offers=[];S.offerId=null;S.events=[];S.payment=null;S.agreement=null;S.dispute=null;S.change=null;S.flags={};S.thread=null;S.proof=[];S.checklist=[];S.fix=null;
+  ev('Task posted');ev('Safety check: '+t.risk.replace('_',' ').toLowerCase());
+  S.stack=[{n:'home'},{n:'published'}];scheduleOffers();render();
+}
+const A={
+ tab(v){root(v);if(v==='find')refreshApiListings()},back,close:closeSheet,
+ mode(v){S.mode=v;root(v==='tasker'?'find':'home');if(v==='tasker')refreshApiListings()},
+ home(){root('home')},
+ post(v){if(v&&!S.draft.text)S.draft.answers={};S.stack.push({n:'post',a:{cat:v||null}});render()},
+ ex(v){const[i,c]=v.split('|');S.draft.text=EX[c][+i];queueDraftSave();render()},
+ bmode(v){S.draft.budgetMode=v;S.draft.budgetTouched=true;render()},
+ analyse(){
+   const t=(S.draft.text||'').trim();
+   if(t.length<8){notify('Add a few more words about the job.');return}
+   if(S.draft.budgetMode==='set'&&!(parseFloat(S.draft.budgetAmt)>0)){notify('Enter your budget, or choose Open to offers.');return}
+   S.p=parse(t);S.draft.answers={};S.draft.dateValue='';S.draft.timeValue='';S.form.title=null;
+   if(S.p.blocked)go('result');else go('understood');
+ },
+ editText(){back()},
+ dpick(){const d0=S.draft.dateValue?S.draft.dateValue.split('-').map(Number):null,n=new Date();S.draft.calY=d0?d0[0]:n.getFullYear();S.draft.calM=d0?d0[1]-1:n.getMonth();S.draft.calView='days';S.sheet={n:'datepick'};render()},
+ cyear(v){const n=new Date(),y=+v;S.draft.calY=y;if(y===n.getFullYear()&&S.draft.calM<n.getMonth())S.draft.calM=n.getMonth();S.draft.calView='days';render()},
+ cmonth(v){S.draft.calM=+v;S.draft.calView='days';render()},
+ calmove(v){let y=S.draft.calY,m=S.draft.calM+(+v);if(m<0){m=11;y--}if(m>11){m=0;y++}S.draft.calY=y;S.draft.calM=m;render()},
+ calview(v){S.draft.calView=S.draft.calView===v?'days':v;render()},
+ dslot(v){if(v==='flex'){S.draft.answers.date='Flexible';S.draft.dateValue=''}else{S.draft.answers.date='Custom';S.draft.dateValue=v}S.sheet=null;render()},
+ times(){S.sheet={n:'timepick'};render()},
+ slot(v){S.draft.timeValue=v;S.draft.answers.part='Time';S.sheet=null;render()},
+ ans(v){const[i,o]=v.split('|');S.draft.answers[i]=o;if(i==='date')S.draft.dateValue='';if(i==='part'){S.draft.timeValue='';S.draft.showTimes=false}render()},
+ check(){
+   const qs=questionsFor(S.p);
+   if(qs.some(q=>!S.draft.answers[q.id])){notify('Please answer the quick questions first.');return}
+   const pe=eff();if(!pe.date&&!pe.flexible){notify('Choose when you need it.');return}
+   go('result');
+ },
+ editTask(){S.stack=[{n:'home'},{n:'post',a:{}}];render()},
+ cancelDraft(){S.draft={text:'',answers:{}};S.form={};root('home')},
+ sendReview(){
+   const t=buildTask();S.task={...t,id:'T-'+Math.floor(1000+Math.random()*9000),status:'UNDER_REVIEW'};S.events=[];ev('Task sent for review');
+   S.draft={text:'',answers:{}};root('tasks');notify('Sent for review. We will notify you once it has been checked.');
+ },
+ toPreview(){go('preview')},
+ publish(){publishTask();S.draft={text:'',answers:{}}},
+ viewTask(){if(S.mode!=='requester')S.mode='requester';S.stack=[{n:'home'},{n:'task'}];render()},
+ sort(v){S.sort=v;render()},
+ offer(v){const o=S.offers.find(x=>x.id===+v);if(!o||o.declined){notify('That offer is no longer available.');return}S.offerId=+v;go('offer')},
+ decline(){const o=chosen();o.declined=true;S.offerId=null;back();notify(`Offer from ${o.name} declined.`)},
+ accept(){const o=chosen(),t=S.task;if(!o||o.declined){notify('Choose a valid offer first.');return}if(!t||!['POSTED','OFFERS_RECEIVED'].includes(t.status)){notify('This task is not open for acceptance.');return}if(S.payment&&S.payment.status==='AUTHORISED'){notify('Payment is already in progress.');return}go('confirm')},
+ toPay(){if(!chosen()){notify('Choose an offer first.');return}go('pay')},
+ pay(){
+   const o=chosen(),t=S.task;
+   if(!o||o.declined||!t||!['POSTED','OFFERS_RECEIVED'].includes(t.status)){notify('This offer cannot be paid right now.');render();return}
+   if(S.payment&&['AUTHORISED','RELEASED'].includes(S.payment.status)){notify('Payment was already taken for this task.');return}
+   const b=$('#paybtn');if(!b)return;b.disabled=true;b.textContent='Processing…';
+   setTimeout(()=>{
+     const f=calcFee(o.fee);
+     S.payment={gross:o.fee,fee:f,tasker:Math.round((o.fee-f)*100)/100,status:'AUTHORISED'};
+     S.agreement={version:1,fee:o.fee,start:fmtTime(o.start),dur:S.task.duration?S.task.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};
+     S.offers.forEach(x=>{if(x.id!==o.id)x.declined=true});
+     S.thread=[{from:'them',text:`Hi Alex, thanks for choosing me. See you ${o.when.split(',')[0]}.`}];
+     setStatus('ACCEPTED');ev(`Offer from ${o.name} accepted`);setStatus('PAYMENT_CONFIRMED');ev(`Payment of ${money(S.payment.gross)} confirmed`);
+     setStatus('UPCOMING');ev('Agreement created (v1)');ev('Address shared with '+o.name);
+     if(t.listingId)TaskAPI.sync(t.listingId,'accept-bid',{fee:o.fee,taskerName:o.name});
+     S.stack=[{n:'home'},{n:'task'}];render();notify(`Payment confirmed. ${o.name} has been notified.`);
+   },900);
+ },
+ agreementScreen(){go('agreement')},
+ openThread(){go('thread')},
+ payments(){go('payments')},
+ quick(v){sendMsg(["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."][+v])},
+ send(){const t=(S.form.msg||'').trim();if(t){S.form.msg='';sendMsg(t)}},
+ demo(v){
+   const o=chosen(),f=S.flags;
+   if(v==='onway'){f.onway=true;ev(o.name+' is on the way');notify(`${o.name} is on the way.`)}
+   else if(v==='arrived'){f.arrived=true;setStatus('TASK_STARTED');ev(o.name+' has arrived. Task started');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'start');notify(`${o.name} has arrived.`)}
+   else if(v==='checkin'){f.checkin=true;ev(o.name+' answered the safety check-in: all OK');notify(`${o.name} confirmed all OK.`)}
+   else if(v==='nocheckin'){f.missed=true;S.incidents.unshift({kind:'Missed check-in',when:clock(),task:S.task.title,who:o.name});ev('No answer to the safety check-in. Support notified');notify('No answer to the safety check-in. Support has been notified.')}
+   else if(v==='confirm'){f.confirmed=true;ev(o.name+' confirmed attendance');notify(`${o.name} confirmed they will be there.`)}
+   else if(v==='autorelease'){setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev('48 hours passed with no problem reported: payment released automatically');setStatus('COMPLETED');ev('Task completed');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'approve-payment');archiveTask();notify('Payment released automatically.')}
+   else if(v==='fixed'){if(S.proof.length<=S.fix.proofBefore){notify('Add a photo of the fix first.');return}const fl=S.task.fixLog&&S.task.fixLog[S.task.fixLog.length-1];if(fl){fl.done=fmtDate(new Date());fl.photos=S.proof.slice(S.fix.proofBefore).map(x=>x.url)}setStatus('FIX_DONE');ev(o.name+' says it is fixed');notify(`${o.name} says it is fixed.`)}
+   else if(v==='disagree'){if(!S.form.tr){notify('Choose a reason first.');return}if(S.proof.length<=S.fix.proofBefore){notify('Add your photos first.');return}S.dispute={reason:o.name+' disagrees with the '+(isVacate()?'re-clean':'fix')+' request: '+S.form.tr,status:'OPEN',taskerPhotos:S.proof.slice(S.fix.proofBefore).map(x=>x.url)};setStatus('DISPUTED');S.payment.status='DISPUTED';ev(o.name+' disagrees and sent photos. We will review both sides');S.form.tr=null;notify('Dispute opened. We will review both sides.')}
+   else if(v==='nofix'){S.dispute={reason:'Fix not made within 48 hours',status:'OPEN'};setStatus('DISPUTED');S.payment.status='DISPUTED';ev('No fix within 48 hours. We will review and decide');notify('Dispute opened. We will review both sides.')}
+   else if(v==='complete'){const pl=proofLabel();if(pl&&!S.proof.length){notify('Add the proof photo first.');return}if(isVacate()&&VACATE_LIST.some((x,i)=>!S.checklist[i])){notify('Tick every item on the vacate checklist first.');return}setStatus('TASKER_COMPLETED');ev(o.name+' marked the task complete');if(S.task&&S.task.listingId)TaskAPI.sync(S.task.listingId,'complete');notify('Your task has been marked complete.')}
+   else if(v==='change'){S.change={};ev(o.name+' requested a change');notify(`${o.name} requested a change to your task.`)}
+   render();
+ },
+ sampleProof(){S.proof.push({name:'Sample receipt',url:SAMPLE_PHOTO});render()},
+ noshow(){const o=chosen();S.dispute=null;setStatus('NO_SHOW');S.payment.status='REFUNDED';o.canc=Math.min(99,o.canc+1);ev(`No-show reported: ${o.name} did not arrive`);ev('Full refund issued');ev(`No-show recorded on ${o.name}'s reliability record`);render();notify('No-show recorded. You have been refunded in full.')},
+ rematch(){const bad=S.offerId;S.offers=S.offers.filter(x=>x.id!==bad);S.offers.forEach(x=>{x.declined=false});S.offerId=null;S.thread=null;S.agreement=null;S.payment=null;S.flags={};S.proof=[];S.checklist=[];S.fix=null;S.dispute=null;S.change=null;setStatus('OFFERS_RECEIVED');ev('Task re-opened for new offers');scheduleOffers();S.stack=[{n:'home'},{n:'task'}];render();notify('Your task is open again. Other Taskers can offer now.')},
+ agentTog(){S.agent=!S.agent;render()},
+ turnarounds(){go('turnarounds')},
+ earnings(){go('earnings')},
+ recPreview(){go('recpreview')},
+ photo(v){S.sheet={n:'photo',a:{i:+v}};render()},
+ openRecord(){S.propSel=((S.task&&S.task.prop)||'').trim()||'My jobs';go('turnaround')},
+ turnaround(v){S.propSel=v;go('turnaround')},
+ printReport(){try{window.print()}catch(e){notify('Printing is not available in this preview. Open the app in your browser.')}},
+ copyReport(){const n=S.propSel,rows=visibleHistory().filter(h=>h.prop===n);const t=`Job record: ${n}\n`+rows.map(r=>`- ${r.title} (${r.tasker}, ${r.date}${r.check?', checklist '+r.check:''}): ${money(r.paid)}`).join('\n')+`\nTotal: ${money(rows.reduce((a,b)=>a+b.paid,0))}`;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>notify('Summary copied.')).catch(()=>notify('Copy is not available here. Use Print instead.'))},
+ sosAlert(){S.incidents.unshift({kind:'SOS',when:clock(),task:S.task?S.task.title:'',who:S.task&&chosen()?chosen().name:''});ev('SOS sent: support'+(S.trusted.on?' and trusted contact':'')+' alerted');S.sheet=null;render();notify('Help alert sent'+(S.trusted.on?' to support and your trusted contact':' to support')+'. In the prototype nothing is really sent.')},
+ sx(v){S.form.sx=v;render()},
+ safeExitOk(){if(!S.form.sx){notify('Choose a reason first.');return}const o=chosen();setStatus('CANCELLED');S.payment.callout=0;S.payment.status='REFUNDED';S.incidents.unshift({kind:'Safety exit',when:clock(),task:S.task.title,who:o.name});ev('Safety exit: '+S.form.sx+'. Job ended, full refund, no fees');S.form.sx=null;S.sheet=null;render();notify('You have left the job. Full refund, no fee. We will review what happened.')},
+ safetyguide(){go('safetyguide')},
+ sgDone(){if(!S.form.sgOk){notify('Tick the box to confirm you have read it.');return}S.tk.safety=true;S.stack.pop();render();notify('Safety guide complete.')},
+ reliability(){go('reliability')},
+ strikeSim(v){S.myStrikes.push({kind:v,task:'Sample job',ts:Date.now()});const st=tStanding();render();notify(st.state==='review'?'Recorded. Your account is now under review.':'Recorded on your reliability record.')},
+ strikeClear(){S.myStrikes=[];render();notify('Record cleared.')},
+ reviewDone(){S.myStrikes.forEach(x=>{x.reviewed=true});render();notify('Review finished. Your account is reinstated.')},
+ appeal(v){const x=S.myStrikes[+v];if(x){x.appeal=true}render();notify('Appeal sent. We will review it.')},
+ trChip(v){S.form.tr=v;render()},
+ decide(v){const o=chosen(),p=S.payment;
+   if(v==='refund'){p.status='REFUNDED';setStatus('RESOLVED');ev('Decision: full refund to the requester');claimOutcome('Upheld: refunded')}
+   else if(v==='partial'){const g=Math.round(p.gross*50)/100,f=calcFee(g);p.partial={gross:g,fee:f,tasker:Math.round((g-f)*100)/100,refund:Math.round((p.gross-g)*100)/100};p.status='PART_RELEASE';setStatus('RESOLVED');ev(`Decision: ${money(g)} paid to ${o.name}, ${money(p.partial.refund)} refunded`);claimOutcome('Partly upheld: part payment');archiveTask({paid:g,note:'Part payment after review'})}
+   else{p.status='RELEASED';setStatus('COMPLETED');ev('Decision: payment released to '+o.name+' in full');claimOutcome('Not upheld: Tasker paid');archiveTask()}
+   if(S.dispute)S.dispute.status='RESOLVED';render();notify('Decision recorded.')},
+ samplePostPhoto(){S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(SAMPLE_ITEM);render()},
+ rmPostPhoto(v){(S.draft.photos||[]).splice(+v,1);render()},
+ bookAgain(){const t=S.task,o=chosen();if(!t||!o)return;A.startRebook({title:t.title,cat:t.cat,prop:t.prop,tasker:o.name,price:(S.payment&&S.payment.status==='RELEASED')?S.payment.gross:null})},
+ rebook(v){const r=S.history[+v];if(!r)return;A.startRebook({title:r.title,cat:r.cat,prop:r.prop==='My jobs'?'':r.prop,tasker:r.tasker,price:r.note?null:r.paid})},
+ startRebook(x){S.draft={text:x.title,answers:{},budgetMode:x.price?'set':'open',budgetAmt:x.price?String(x.price):'',budgetTouched:!!x.price,photos:[],preferred:{name:x.tasker,fee:x.price||null}};S.form={prop:x.prop||''};S.stack=[{n:'home'},{n:'post',a:{cat:x.cat}}];render();notify('Filled in for you. '+x.tasker+' will be offered first.')},
+ viewProfile(v){S.profName=v;go('taskerprofile')},
+ myprofile(){go('myprofile')},
+ seeMine(){S.profName='You';go('taskerprofile')},
+ tlang(v){const l=S.tprof.langs;S.tprof.langs=l.includes(v)?l.filter(x=>x!==v):[...l,v];render()},
+ sampleWorkPhoto(){if(S.tprof.photos.length<6)S.tprof.photos.push(S.tprof.photos.length%2?SAMPLE_ITEM:SAMPLE_PHOTO);render()},
+ rmWorkPhoto(v){S.tprof.photos.splice(+v,1);render()},
+ gstTog(){S.tk.gst=!S.tk.gst;render()},
+ qtGstTog(){S.qtGst=!S.qtGst;render()},
+ receipts(){go('receipts')},
+ receipt(v){S.recIdx=+v;go('receipt')},
+ invoice(v){S.invIdx=+v;go('invoice')},
+ tip(v){S.form.tip=+v||0;render()},
+ notifs(){go('notifs')},
+ idsel(v){S.idc.type=v;render()},
+ idfront(){S.idc.front=!S.idc.front;render()},
+ idselfie(){S.idc.selfie=!S.idc.selfie;render()},
+ idsubmit(){const c=S.idc;if(!c.type||!c.front||!c.selfie){notify('Choose an ID and add both photos first.');return}c.status='checking';render();setTimeout(()=>{S.verified=true;c.status='done';if(S.stack[S.stack.length-1].n==='idcheck')render();notify('Identity verified (demo).')},1500)},
+ policereq(){const c=S.idc;if(!c.consent){notify('Tick the consent box first.');return}c.police='requested';render();setTimeout(()=>{S.tk.police=true;c.police='done';if(S.stack[S.stack.length-1].n==='idcheck')render();notify('Police check clear (demo).')},2000)},
+ tickAll(){S.checklist=VACATE_LIST.map(()=>true);render()},
+ fixWhat(v){S.form.fix=v;render()},
+ fixSend(){if(!S.form.fix){notify('Choose what needs fixing.');return}const o=chosen(),t=S.task;if(t.fixUsed){notify('The free fix for this job has already been used.');return}t.fixUsed=true;S.fix={what:S.form.fix,text:(S.form.fixText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.fix,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:isVacate()?'Re-clean request':'Fix request',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev(`${isVacate()?'Re-clean':'Fix'} requested: ${S.form.fix}`);S.form.fix=null;S.form.fixText='';S.sheet=null;render();notify(`${o.name} has 48 hours to put it right.`)},
+ tk(v){S.tk[v]=true;render();notify('Demo: in the real app you upload a document here.')},
+ confirmDone(){
+   const o=chosen(),t=S.task,p=S.payment;
+   if(!o||!t||!p){notify('Nothing to confirm yet.');return}
+   if(!['TASKER_COMPLETED','FIX_DONE'].includes(t.status)){notify('The Tasker has not marked this job complete yet.');return}
+   if(p.status==='RELEASED'||t.archived){notify('Payment was already released.');return}
+   if(p.status!=='AUTHORISED'){notify('Payment is on hold until this is resolved.');return}
+   setStatus('REQUESTER_CONFIRMED');ev('You confirmed completion');setStatus('PAYMENT_RELEASED');S.payment.status='RELEASED';ev(`Payment of ${money(S.payment.tasker)} released to ${o.name}`);setStatus('COMPLETED');ev('Task completed');if(t.listingId)TaskAPI.sync(t.listingId,'approve-payment');S.claims.forEach(c=>{if(c.task===S.task.title&&!c.outcome)c.outcome='Fixed'});archiveTask();
+   S.form.stars=0;S.form.good=[];S.form.review='';S.form.tip=0;go('review');
+ },
+ toReview(){S.form.stars=0;S.form.good=[];go('review')},
+ star(v){S.form.stars=+v;render()},
+ good(v){const g=S.form.good||[];S.form.good=g.includes(v)?g.filter(x=>x!==v):[...g,v];render()},
+ submitReview(){
+   if(!S.form.stars){notify('Choose a star rating first.');return}
+   S.task.reviewed=true;ev('Review submitted');if(S.form.tip){applyTip(S.form.tip);notify('Thanks. A '+money(S.form.tip)+' tip was sent.')}S.form.tip=0;S.stack=[{n:'home'},{n:'task'}];render();notify('Thanks. Your review has been submitted.');
+ },
+ sheet(v){openSheet(v)},
+ rep(v){S.form.rep=v;render()},
+ repSimple(){if(!S.form.rep){notify('Choose what happened.');return}S.form.rep=null;S.sheet=null;render();notify('Report sent. We will review it.')},
+ repSubmit(){
+   if(!S.form.rep){notify('Choose what happened.');return}
+   if(S.form.rep==='Tasker did not arrive'){S.form.rep=null;S.sheet=null;A.noshow();return}
+   if(['Task not completed','Partially completed'].includes(S.form.rep)&&!S.task.fixUsed){const t=S.task,o=chosen();t.fixUsed=true;S.fix={what:S.form.rep,text:(S.form.repText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.rep,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:'Problem reported: finish the job',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev('Asked '+o.name+' to finish the job: '+S.form.rep);S.form.rep=null;S.form.repText='';S.sheet=null;render();notify(o.name+' has 48 hours to finish the job. Your payment stays on hold.');return}
+   S.claims.unshift({kind:'Problem reported: '+S.form.rep,task:S.task.title,ts:Date.now(),outcome:null});
+   S.dispute={reason:S.form.rep,status:'OPEN'};setStatus('DISPUTED');S.payment.status='DISPUTED';ev(`Problem reported: ${S.form.rep}`);ev('Dispute opened');
+   S.form.rep=null;S.sheet=null;render();notify('Problem reported. Your payment stays on hold.');
+ },
+ blockOk(){S.sheet=null;render();notify('User blocked.')},
+ why(v){S.form.why=v;render()},
+ cancelOk(){
+   if(!S.form.why){notify('Choose a reason first.');return}
+   const h=hoursToStart(),late=h<24&&h!==Infinity,fee=late?calloutFee():0;
+   setStatus('CANCELLED');S.payment.callout=fee;S.payment.status=fee?'PART_REFUND':'REFUNDED';ev('Task cancelled: '+S.form.why);ev(fee?`Part refund: ${money(Math.round((S.payment.gross-fee)*100)/100)} refunded, ${money(fee)} call-out fee to the Tasker`:'Payment refunded in full');S.form.why=null;S.sheet=null;render();
+ },
+ chgOk(){
+   S.change=null;S.agreement.version=2;S.agreement.fee+=15;S.agreement.dur='Original plus 30 minutes';S.agreement.history.push({v:2,note:'+30 min, +$15 (approved)'});
+   S.payment.gross+=15;S.payment.fee+=calcFee(15);S.payment.tasker=Math.round((S.payment.tasker+15-calcFee(15))*100)/100;ev('Change accepted. Agreement updated (v2)');S.sheet=null;render();notify('Change accepted. Agreement updated.');
+ },
+ chgNo(){S.change=null;ev('Change rejected');S.sheet=null;render();notify('Change rejected. The original agreement stands.')},
+ leave(){S.sheet=null;render();notify('In the real app this ends your part in the task and alerts support.')},
+ tcToggle(){S.trusted.on=!S.trusted.on;render()},
+ tcSave(){S.sheet=null;render();notify('Trusted contact saved.')},
+ ntog(v){S.notif[v]=!S.notif[v];render()},
+ verify(){go('idcheck')},
+ fkm(v){S.find.km=+v;render()},fcat(v){S.find.cat=v;render()},
+ fsort(v){S.find.sort=v;render()},ffilt(){S.find.fopen=!S.find.fopen;render()},fview(v){S.find.view=v;S.find.pin=null;render()},fpin(v){S.find.pin=+v;render()},fclear(){S.find.q='';S.find.cat='all';render()},
+ openFind(v){S.findId=+v;go('findTask')},
+ save(){S.saved[S.findId]=!S.saved[S.findId];render()},
+ makeOffer(){S.form.fee='';S.form.ok=false;S.form.omsg='';S.form.start=null;S.form.end=null;S.form.dur=null;S.form.showStart=false;go('makeOffer')},
+ atimes(v){S.sheet={n:'apick',a:{k:v}};render()},
+ aslot(v){const[k,t]=v.split('|');if(k==='from')S.avail.from=t;else S.avail.to=t;S.sheet=null;render()},
+ otimes(){S.sheet={n:'ostart'};render()},
+ oslot(v){S.form.start=v;S.sheet=null;render()},
+ odur(v){S.form.dur=+v;render()},
+ async sendOffer(){
+   const stg=tStanding();if(stg.state==='review'){notify('Your account is under review. New offers are on hold.');return}
+   if(!S.tk.safety){notify('Complete the safety guide before sending offers.');go('safetyguide');return}
+   const t=getFindTask(S.findId);if(!t){notify('Task not found.');return}
+   if(t.fromApi&&t.listingStatus!=='Open'){notify('This listing is not open for bids.');return}
+   if(S.sent.some(s=>s.tid===t.id)){notify('You already sent an offer for this task.');return}
+   const fee=parseFloat(S.form.fee);
+   if(!(fee>=5)||fee>15000){notify('Enter a fee between $5 and $15,000.');return}
+   if(!S.form.ok)return;
+   if(t.fromApi){try{await TaskAPI.bid(t.id,fee,'You');await refreshApiListings()}catch(e){notify(e.message||'Bid failed');return}}
+   const st=S.form.start||t.t,[h,m]=st.split(':').map(Number);
+   const dur=S.form.dur||t.d;
+   S.sent.push({tid:t.id,title:t.title,date:t.date,time:fmtTime(h*60+m)+' – '+fmtTime(h*60+m+dur),fee});t.offers++;
+   S.stack.pop();render();notify(t.fromApi?`Bid of ${money(fee)} saved · waiting for acceptance`:`Offer of ${money(fee)} sent.`);
+ },
+ theme:themeCycle,
+ apause(){S.avail.paused=!S.avail.paused;render()},
+ aday(v){const a=S.avail.days,i=+v;S.avail.days=a.includes(i)?a.filter(x=>x!==i):[...a,i];render()},
+ akm(v){S.avail.km=+v;render()},
+ acat(v){const a=S.avail.cats;S.avail.cats=a.includes(v)?a.filter(x=>x!==v):[...a,v];render()},
+ asave(){back();notify('Availability saved.')},
+ avail(){go('avail')}
+};
+const OFFPLAT=/\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|don'?t worry about the app|pay me direct/i;
+function sendMsg(text){
+  S.thread.push({from:'me',text});
+  const off=OFFPLAT.test(text);
+  if(off)S.thread.push({sys:true});
+  render();const i=$('#msgin');if(i)i.focus();
+  if(!off)setTimeout(()=>{
+    S.thread.push({from:'them',text:['Sounds good, thanks!','Got it. See you then.','Great, thanks Alex.'][S.thread.length%3]});
+    if(S.stack[S.stack.length-1].n==='thread')render();
+  },1300);
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');if(!el)return;
+  const f=A[el.dataset.a];if(f)f(el.dataset.v,el,e);
+});
+document.addEventListener('input',e=>{
+  const k=e.target.dataset&&e.target.dataset.in;if(!k)return;
+  if(k==='idConsent'){S.idc.consent=e.target.checked;return}
+  if(k==='tpPhoto'){[...(e.target.files||[])].slice(0,6).forEach(f=>{const r=new FileReader();r.onload=()=>{if(S.tprof.photos.length<6)S.tprof.photos.push(r.result);render()};r.readAsDataURL(f)});return}
+  if(k==='postPhoto'){[...(e.target.files||[])].slice(0,5).forEach(f=>{const r=new FileReader();r.onload=()=>{S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(r.result);render()};r.readAsDataURL(f)});return}
+  if(k==='proofFile'){[...(e.target.files||[])].slice(0,5).forEach(f=>{const r=new FileReader();r.onload=()=>{S.proof.push({name:f.name,url:r.result});render()};r.readAsDataURL(f)});return}
+  const v=e.target.type==='checkbox'?e.target.checked:e.target.value;
+  if(k==='text'){S.draft.text=v;queueDraftSave()}
+  else if(k==='bamt')S.draft.budgetAmt=v;
+  else if(k==='tpbio')S.tprof.bio=v;else if(k==='tpveh')S.tprof.vehicle=v;else if(k==='tpareas')S.tprof.areas=v;else if(k==='abnNum')S.tk.abnNum=v;
+  else if(/^vc\d+$/.test(k)){S.checklist[+k.slice(2)]=v;render();return}
+  else if(k==='wtime'){S.draft.timeValue=v;if(v)S.draft.answers.part='Time';else if(S.draft.answers.part==='Time')delete S.draft.answers.part;render();return}
+  else if(k==='wdate'){S.draft.dateValue=v;if(v)S.draft.answers.date='Custom';else if(S.draft.answers.date==='Custom')delete S.draft.answers.date;render();return}
+  else if(k==='afrom')S.avail.from=v;else if(k==='ato')S.avail.to=v;
+  else if(k==='tcname')S.trusted.name=v;
+  else if(k==='fq'){S.find.q=v;INP.fq();return}
+  else S.form[k]=v;
+  if(INP[k])INP[k]();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.id==='msgin'){e.preventDefault();A.send()}
+  if(e.key==='Escape'&&S.sheet)closeSheet();
+});
+render();
+refreshApiListings();
+</script>
+</body>
+</html>
