@@ -1,4 +1,4 @@
-/** Sample people for `npm run demo`. Passwords are shown on the sign-in screen only while demo mode is on. */
+/** Sample people for `npm run demo`. The app opens as Maya and switches with one tap. The shared password stays on the server. */
 export const DEMO_PASSWORD = 'demo-help-2026';
 
 export const DEMO_ACCOUNTS = [
@@ -15,9 +15,17 @@ export function demoPublic() {
     accounts: DEMO_ACCOUNTS.map((account) => ({
       name: account.name,
       email: account.email,
-      password: account.password,
       role: account.role,
       note: account.note,
     })),
   };
+}
+
+/** Server-only sign-in for one demo person. Never send this object to the browser. */
+export function demoCredentials(email) {
+  if (process.env.TASKSPECK_DEMO !== '1') return { error: 'Demo mode is off.', code: 404 };
+  const wanted = String(email || '').trim().toLowerCase();
+  const account = DEMO_ACCOUNTS.find((row) => row.email === wanted);
+  if (!account) return { error: 'Choose Maya, Sam, Priya, or Casey.', code: 400 };
+  return { email: account.email, password: account.password };
 }

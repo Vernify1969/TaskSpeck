@@ -15,7 +15,7 @@ npm run demo
 
 On Windows, double-click `start-demo.bat` in this folder. The first time, it installs the app. It then starts the demo and opens a browser at http://127.0.0.1:5173/ .
 
-The sign-in screen lists the demo email addresses and the shared password. Each name says whether that person posts tasks, makes offers, or lives outside the launch area. A yellow Demo label shows wherever the sample data appears. A Demo payment note shows when a price is recorded. No real money moves.
+The demo opens straight into the app as Maya. A Viewing as switch under the header changes to Sam, Priya, or Casey with one tap. No password is shown. A yellow Demo label shows wherever the sample data appears. A Demo payment note shows when a price is recorded. No real money moves.
 
 The server listens on every network address on your computer, not only this machine. The terminal prints a second address such as http://192.168.1.20:5173/ . On a phone connected to the same Wi-Fi, type that address into the browser. Leave the terminal window open while you look around.
 

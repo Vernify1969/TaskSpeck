@@ -1,5 +1,5 @@
 import { oauthUnavailable, listAuthProviders } from './auth.js';
-import { demoPublic } from './demoAccounts.js';
+import { demoCredentials, demoPublic } from './demoAccounts.js';
 import {
   userFromToken,
   signup,
@@ -132,6 +132,17 @@ async function handle(req, res) {
 
   if (url === '/api/demo' && req.method === 'GET') {
     return sendJson(res, 200, demoPublic());
+  }
+
+  if (url === '/api/demo/view' && req.method === 'POST') {
+    const body = await readJsonBody(req);
+    const creds = demoCredentials(body.email);
+    if (creds.error) return fail(res, creds);
+    logout(readToken(req));
+    const result = login(creds);
+    if (result.error) return fail(res, result);
+    setSessionCookie(res, result.token);
+    return sendJson(res, 200, { user: result.user });
   }
 
   if (url === '/api/places' && req.method === 'GET') {

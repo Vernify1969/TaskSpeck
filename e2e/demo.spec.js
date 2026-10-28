@@ -5,6 +5,7 @@ import path from 'node:path';
 const PASSWORD = 'demo-help-2026';
 const MAYA = 'maya.demo@taskspeck.test';
 const SAM = 'sam.demo@taskspeck.test';
+const PRIYA = 'priya.demo@taskspeck.test';
 const CASEY = 'casey.demo@taskspeck.test';
 const SHOTS = '/opt/cursor/artifacts/screenshots/demo';
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -15,13 +16,21 @@ async function settle(page) {
   await page.locator('#toast.show').waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
 }
 
-async function login(page, email, password = PASSWORD) {
+async function viewAs(page, email) {
   await page.goto('/');
-  await page.locator('#em').waitFor();
-  await page.locator('#em').fill(email);
-  await page.locator('#pw').fill(password);
-  await page.getByRole('button', { name: 'Log in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Fair help, without a booking fee|Tasks near you/ })).toBeVisible({ timeout: 15000 });
+  const who = page.getByRole('group', { name: 'Viewing as' });
+  await expect(who).toBeVisible({ timeout: 15000 });
+  const name = {
+    [MAYA]: 'Maya',
+    [SAM]: 'Sam',
+    [PRIYA]: 'Priya',
+    [CASEY]: 'Casey',
+  }[email];
+  const button = who.getByRole('button', { name, exact: true });
+  if ((await button.getAttribute('aria-pressed')) !== 'true') {
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+  }
   await settle(page);
 }
 
@@ -100,14 +109,27 @@ for (const viewport of widths) {
   test.describe(viewport.name, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    test('shows demo logins, typical prices, and ten even category tiles', async ({ page }) => {
+    test('opens as Maya, switches people without a password, and shows ten even category tiles', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('#demo-logins')).toContainText('maya.demo@taskspeck.test');
-      await expect(page.locator('#demo-logins')).toContainText(PASSWORD);
-      await expect(page.locator('#demo-logins')).toContainText('Demo');
-      await page.getByRole('button', { name: /Maya Chen/ }).click();
-      await expect(page.locator('#em')).toHaveValue(MAYA);
-      await page.getByRole('button', { name: 'Log in', exact: true }).click();
+      const who = page.getByRole('group', { name: 'Viewing as' });
+      await expect(who).toBeVisible();
+      await expect(who.getByRole('button')).toHaveCount(4);
+      await expect(who.getByRole('button', { name: 'Maya', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('#demo-logins')).toHaveCount(0);
+      await expect(page.locator('#pw')).toHaveCount(0);
+      await expect(page.locator('#em')).toHaveCount(0);
+      expect(await page.content()).not.toContain(PASSWORD);
+      const whoWidths = await who.getByRole('button').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().width)));
+      expect(new Set(whoWidths).size).toBe(1);
+      expect(whoWidths[0]).toBeGreaterThan(40);
+      for (const [name, heading] of [['Sam', 'Sam Taylor'], ['Priya', 'Priya Nair'], ['Casey', 'Casey Outer'], ['Maya', 'Maya Chen']]) {
+        await who.getByRole('button', { name, exact: true }).click();
+        await expect(who.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await page.getByRole('button', { name: 'Profile', exact: true }).click();
+        await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+        expect(await page.content()).not.toContain(PASSWORD);
+        await page.getByRole('button', { name: 'Home', exact: true }).click();
+      }
       await expect(page.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await expect(page.getByText('$500–$950')).toBeVisible();
       await expect(page.getByText('Typical Melbourne examples for 2026')).toBeVisible();
@@ -129,33 +151,33 @@ for (const viewport of widths) {
       expect(boxes[0].h).toBe(156);
     });
 
-    test('signs up, edits profile, and logs out', async ({ page }) => {
-      const email = `new.${viewport.name}.${Date.now()}@taskspeck.test`;
-      await page.goto('/');
-      await page.getByRole('button', { name: 'Need an account? Sign up' }).click();
-      await page.locator('#nm').fill('Taylor Demo');
-      await page.locator('#em').fill(email);
-      await page.locator('#pw').fill(PASSWORD);
-      await page.getByRole('button', { name: 'Create account' }).click();
-      await expect(page.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
+    test('edits a profile and logs out back to Maya', async ({ page }) => {
+      await viewAs(page, MAYA);
+      await expect(page.locator('#pw')).toHaveCount(0);
       await page.getByRole('button', { name: 'Profile', exact: true }).click();
       await page.getByRole('button', { name: 'Edit profile' }).click();
-      await page.locator('#ps').fill('Carlton');
-      await page.locator('#pb').fill('Demo bio from the signup test');
+      const bio = page.locator('#pb');
+      const original = await bio.inputValue();
+      const next = `${original} ${viewport.name}`.trim();
+      await bio.fill(next);
       await page.getByRole('button', { name: 'Save profile' }).click();
       await expect(page.getByText('Profile saved').or(page.locator('#toast'))).toBeVisible();
       await settle(page);
       await page.getByRole('button', { name: 'Profile', exact: true }).click();
-      await page.getByRole('button', { name: 'Log out' }).click();
-      await expect(page.locator('#em')).toBeVisible();
-      await login(page, email);
-      await page.getByRole('button', { name: 'Profile', exact: true }).click();
       await page.getByRole('button', { name: 'Edit profile' }).click();
-      await expect(page.locator('#pb')).toHaveValue('Demo bio from the signup test');
+      await expect(bio).toHaveValue(next);
+      await bio.fill(original);
+      await page.getByRole('button', { name: 'Save profile' }).click();
+      await settle(page);
+      await page.getByRole('button', { name: 'Profile', exact: true }).click();
+      await page.getByRole('button', { name: 'Log out' }).click();
+      await expect(page.getByRole('group', { name: 'Viewing as' }).getByRole('button', { name: 'Maya', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('#em')).toHaveCount(0);
+      await expect(page.locator('#pw')).toHaveCount(0);
     });
 
     test('opens every home category and blocks licensed work and large painting', async ({ page }) => {
-      await login(page, MAYA);
+      await viewAs(page, MAYA);
       for (const name of HOME) {
         await page.locator('.home-cats').getByRole('button', { name }).click();
         await expect(page.locator('#pt')).toBeVisible();
@@ -179,13 +201,13 @@ for (const viewport of widths) {
     });
 
     test('posts a task with a photo, a budget, and two payment stages', async ({ page }) => {
-      await login(page, MAYA);
+      await viewAs(page, MAYA);
       const title = `Pack the spare room ${viewport.name} ${Date.now()}`;
       await postTask(page, { text: `${title}. Pack these items into boxes.`, price: 200, stages: true, category: 'Packing & unpacking' });
     });
 
     test('browses the list and map, filters, and saves a search', async ({ page }) => {
-      await login(page, SAM);
+      await viewAs(page, SAM);
       await page.getByRole('button', { name: 'Tasker', exact: true }).click();
       await passSafety(page);
       await expect(page.getByRole('heading', { name: 'Tasks near you' })).toBeVisible();
@@ -240,7 +262,7 @@ for (const viewport of widths) {
     });
 
     test('makes, edits, and withdraws an offer', async ({ page }) => {
-      await login(page, SAM);
+      await viewAs(page, SAM);
       await page.getByRole('button', { name: 'Tasker', exact: true }).click();
       await passSafety(page);
       await page.locator('#fq').fill('Collect a parcel');
@@ -265,9 +287,9 @@ for (const viewport of widths) {
       const maya = await mayaContext.newPage();
       const sam = await samContext.newPage();
       const title = `Carry two lobby boxes ${viewport.name} ${Date.now()}`;
-      await login(maya, MAYA);
+      await viewAs(maya, MAYA);
       await postTask(maya, { text: `${title}. Help carry two boxes from the lobby.`, price: 120, category: 'Moving help' });
-      await login(sam, SAM);
+      await viewAs(sam, SAM);
       await offerOn(sam, title, 110);
       await maya.reload();
       await expect(maya.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
@@ -304,9 +326,9 @@ for (const viewport of widths) {
       const maya = await mayaContext.newPage();
       const sam = await samContext.newPage();
       const cancelTitle = `Cancel me ${viewport.name} ${Date.now()}`;
-      await login(maya, MAYA);
+      await viewAs(maya, MAYA);
       await postTask(maya, { text: `${cancelTitle}. Help carry one small box.`, price: 80, category: 'Moving help' });
-      await login(sam, SAM);
+      await viewAs(sam, SAM);
       await offerOn(sam, cancelTitle, 70);
       await maya.reload();
       await expect(maya.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
@@ -348,7 +370,7 @@ for (const viewport of widths) {
     });
 
     test('opens messages, notifications, a share link, and a CSV', async ({ page }) => {
-      await login(page, MAYA);
+      await viewAs(page, MAYA);
       await page.getByRole('button', { name: /Notifications/ }).click();
       await expect(page.getByText('In the app, and by email')).toBeVisible();
       await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -369,14 +391,14 @@ for (const viewport of widths) {
     });
 
     test('shows coming soon and joins the waitlist outside the zone', async ({ page }) => {
-      await login(page, CASEY);
+      await viewAs(page, CASEY);
       await expect(page.getByText('Coming soon to your area')).toBeVisible();
       await page.getByRole('button', { name: 'Join the waitlist' }).click();
       await expect(page.getByText(/waitlist/i)).toBeVisible();
     });
 
     test('switches between requester and tasker', async ({ page }) => {
-      await login(page, MAYA);
+      await viewAs(page, MAYA);
       await page.getByRole('button', { name: 'Tasker', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Tasks near you' })).toBeVisible();
       await page.getByRole('button', { name: 'Requester', exact: true }).click();

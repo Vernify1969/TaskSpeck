@@ -245,6 +245,12 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .map .you{fill:var(--brand);stroke:var(--surface);stroke-width:.9}
 .pin{position:absolute;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:hsl(var(--h) 62% 40%);display:grid;place-items:center;font-size:17px;line-height:1;border:2.5px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.3);padding:0;text-align:center}
 .pin[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px;z-index:2}
+#top{flex:none}
+.view-as{display:flex;align-items:center;gap:8px;padding:0 16px 10px}
+.view-as-l{flex:none;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.view-as-p{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.view-as-p button{min-width:0;min-height:36px;padding:6px 2px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap}
+.view-as-p button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
 .top-actions{display:flex;align-items:center;gap:6px;flex:none}
 .top-actions .iconbtn{position:relative}
 .badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:2px solid var(--surface)}
@@ -298,7 +304,10 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   #app{max-width:1120px;width:100%;height:auto;min-height:100%;max-height:none;margin:0 auto;border-radius:0;box-shadow:none;overflow:visible}
   #view{overflow:visible;padding:8px 32px 48px}
   #nav{display:none!important}
-  .top{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);padding:16px 32px;gap:16px}
+  #top{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px)}
+  .top{padding:16px 32px;gap:16px}
+  .view-as{padding:0 32px 12px}
+  .view-as-p{flex:0 1 440px;max-width:440px}
   .top .seg{flex:0 0 auto;order:3}
   .desk-nav{display:flex;gap:4px;order:2}
   .desk-nav button{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px;color:var(--muted)}
@@ -687,8 +696,17 @@ function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bund
 function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];hydrateOffers(row,t);return t}
 function hydrateOffers(row,t){if(t._bundle.offers&&t._bundle.offers.length)return;const bids=Array.isArray(row.bids)?row.bids.filter(b=>b.status==='pending'||b.status==='accepted'):[];if(!bids.length)return;const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=bids.map(b=>({id:b.id,bidId:b.id,name:b.taskerName,fee:b.fee,km:1,rating:'New',done:1,comp:100,canc:0,ver:true,msg:b.message||'',cats:[],repeat:0,reply:'Usually replies the same day',age:'Demo',when,start:t.startMin||600,demo:b.source==='demo'}));const acc=bids.find(b=>b.status==='accepted');if(acc){t._bundle.offerId=acc.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:acc.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(row.payment)t._bundle.payment=row.payment;if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}}
 function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" data-demo-pay="1" style="margin-top:12px"><b>Demo payment</b>No real money moves. Amounts are only recorded in this demo.</div>`}
-function demoLoginCard(){const info=S.demoInfo;if(!info||!info.enabled||!(info.accounts||[]).length)return '';return `<div class="card" id="demo-logins" style="margin:14px 0"><span class="pill warn">Demo</span><h3 style="margin-top:8px">Demo logins</h3><p class="muted small">Sample people only. No real money moves.</p>${info.accounts.map(a=>`<button class="btn secondary" style="margin-top:8px" data-a="fillDemo" data-v="${esc(a.email)}"><b>${esc(a.name)}</b> · ${esc(a.role)}<br><span class="muted small">${esc(a.email)} · password ${esc(a.password)}</span></button>`).join('')}</div>`}
-function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);if(data.user&&data.user.safetyGuide)S.tk.safety=true;S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];if((data.records||[]).length)S.history=data.records.map(r=>({prop:r.property||'My jobs',title:r.title,cat:r.cat,tasker:r.taskerName,date:r.date,paid:+r.paid||0,seed:false,note:r.note||''}));S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
+function demoShort(name){const part=String(name||'').trim().split(/\s+/)[0];return part||'Demo'}
+function viewingAsBar(){
+  const info=S.demoInfo;
+  if(!S.serverDemo||!S.user||!info||!info.enabled||!(info.accounts||[]).length)return '';
+  const buttons=info.accounts.map(a=>{
+    const on=String(S.user.email||'').toLowerCase()===String(a.email||'').toLowerCase();
+    return `<button type="button" data-a="viewAs" data-v="${esc(a.email)}" aria-pressed="${on}">${esc(demoShort(a.name))}</button>`;
+  }).join('');
+  return `<div class="view-as" role="group" aria-label="Viewing as"><span class="view-as-l">Viewing as</span><div class="view-as-p">${buttons}</div></div>`;
+}
+function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);S.tk.safety=!!(data.user&&data.user.safetyGuide);S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];if((data.records||[]).length)S.history=data.records.map(r=>({prop:r.property||'My jobs',title:r.title,cat:r.cat,tasker:r.taskerName,date:r.date,paid:+r.paid||0,seed:false,note:r.note||''}));S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
 function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
 function recentTasks(){return [...myTaskList()].sort((a,b)=>(Number(b.listingId)||0)-(Number(a.listingId)||0)).slice(0,3)}
 function themeInit(){try{const t=localStorage.getItem('ts-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}}
@@ -796,7 +814,7 @@ function topRoot(backTitle){
   return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee${S.serverDemo?' · Demo':''}</span></span></div>
   <nav class="desk-nav" aria-label="Sections">${desk}</nav>
   <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
-  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}`;
+  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}${viewingAsBar()}`;
 }
 const topBack=t=>`<div class="top"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(t||'')}</div></div>`;
 function navHtml(){
@@ -812,7 +830,6 @@ function renderAuth(){
   $('#view').innerHTML=`<div class="auth-card">
     <h1 class="display" style="font-size:30px">${mode==='login'?'Welcome back':'Create your account'}</h1>
     <p class="muted">One account covers both sides. You can post tasks and make offers.</p>
-    ${demoLoginCard()}
     ${mode==='signup'?`<label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="name" autocomplete="name" value="${esc(S.form.name||'')}">`:''}
     <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="username" value="${esc(S.form.email||'')}">
     <label class="f" for="pw">Password</label><input id="pw" type="password" data-in="password" autocomplete="${mode==='login'?'current-password':'new-password'}">
@@ -1936,7 +1953,19 @@ const A={
  asave(){TaskAPI.settings({avail:S.avail}).catch(()=>{});back();notify('Availability saved.')},
  avail(){go('avail')},
  authMode(v){S.authMode=v;S.form.password='';render()},
- fillDemo(v){const acc=(S.demoInfo&&S.demoInfo.accounts||[]).find(a=>a.email===v);if(!acc)return;S.form.email=acc.email;S.form.password=acc.password;S.authMode='login';render()},
+ async viewAs(v){
+   if(!v||(S.user&&String(S.user.email).toLowerCase()===String(v).toLowerCase()))return;
+   const data=await api('/api/demo/view',{method:'POST',body:{email:v}});
+   if(data.error){notify(data.error);return}
+   const me=await api('/api/auth/me');
+   if(me.error||!me.user){notify(me.error||'Could not switch.');return}
+   S.sheet=null;S.mode='requester';S.stack=[{n:'home'}];
+   S.find={km:null,cat:'all',sort:'closest',view:'list',q:'',pin:null,fopen:false};
+   S.tk={abn:false,ins:false,veh:false,safety:false,gst:false,abnNum:'',police:false};
+   S.verified=false;S.agent=false;S.task=null;S.offers=[];S.offerId=null;
+   S.history=SEED_HISTORY.map(x=>({...x,seed:true}));S.serverRecords=[];
+   applyWorkspace(me);render();refreshApiListings();
+ },
  async doLogin(){
    const data=await api('/api/auth/login',{method:'POST',body:{email:S.form.email||'',password:S.form.password||''}});
    if(data.error){notify(data.error);return}
@@ -2081,6 +2110,12 @@ async function boot(){
     const r=await fetch('/api/auth/me',{credentials:'same-origin'});
     if(r.ok){const data=await r.json();if(data.user)applyWorkspace(data)}
   }catch(e){}
+  if(!S.user&&S.serverDemo&&S.demoInfo.accounts&&S.demoInfo.accounts[0]){
+    try{
+      const entered=await api('/api/demo/view',{method:'POST',body:{email:S.demoInfo.accounts[0].email}});
+      if(!entered.error){const me=await api('/api/auth/me');if(me.user)applyWorkspace(me)}
+    }catch(e){}
+  }
   render();
   if(S.user)refreshApiListings();
 }
