@@ -9,7 +9,7 @@ const CASEY = 'casey.demo@taskspeck.test';
 const SHOTS = '/opt/cursor/artifacts/screenshots/demo';
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
-const HOME = ['Moving help', 'Cleaning', 'Gardening', 'Handyman', 'Assembly', 'Errands & delivery', 'Hard rubbish', 'Painting', 'Packing & unpacking', 'Other'];
+const HOME = ['Moving help', 'Cleaning', 'Gardening', 'Handyman', 'Assembly', 'Pickup & delivery', 'Hard rubbish', 'Painting', 'Packing & unpacking', 'Other'];
 
 async function settle(page) {
   await page.locator('#toast.show').waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
@@ -203,12 +203,12 @@ for (const viewport of widths) {
       await expect(page.getByRole('button', { name: '50 km', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'General help', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Errands', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Pickup & delivery', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Errands & delivery', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Office help', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Admin', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Pets & plants', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Tech setup', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Errands & delivery', exact: true })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: 'Pickup & delivery', exact: true })).toHaveCount(1);
       await expect(page.getByRole('button', { name: 'Admin & office help', exact: true })).toHaveCount(1);
       await expect(page.getByRole('button', { name: 'Pet care', exact: true })).toHaveCount(1);
       await expect(page.getByRole('button', { name: 'Tech help', exact: true })).toHaveCount(1);
@@ -381,7 +381,8 @@ for (const viewport of widths) {
       await expect(page.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await page.getByRole('button', { name: 'See all categories' }).click();
       await expect(page.locator('.ttl', { hasText: 'All categories' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Errands & delivery', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Pickup & delivery', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Errands & delivery', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Admin & office help', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Pet care', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Tech help', exact: true })).toBeVisible();

@@ -548,7 +548,11 @@ test('retired categories, including general help, are stored as Other', async ()
   const grocery = await db.publishListing((db.upsertListingText('Collect groceries from Coles', null, alex)).task.id, {
     text: 'Collect groceries from Coles and queue if needed.', title: 'Grocery run', cat: 'errand', suburb: 'Carlton', budgetLabel: '$25', priceNum: 25,
   }, alex);
-  assert.equal(grocery.task.cat, 'errandsdelivery');
+  assert.equal(grocery.task.cat, 'pickup');
+  const renamed = await db.publishListing((db.upsertListingText('Return a parcel to the shop', null, alex)).task.id, {
+    text: 'Return a parcel to the shop.', title: 'Return a parcel', cat: 'errandsdelivery', suburb: 'Carlton', budgetLabel: '$20', priceNum: 20,
+  }, alex);
+  assert.equal(renamed.task.cat, 'pickup');
   const laptop = await db.publishListing((db.upsertListingText('Set up my laptop', null, alex)).task.id, {
     text: 'Help me set up my laptop and the printer.', title: 'Laptop setup', cat: 'techsetup', suburb: 'Carlton', budgetLabel: '$60', priceNum: 60,
   }, alex);
@@ -599,7 +603,7 @@ test('retired categories, including general help, are stored as Other', async ()
   assert.equal(again.tasks.find((task) => task.title === 'Walk the dog').cat, 'pets');
   assert.equal(again.savedSearches.find((search) => search.q === 'water the indoor plants').cat, 'garden');
   assert.equal(again.savedSearches.find((search) => search.q === 'filing').cat, 'adminoffice');
-  assert.equal(again.records.find((record) => record.title === 'Grocery run record').cat, 'errandsdelivery');
+  assert.equal(again.records.find((record) => record.title === 'Grocery run record').cat, 'pickup');
   assert.equal(again.tasks.find((task) => task.title === 'Laptop setup').cat, 'tech');
   assert.equal(again.tasks.find((task) => task.title === 'File the invoices').cat, 'adminoffice');
 });

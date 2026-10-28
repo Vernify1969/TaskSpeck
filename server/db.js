@@ -26,8 +26,9 @@ const CAT_ALIAS = {
   labour: 'other',
   admin: 'adminoffice',
   office: 'adminoffice',
-  errand: 'errandsdelivery',
-  errands: 'errandsdelivery',
+  errand: 'pickup',
+  errands: 'pickup',
+  errandsdelivery: 'pickup',
   techsetup: 'tech',
   'tech-setup': 'tech',
 };
