@@ -522,7 +522,7 @@ test('building-type jobs over $10,000 are refused, including quotes and stages',
   assert.match(structural.error, /doesn't offer licensed work/);
 });
 
-test('events and hosting tasks are stored as Other, and packing stays its own category', async () => {
+test('retired categories, including general help, are stored as Other', async () => {
   db.resetStore();
   const alex = await account('Alex', 'pack@example.com');
   const party = await db.publishListing((db.upsertListingText('Set up chairs', null, alex)).task.id, {
@@ -537,6 +537,12 @@ test('events and hosting tasks are stored as Other, and packing stays its own ca
     text: 'Pack the kitchen into boxes', title: 'Pack the kitchen', cat: 'packing', suburb: 'Carlton', budgetLabel: '$180', priceNum: 180,
   }, alex);
   assert.equal(packed.task.cat, 'packing');
+  const hands = await db.publishListing((db.upsertListingText('An extra pair of hands for the afternoon', null, alex)).task.id, {
+    text: 'An extra pair of hands for the afternoon', title: 'Extra hands', cat: 'labour', suburb: 'Carlton', budgetLabel: '$80', priceNum: 80,
+  }, alex);
+  assert.equal(hands.task.cat, 'other');
+  const prefs = db.updateProfile(alex, { avail: { cats: ['labour', 'cleaning', 'other'] } });
+  assert.deepEqual(prefs.user.avail.cats, ['other', 'cleaning']);
   const file = path.join(dir, 'store.json');
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   const row = raw.tasks.find((task) => task.title === 'Party setup');
@@ -544,6 +550,11 @@ test('events and hosting tasks are stored as Other, and packing stays its own ca
   row.bundle = { task: { cat: 'events', title: 'Party setup' } };
   raw.records.push({ id: 1, userId: alex.id, cat: 'events', title: 'Old party', date: '', paid: 0, suburb: 'Carlton' });
   raw.savedSearches.push({ id: 1, userId: alex.id, cat: 'hosting', q: 'party', km: 10, alert: false });
+  raw.savedSearches.push({ id: 2, userId: alex.id, cat: 'labour', q: 'hands', km: null, alert: false });
+  raw.records.push({ id: 2, userId: alex.id, cat: 'labour', title: 'Old general help', date: '', paid: 0, suburb: 'Carlton' });
+  const extra = raw.tasks.find((task) => task.title === 'Extra hands');
+  extra.cat = 'labour';
+  extra.bundle = { task: { cat: 'labour', title: 'Extra hands' } };
   fs.writeFileSync(file, JSON.stringify(raw));
   const fresh = await import('./db.js?retired=1');
   assert.equal(fresh.getTaskById(row.id, alex).cat, 'other');
@@ -553,6 +564,10 @@ test('events and hosting tasks are stored as Other, and packing stays its own ca
   assert.equal(again.tasks.find((task) => task.id === row.id).bundle.task.cat, 'other');
   assert.equal(again.records[0].cat, 'other');
   assert.equal(again.savedSearches[0].cat, 'other');
+  assert.equal(again.tasks.find((task) => task.id === extra.id).cat, 'other');
+  assert.equal(again.tasks.find((task) => task.id === extra.id).bundle.task.cat, 'other');
+  assert.equal(again.savedSearches.find((search) => search.q === 'hands').cat, 'other');
+  assert.equal(again.records.find((record) => record.title === 'Old general help').cat, 'other');
 });
 
 test('demo logins stay hidden unless demo mode is on', async () => {

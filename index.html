@@ -217,9 +217,11 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 @media (min-width:480px){
   .fseg.sortgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .catgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .catgrid .fpick:first-child{grid-column:1 / -1}
 }
 @media (min-width:800px){
   .catgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .catgrid .fpick:first-child{grid-column:auto}
 }
 @media (max-width:959px){
   .filter-back{display:block;position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:24}
@@ -413,7 +415,6 @@ const CATS={
  tech:{name:'Tech setup',em:'💻',h:230,base:120,guide:'Setting up devices you already own. Electrical and TV mounting are not offered.'},
  pets:{name:'Pets & plants',em:'🐕',h:28,base:60,guide:'Feeding, walking or watering. Not vet care.'},
  admin:{name:'Admin',em:'📋',h:260,base:120,guide:'Sorting, packing lists, or a day of organising.'},
- labour:{name:'General help',em:'💪',h:15,base:180,guide:'An extra pair of hands for a few hours or several days, at a fixed price.'},
  other:{name:'Other',em:'✨',h:200,base:150,guide:'Describe the job and the size. The safety check still applies. Licensed work is not offered.'}
 };
 const FINAL=Object.keys(CATS);
@@ -436,7 +437,6 @@ const CAT_ICON={
  tech:'<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4"/>',
  pets:'<circle cx="8" cy="9" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="6" cy="14" r="1.6"/><circle cx="18" cy="14" r="1.6"/><path d="M9 18c1 2 5 2 6 0"/>',
  admin:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
- labour:'<path d="M8 13a4 4 0 1 1 8 0"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>',
  other:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
 };
 function catIcon(k,s=22){const d=CAT_ICON[k]||CAT_ICON.other;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`}
@@ -477,7 +477,6 @@ const RULES=[
  ['garden',/\b(garden|lawn|mow|weed|hedge|plants?|mulch)\b/i],
  ['pets',/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank)\b/i],
  ['admin',/\b(sort|organi[sz]e|filing|paperwork|label)\b/i],
- ['labour',/\b(extra pair of hands|general help|labour|labor)\b/i],
  ['home',/\b(hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
 ];
 function parseWhen(t){
@@ -915,7 +914,7 @@ home(){
   ${S.demoMode?'<p class="muted small center" style="margin-top:18px"><span class="pill warn">Demo</span> Sample people and prompts are turned on.</p>':''}`};
 },
 post(a){
-  const cat=a.cat;const ex=EX[cat||'all'];
+  const cat=a.cat==='labour'?'other':a.cat;const ex=EX[cat||'all'];
   return{title:cat?CATS[cat].name:'Post a task',html:`
   <h1 class="display" style="font-size:28px">What do you need help with?</h1>
   <p class="muted small" style="margin:0 0 6px"><b>1. The job</b></p>

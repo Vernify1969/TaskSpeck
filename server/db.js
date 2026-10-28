@@ -20,7 +20,7 @@ import {
 } from '../shared/places.js';
 
 const FEE_PCT = 15;
-const RETIRED_CATS = new Set(['events', 'hosting']);
+const RETIRED_CATS = new Set(['events', 'hosting', 'labour']);
 
 function retireCat(cat) {
   const name = String(cat || '');

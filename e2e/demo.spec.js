@@ -201,6 +201,8 @@ for (const viewport of widths) {
       await expect(page.getByRole('button', { name: '10 km', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: '25 km', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: '50 km', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'General help', exact: true })).toHaveCount(0);
+      await expect(page.locator('.catgrid .fpick')).toHaveCount(16);
       await page.getByRole('button', { name: 'Price low', exact: true }).scrollIntoViewIfNeeded();
       await expect(page.getByRole('button', { name: 'Price low', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Price high', exact: true })).toBeVisible();
@@ -370,8 +372,11 @@ for (const viewport of widths) {
       await page.getByRole('button', { name: 'See all categories' }).click();
       await expect(page.locator('.ttl', { hasText: 'All categories' })).toBeVisible();
       await expect(page.getByText('Errands', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Other', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'General help', exact: true })).toHaveCount(0);
       await expect(page.getByText('Events', { exact: true })).toHaveCount(0);
       await expect(page.getByText('Hosting help', { exact: true })).toHaveCount(0);
+      await expect(page.locator('#catgrid .cat')).toHaveCount(15);
     });
   });
 }
