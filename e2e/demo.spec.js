@@ -9,7 +9,7 @@ const CASEY = 'casey.demo@taskspeck.test';
 const SHOTS = '/opt/cursor/artifacts/screenshots/demo';
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
-const HOME = ['Moving help', 'Cleaning', 'Gardening', 'Handyman', 'Assembly', 'Pickup & delivery', 'Hard rubbish', 'Painting', 'Packing & unpacking', 'Other'];
+const HOME = ['Moving help', 'Packing & unpacking', 'Cleaning', 'Gardening', 'Handyman', 'Furniture assembly', 'Pickup & delivery', 'Hard rubbish', 'Painting', 'Other'];
 
 async function settle(page) {
   await page.locator('#toast.show').waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
@@ -118,6 +118,8 @@ for (const viewport of widths) {
       await expect(page.getByRole('button', { name: 'View all my tasks' })).toBeVisible();
       const tiles = page.locator('.home-cats .cat');
       await expect(tiles).toHaveCount(10);
+      const labels = await tiles.allInnerTexts();
+      expect(labels.map((text) => text.replace(/\s+/g, ' ').trim())).toEqual(HOME);
       const boxes = await tiles.evaluateAll((els) => els.map((el) => {
         const r = el.getBoundingClientRect();
         return { w: Math.round(r.width), h: Math.round(r.height) };
