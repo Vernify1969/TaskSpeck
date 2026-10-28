@@ -209,6 +209,8 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .fseg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;padding:4px;background:var(--bg);border-radius:14px}
 .fseg.sortgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .catgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+.catgrid .fpick:last-child:nth-child(odd){grid-column:1 / -1}
+#catgrid.cats .cat:last-child:nth-child(3n+1){grid-column:1 / -1}
 .fpick{width:100%;min-width:0;height:44px;padding:0 8px;border:1.5px solid transparent;background:transparent;border-radius:10px;font-weight:700;font-size:13px;color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center}
 .fpick span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .fpick.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
@@ -216,12 +218,6 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .catgrid .fpick.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 @media (min-width:480px){
   .fseg.sortgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .catgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .catgrid .fpick:first-child{grid-column:1 / -1}
-}
-@media (min-width:800px){
-  .catgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .catgrid .fpick:first-child{grid-column:auto}
 }
 @media (max-width:959px){
   .filter-back{display:block;position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:24}
@@ -314,6 +310,9 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   .popular{grid-template-columns:repeat(4,1fr)}
   .cats{grid-template-columns:repeat(5,1fr)}
   .cats.home-cats{grid-template-columns:repeat(5,minmax(0,1fr))}
+  #catgrid.cats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #catgrid.cats .cat:last-child:nth-child(3n+1){grid-column:auto}
+  #catgrid.cats .cat:last-child:nth-child(4n+1){grid-column:1 / -1}
   .read{max-width:720px}
   #fres .stack{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   #fres .stack>*+*{margin-top:0}
@@ -404,21 +403,19 @@ const CATS={
  cleaning:{name:'Cleaning',em:'',h:185,base:200,guide:'A small clean is often a few hundred dollars. A whole home or several days costs more. Taskers set the price.'},
  furniture:{name:'Assembly',em:'',h:45,base:150,guide:'A single flat-pack is a smaller job. A house full of assembly costs more. Assembly over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs.'},
  moving:{name:'Moving help',em:'',h:345,base:250,guide:'A few boxes is a small job. A whole move, including multi-day work, is priced by the Tasker.'},
- errands:{name:'Pickup & delivery',em:'',h:215,base:80,guide:'A quick pickup is small. A day of deliveries costs more.'},
- errand:{name:'Errands',em:'',h:200,base:60,guide:'Shopping runs, queuing, returns and key pickup. A quick stop is small. Several stops cost more.'},
+ errandsdelivery:{name:'Errands & delivery',em:'',h:215,base:80,guide:'Grocery runs, queuing, returning parcels, key pickup, and other pickups and deliveries. A quick stop is small. A day of deliveries costs more.'},
  packing:{name:'Packing & unpacking',em:'',h:58,base:180,guide:'Boxing up or unpacking for a move, and organising what goes in the boxes. A few boxes is smaller. A whole home costs more.'},
  rubbish:{name:'Hard rubbish',em:'',h:100,base:180,guide:'A few items is a small load. A full clearance costs more. Hazardous waste is not allowed.'},
  home:{name:'Handyman',em:'',h:255,base:200,guide:'Small repairs vary. Larger unlicensed jobs can run to several days. Handyman work over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Licensed trades are not offered.'},
- garden:{name:'Gardening',em:'',h:120,base:160,guide:'A tidy-up is smaller. A big garden over several days costs more. Tree removal with a chainsaw is not offered.'},
+ garden:{name:'Gardening',em:'',h:120,base:160,guide:'A tidy-up is smaller. Watering and indoor plant care sit here too. A big garden over several days costs more. Tree removal with a chainsaw is not offered.'},
  painting:{name:'Painting',em:'',h:30,base:400,guide:'One room is smaller. Several rooms or days cost more. Painting over $10,000 needs a registered builder in Victoria, so TaskSpeck can\'t take those jobs. Wet-area waterproofing is licensed and not offered.'},
- office:{name:'Office help',em:'🏢',h:210,base:180,guide:'A one-off office job. Shifts and ongoing staffing are not offered.'},
- tech:{name:'Tech setup',em:'💻',h:230,base:120,guide:'Setting up devices you already own. Electrical and TV mounting are not offered.'},
- pets:{name:'Pets & plants',em:'🐕',h:28,base:60,guide:'Feeding, walking or watering. Not vet care.'},
- admin:{name:'Admin',em:'📋',h:260,base:120,guide:'Sorting, packing lists, or a day of organising.'},
+ adminoffice:{name:'Admin & office help',em:'',h:260,base:120,guide:'Paperwork, filing, data entry, scanning, spreadsheets, posting letters, or a one-off office tidy. Shifts and ongoing staffing are not offered.'},
+ tech:{name:'Tech help',em:'',h:230,base:120,guide:'Help with a phone, laptop, printer, Wi-Fi, or a smart TV or speaker you already own, including how to use it. Data cabling and antenna installs need a registered cabler, so TaskSpeck can\'t take those. TV mounting and electrical work are not offered.'},
+ pets:{name:'Pet care',em:'',h:28,base:60,guide:'Dog walking, pet sitting, feeding, and litter or cage cleaning. Not vet care. Plant watering sits under Gardening.'},
  other:{name:'Other',em:'✨',h:200,base:150,guide:'Describe the job and the size. The safety check still applies. Licensed work is not offered.'}
 };
 const FINAL=Object.keys(CATS);
-const HOME_CATS=[['moving','Moving help'],['cleaning','Cleaning'],['garden','Gardening'],['home','Handyman'],['furniture','Assembly'],['errands','Pickup &\ndelivery'],['rubbish','Hard rubbish'],['painting','Painting'],['packing','Packing &\nunpacking'],['other','Other']];
+const HOME_CATS=[['moving','Moving help'],['cleaning','Cleaning'],['garden','Gardening'],['home','Handyman'],['furniture','Assembly'],['errandsdelivery','Errands &\ndelivery'],['rubbish','Hard rubbish'],['painting','Painting'],['packing','Packing &\nunpacking'],['other','Other']];
 const POPULAR=[['cleaning','End-of-lease clean','$500–$950'],['furniture','Furniture assembly','$150–$450'],['garden','Garden tidy','$220–$550'],['rubbish','Hard rubbish pickup','$280–$650']];
 function heroArt(){return `<svg class="illu" viewBox="0 0 320 210" role="img" aria-label="Illustration of a helper with a box and a plant"><rect class="g" x="18" y="168" width="284" height="14" rx="7" opacity=".15"/><rect class="g" x="54" y="86" width="118" height="82" rx="18"/><rect class="y" x="72" y="104" width="82" height="46" rx="10"/><circle class="y" cx="214" cy="78" r="26"/><rect class="g" x="200" y="102" width="28" height="52" rx="12"/><path class="line" d="M176 168c18-26 46-26 66 0"/><rect class="s" x="248" y="118" width="40" height="46" rx="10" stroke="var(--brand)" stroke-width="3"/><path class="g" d="M268 118c-8-26 6-44 0-62 16 16 20 38 0 62z"/></svg>`}
 const FIND_DISTANCES=[2,5,10];
@@ -429,14 +426,12 @@ const CAT_ICON={
  moving:'<path d="M3 8h11v10H3z"/><path d="M14 11h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>',
  cleaning:'<path d="M4 20h10"/><path d="M8 20V6"/><path d="M8 6h8l-2 6H8"/>',
  home:'<path d="M14 7l3 3"/><path d="M4 20l8-8 3 3-8 8H4v-3z"/><path d="M12 12l2-2"/>',
- errands:'<path d="M6 7h15l-1.5 9h-12z"/><path d="M6 7L5 4H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
- errand:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+ errandsdelivery:'<path d="M6 7h15l-1.5 9h-12z"/><path d="M6 7L5 4H2"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',
  packing:'<path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/>',
  rubbish:'<path d="M5 8h14"/><path d="M8 8V6h8v2"/><path d="M7 8l1 12h8l1-12"/>',
- office:'<path d="M4 20V6h10v14"/><path d="M14 10h6v10"/><path d="M8 10h2M8 14h2"/>',
+ adminoffice:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
  tech:'<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4"/>',
  pets:'<circle cx="8" cy="9" r="2"/><circle cx="16" cy="9" r="2"/><circle cx="6" cy="14" r="1.6"/><circle cx="18" cy="14" r="1.6"/><path d="M9 18c1 2 5 2 6 0"/>',
- admin:'<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4"/><path d="M10 13h6M10 17h4"/>',
  other:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
 };
 function catIcon(k,s=22){const d=CAT_ICON[k]||CAT_ICON.other;return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`}
@@ -450,7 +445,8 @@ const kv=(l,v)=>{const none=(v==='Not stated'||!v);return `<div class="kv"><span
 const LICENSED_MSG="TaskSpeck doesn't offer licensed work at the moment, so you'll need a licensed tradesperson.";
 const BLOCK=[
  [/\b(staff|staffing|waiters?|waitress\w*|bartend\w*|barista|kitchen ?hand|promo(tional)?|receptionist|personal assistant|shifts?|roster\w*|casual (worker|staff|role)|per hour|an hour|\/ ?hr|hourly|full.?time|part.?time)\b/i,'TaskSpeck is for a fixed price for a job, not staffing, shifts or hourly roles.'],
- [/(mount\w*|install\w*|hang\w*|wall|connect\w*|set ?up|wir\w*|cabl\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|install\w*|wall|bracket|connect\w*|set ?up|wir\w*|cabl\w*|antenna|hdmi|soundbar)|\b(antenna|soundbar|hdmi)\b/i,'TV mounting and antenna work can be electrical. '+LICENSED_MSG],
+ [/data ?cabl\w*|structured cabling|network cabling|\bantenna\b/i,'Data cabling and antenna installs need a registered cabler. '+LICENSED_MSG],
+ [/(mount\w*|hang\w*|wall|wir\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|hang\w*|wall|bracket|wir\w*)/i,'TV mounting can be electrical. '+LICENSED_MSG],
  [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit|air[\s-]?con|aircon|refrigerat/i,'This looks like electrical, air-conditioning or refrigeration work. '+LICENSED_MSG],
  [/\bgas\b/i,'This looks like gas work. '+LICENSED_MSG],
  [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i,'This looks like plumbing. '+LICENSED_MSG],
@@ -471,12 +467,12 @@ const RULES=[
  ['cleaning',/\b(clean\w*|vacuum\w*|mop\w*|sweep\w*)\b/i],
  ['packing',/\b(pack\w*|unpack\w*|boxing|box(?:es)? up)\b/i],
  ['moving',/\b(boxes|carry|move|moving|unload|load)\b/i],
- ['errand',/\b(errands?|queu(?:e|ing)|grocer\w*|coles|woolworths|aldi|key ?pick ?up|pick ?up (?:the |my |a )?keys?|shopping run|shop for)\b/i],
- ['errands',/\b(pick ?up|collect|parcel|deliver\w*|courier|post office)\b/i],
+ ['errandsdelivery',/\b(errands?|queu(?:e|ing)|grocer\w*|coles|woolworths|aldi|key ?pick ?up|pick ?up (?:the |my |a )?keys?|shopping run|shop for|pick ?up|collect|parcel|deliver\w*|courier|post office|return(?:ing)? (?:a |the |my )?parcel)\b/i],
  ['painting',/\b(paint\w*|undercoat|feature wall)\b/i],
- ['garden',/\b(garden|lawn|mow|weed|hedge|plants?|mulch)\b/i],
- ['pets',/\b(dog|cat|puppy|kitten|pets?|walk my|feed my|fish tank)\b/i],
- ['admin',/\b(sort|organi[sz]e|filing|paperwork|label)\b/i],
+ ['pets',/\b(dog|cat|puppy|kitten|pets?|pet sitting|walk my|feed my|fish tank|litter|cage)\b/i],
+ ['garden',/\b(garden|lawn|mow|weed|hedge|plants?|mulch|houseplants?|water(?:ing)? (?:the |my |indoor )?plants?)\b/i],
+ ['adminoffice',/\b(filing|paperwork|data entry|scan(?:ning)? documents|spreadsheets?|post(?:ing)? (?:a |the )?letters?|office tidy|admin work)\b/i],
+ ['tech',/\b(wi-?fi|laptop|printer|smartphone|smart (?:tv|speaker)|set ?up (?:my |the )?(?:phone|laptop|printer|wi-?fi|tv|speaker))\b/i],
  ['home',/\b(hang\w*|mount\w*|bracket|shel(f|ves)|pictures?|tiles?|tiling|retil\w*|plaster\w*|patch\w*|grout\w*|handyman|repair\w*|fix\w*|doors?|hinges?)\b/i]
 ];
 function parseWhen(t){
@@ -526,7 +522,7 @@ function questionsFor(p){
   const q=[];
   if(!p.duration)q.push({id:'duration',q:'How long do you expect the task to take?',o:['Under 30 minutes','30–60 minutes','1–2 hours','2–4 hours','A full day','Several days','Not sure']});
   const t=p.text;
-  const inHome=p.cat!=='errands'||/apartment|my place|home|door|level|upstairs|deliver it|bring (it|them)/i.test(t);
+  const inHome=p.cat!=='errandsdelivery'||/apartment|my place|home|door|level|upstairs|deliver it|bring (it|them)/i.test(t);
   if(inHome){
     q.push({id:'home',q:'Will someone be home during the job?',o:['Yes, I will be home','Someone else will be home','No, access by key or code']});
     q.push({id:'pets',q:'Are there pets at the property?',o:['No','Yes, friendly','Yes, may be aggressive']});
@@ -535,7 +531,8 @@ function questionsFor(p){
   if(p.cat==='furniture')q.push({id:'furn',q:'Is this ordinary household furniture?',o:['Yes','No']});
   if(p.cat==='home'&&/paint|hang|mount|shel(f|ves)|picture/i.test(t))q.push({id:'height',q:'Does the task require working at significant height?',o:['No','Yes']});
   if(p.cat==='moving'||(p.cat==='home'&&/rearrange|organi[sz]e|garage/i.test(t)))q.push({id:'heavy',q:'Are any items unusually heavy or hazardous?',o:['No','Yes']});
-  if(p.cat==='errands'&&/deliver|courier|stock|supplies|pick ?up|collect/i.test(t))q.push({id:'vehicle',q:'Is a van or ute needed?',o:['No','Yes']});
+  if(p.cat==='errandsdelivery'&&/deliver|courier|stock|supplies|pick ?up|collect/i.test(t))q.push({id:'vehicle',q:'Is a van or ute needed?',o:['No','Yes']});
+  if(p.cat==='tech')q.push({id:'cable',q:'Does this need new data cabling or an antenna installed?',o:['No','Yes']});
   if(p.cat==='rubbish'){
     q.push({id:'size',q:'How much needs to go?',o:['A few items','Up to a van load','More than a van load']});
     q.push({id:'ewaste',q:'Are any items electrical or battery powered, such as a TV, fridge or heater?',o:['No','Yes']});
@@ -548,8 +545,8 @@ function questionsFor(p){
     q.push({id:'old',q:'Was the building built before 2004?',o:['No','Yes','Not sure']});
   }
   if(p.cat==='home'&&/mount|hang|shel(f|ves)|bracket|picture/i.test(t))q.push({id:'perm',q:'Do you have permission to drill or fix items to the walls?',o:['Yes','No, not sure']});
-  if(p.cat==='errands'&&/grocer|coles|woolworths|aldi/i.test(t))q.push({id:'order',q:'Have you already placed the grocery order?',o:['Yes','Not yet']});
-  else if(p.cat==='errands'&&/deliver|pick ?up|parcel|collect/i.test(t))q.push({id:'hazard',q:'Does the item contain restricted or hazardous material?',o:['No','Yes']});
+  if(p.cat==='errandsdelivery'&&/grocer|coles|woolworths|aldi/i.test(t))q.push({id:'order',q:'Have you already placed the grocery order?',o:['Yes','Not yet']});
+  else if(p.cat==='errandsdelivery'&&/deliver|pick ?up|parcel|collect/i.test(t))q.push({id:'hazard',q:'Does the item contain restricted or hazardous material?',o:['No','Yes']});
   return q;
 }
 function eff(){
@@ -574,7 +571,7 @@ function evaluate(){
   if(a.bio==='Yes')return{risk:'HIGH_RISK',why:'Mould, pest infestations, needles and other biohazards need a specialist cleaner and cannot be posted on TaskSpeck.'};
   if(a.wet==='Yes')return{risk:'HIGH_RISK',why:'Wet-area waterproofing is licensed work. '+LICENSED_MSG};
   if(a.haz==='Yes')return{risk:'HIGH_RISK',why:'Hazardous waste (chemicals, paint, gas bottles, asbestos or sharps) cannot be handled through TaskSpeck.'};
-  if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'New cabling or wiring is licensed electrical work. '+LICENSED_MSG};
+  if(a.cable==='Yes')return{risk:'HIGH_RISK',why:'Data cabling and antenna installs need a registered cabler. '+LICENSED_MSG};
   if(a.hazard==='Yes')return{risk:'HIGH_RISK',why:'Restricted or hazardous items cannot be handled through TaskSpeck.'};
   if(window.registeredWorkReason){
     const amount=p.budget&&p.budget.type==='SET'?p.budget.amount:p.budget&&p.budget.type==='RANGE'?p.budget.max:0;
@@ -609,7 +606,7 @@ const S={
   mode:'requester',stack:[{n:'home'}],draft:{text:'',answers:{},listingId:null},p:null,form:{},apiListings:[],
   task:null,offers:[],sort:'new',offerId:null,events:[],payment:null,agreement:null,dispute:null,change:null,flags:{},thread:null,proof:[],checklist:[],fix:null,agent:false,history:SEED_HISTORY.map(x=>({...x,seed:true})),propSel:null,incidents:[],myStrikes:[],claims:[],tprof:{bio:'',langs:['English'],vehicle:'',areas:'Melbourne CBD',photos:[]},receipts:[],rcptNo:1000,notifs:[],notifSeen:0,qtGst:false,idc:{type:null,front:false,selfie:false,status:'idle',consent:false,police:'idle'},recIdx:0,invIdx:0,profName:null,payouts:[{title:'Assemble a flat-pack bookshelf',date:'Mon 5 Oct',price:80},{title:'Collect a furniture order and deliver it',date:'Tue 6 Oct',price:90}],tk:{abn:false,ins:false,veh:false,safety:false,gst:false,abnNum:'',police:false},
   sent:[],find:{km:null,cat:'all',sort:'closest',view:'list',q:'',pin:null,fopen:false},findId:null,saved:{},verified:false,sheet:null,timers:[],lastKey:'',
-  avail:{days:[1,2,3,4,5,6],from:'09:00',to:'17:00',km:3,cats:['furniture','moving','errands','rubbish'],paused:false},
+  avail:{days:[1,2,3,4,5,6],from:'09:00',to:'17:00',km:3,cats:['furniture','moving','errandsdelivery','rubbish'],paused:false},
   notif:{offers:true,messages:true,reminders:true,nearby:false,email:true,sms:false},trusted:{name:'',on:false},demoMode:false,catQ:'',
   user:null,myTasks:[],askThreads:[],ask:null,savedSearches:[],shareUrl:'',shareView:null,shareData:null,authMode:'login',editIdx:0
 };
@@ -700,14 +697,14 @@ themeInit();
 const NEAR=[
  {id:1,title:'Assemble my desk and bookshelf',cat:'furniture',km:0.4,date:'Saturday',t:'10:00',d:120,budget:'$80',offers:2,posted:'12 min ago',suburb:'Melbourne CBD',indoor:true,desc:'Two flat-pack pieces, all parts and instructions in the box. Lift access, 12th floor.',cond:'Ordinary household furniture. Screwdriver provided.',req:{name:'Maya',r:4.8,n:12}},
  {id:2,title:'End-of-lease clean for a one-bedroom apartment',cat:'cleaning',km:0.8,date:'Saturday',t:'09:00',d:180,budget:'$220',offers:1,posted:'40 min ago',suburb:'Southbank',indoor:true,desc:'Vacate clean to hand the apartment back. Kitchen, bathroom, floors, inside windows, oven and balcony.',cond:'Cleaning supplies provided. Lift booked.',req:{name:'Mei',r:4.8,n:3}},
- {id:3,title:'Collect a parcel from the post office',cat:'errands',km:0.6,date:'Monday',t:'12:30',d:30,budget:'Open to offers',offers:0,posted:'1 hr ago',suburb:'Melbourne CBD',indoor:false,desc:'Collect one small parcel and bring it to my apartment lobby. Card and ID will be provided.',cond:'Small, non-hazardous item.',req:{name:'Elena',r:4.9,n:27}},
+ {id:3,title:'Collect a parcel from the post office',cat:'errandsdelivery',km:0.6,date:'Monday',t:'12:30',d:30,budget:'Open to offers',offers:0,posted:'1 hr ago',suburb:'Melbourne CBD',indoor:false,desc:'Collect one small parcel and bring it to my apartment lobby. Card and ID will be provided.',cond:'Small, non-hazardous item.',req:{name:'Elena',r:4.9,n:27}},
  {id:4,title:'Hang a mirror and two shelves',cat:'home',km:1.1,date:'Saturday',t:'09:30',d:90,budget:'$90–$120',offers:3,posted:'2 hrs ago',suburb:'Docklands',indoor:true,desc:'One large mirror and two floating shelves. Brackets supplied. Owner has approved fixing to the wall. Ground-level work only.',cond:'Owner permission confirmed. Own drill needed.',req:{name:'Dave',r:4.7,n:9}},
  {id:5,title:'Help carry boxes from the lobby to level 18',cat:'moving',km:0.9,date:'Sunday',t:'14:00',d:60,budget:'$60',offers:1,posted:'3 hrs ago',suburb:'Melbourne CBD',indoor:true,desc:'About 25 boxes, none unusually heavy. Loading dock and lift are booked.',cond:'Lift booking confirmed for 2 PM to 3 PM.',req:{name:'Chloe',r:5,n:6}},
  {id:6,title:'Move-in clean for a studio apartment',cat:'cleaning',km:1.4,date:'Friday',t:'11:00',d:120,budget:'Open to offers',offers:0,posted:'5 hrs ago',suburb:'Carlton',indoor:true,desc:'Standard clean before I move in: kitchen, bathroom, floors. Vacuum and mop provided.',cond:'Cleaning supplies provided.',req:{name:'Sam',r:4.6,n:3}},
  {id:7,photoCount:2,title:'Remove left-behind furniture after tenants left',cat:'rubbish',km:0.7,date:'Saturday',t:'11:00',d:90,budget:'$180',offers:0,posted:'Yesterday',suburb:'Melbourne CBD',indoor:true,desc:'Two chairs, a bookcase and a double mattress left in a vacant apartment. Van or ute needed. Lift booked.',cond:'No electrical items or hazardous waste. Drop-off receipt required.',req:{name:'Jordan (property manager)',r:4.9,n:41}},
  {id:9,photoCount:2,title:'Remove my old sofa and mattress',cat:'rubbish',km:0.5,date:'Saturday',t:'10:00',d:90,budget:'$120',offers:2,posted:'20 min ago',suburb:'Melbourne CBD',indoor:true,desc:'One three-seat sofa and a double mattress on level 9. Lift booked. Needs a van or ute.',cond:'No electrical items or hazardous waste. Drop-off receipt required.',req:{name:'Lena',r:4.9,n:7}},
  {id:10,photoCount:2,title:'Patch and paint a hole in my lounge wall',cat:'home',km:0.9,date:'Sunday',t:'10:00',d:120,budget:'$150',offers:1,posted:'1 hr ago',suburb:'Southbank',indoor:true,desc:'Fist-sized hole in plasterboard. Patch, sand and paint one wall. Paint supplied.',cond:'Built after 2004. Ground-level work only. Owner permission confirmed.',req:{name:'Jo',r:4.7,n:5}},
- {id:12,title:'Collect furniture-store order and deliver to my apartment',cat:'errands',km:1.2,date:'Sunday',t:'11:00',d:90,budget:'$90',offers:2,posted:'4 hrs ago',suburb:'Southbank',indoor:false,desc:'Collect two flat boxes (about 25 kg each) and bring them to level 14. Van or ute needed.',cond:'Order number provided. Lift booked.',req:{name:'Ken',r:4.6,n:6}}
+ {id:12,title:'Collect furniture-store order and deliver to my apartment',cat:'errandsdelivery',km:1.2,date:'Sunday',t:'11:00',d:90,budget:'$90',offers:2,posted:'4 hrs ago',suburb:'Southbank',indoor:false,desc:'Collect two flat boxes (about 25 kg each) and bring them to level 14. Van or ute needed.',cond:'Order number provided. Lift booked.',req:{name:'Ken',r:4.6,n:6}}
 ];
 const GUIDE={furniture:'Typical assembly jobs run $80-$200.',cleaning:'End-of-lease cleans typically run $120-$360.'};
 const PH={
@@ -716,13 +713,13 @@ const PH={
  rubbish:'For example: Remove my old sofa and mattress on Saturday.',
  cleaning:'For example: End-of-lease clean for my one-bedroom apartment on Saturday.',
  furniture:'For example: I need someone to assemble my new desk on Saturday.',
- errands:'For example: Collect a furniture order and deliver it to my apartment on Sunday.',
+ errandsdelivery:'For example: Collect a furniture order and deliver it to my apartment on Sunday.',
  home:'For example: Patch and paint a hole in my lounge wall on Sunday.'
 };
 const EX={
  all:['I need someone to assemble my new desk on Saturday.','End-of-lease clean for my one-bedroom apartment on Saturday.','Remove my old sofa and mattress on Saturday.','Help carry boxes from the loading dock to my apartment.'],
  rubbish:['Remove my old sofa and mattress on Saturday.','Take away left-behind furniture from a vacant apartment.'],
- errands:['Collect a furniture order and deliver it to my apartment.','Pick up a parcel from the post office.','Collect my groceries from Coles and bring them to my apartment.'],
+ errandsdelivery:['Collect a furniture order and deliver it to my apartment.','Pick up a parcel from the post office.','Collect my groceries from Coles and bring them to my apartment.'],
  home:['Patch and paint a hole in my lounge wall.','Hang a mirror in my hallway on Saturday.','Fix a loose door handle.'],
  cleaning:['End-of-lease clean for my one-bedroom apartment on Saturday.','Move-in clean for a studio apartment before I arrive.'],
  moving:['Help carry light boxes from the loading dock to my apartment.','Move boxes from my apartment to a storage cage.'],
@@ -736,8 +733,8 @@ function makeOffers(t){
   const mk=(i,name,mult,km,rating,done,comp,canc,ver,msg,cats,repeat,reply)=>({id:i,name,demo:true,fee:Math.max(10,Math.round(base*mult/5)*5),km,rating,done,comp,canc,ver,msg,cats,repeat,reply,age:['2 years','8 months','3 years','5 months'][i-1],when:`${dl}, ${fmtTime(st[i-1])} – ${fmtTime(st[i-1]+dur)}`,start:st[i-1]});
   return[
    mk(1,'Jordan',1,0.6,4.9,83,99,1,true,'Hi! I have done plenty of jobs like this nearby and can bring my own basic tools.',['Furniture','Household','Moving'],14,'Usually replies within 10 minutes'),
-   mk(2,'Sam',.85,1.8,4.8,41,97,3,true,'Happy to help. I can do it at the time suggested.',['Pickup & delivery','Furniture'],6,'Usually replies within 30 minutes'),
-   mk(3,'Priya',1.2,0.4,4.9,127,98,2,true,'I am nearby and free then, so no travel time.',['Cleaning','Hard rubbish','Pickup & delivery'],31,'Usually replies within 5 minutes'),
+   mk(2,'Sam',.85,1.8,4.8,41,97,3,true,'Happy to help. I can do it at the time suggested.',['Errands & delivery','Furniture'],6,'Usually replies within 30 minutes'),
+   mk(3,'Priya',1.2,0.4,4.9,127,98,2,true,'I am nearby and free then, so no travel time.',['Cleaning','Hard rubbish','Errands & delivery'],31,'Usually replies within 5 minutes'),
    mk(4,'Marco',.95,1.2,4.6,12,92,8,false,'Available. Let me know if you would like any details confirmed.',['Household'],1,'Usually replies within an hour')
   ];
 }
@@ -1099,7 +1096,7 @@ safetyguide(){
   ${sec('At the door',['Check who you are meeting.','Do not go in if you feel unsafe.','Ask for items to be brought to the doorway where you can.'])}
   ${sec('During the job',['Stay in the agreed areas.','Take your proof photos.','Never accept cash off the app or share your personal number.'])}
   ${sec('Say no and leave if',['Someone is aggressive, harassing or seems intoxicated.','There are hazards: asbestos, mould, chemicals, sharps or unsafe wiring.','The load is too heavy for one person. Ask for a second person or decline.'])}
-  ${sec('Never do',['Electrical, gas or plumbing work, or TV mounting.','Work at height beyond a safe ladder reach.','Hazardous waste removal.'])}
+  ${sec('Never do',['Electrical, gas or plumbing work, or TV mounting.','Data cabling or antenna installs. Those need a registered cabler.','Work at height beyond a safe ladder reach.','Hazardous waste removal.'])}
   ${sec('If something goes wrong',['Step out and call 000 if anyone is in danger.','Tap SOS in the app.','Report it afterwards so we can review it.'])}
   <label class="card" style="display:flex;gap:10px;align-items:center;margin-top:6px"><input type="checkbox" data-in="sgOk" ${S.form.sgOk?'checked':''}><span class="small">I have read the Tasker safety guide.</span></label>
   <button class="btn primary" style="margin-top:12px" data-a="sgDone">Finish</button>`};
@@ -1491,7 +1488,7 @@ function activeBlock(){
   if(S.payment)h+=demoPayNote();
   h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
   if(idx>=0)h+=`<div class="steps" aria-label="Progress" style="margin-top:14px">${STEPS.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div><p class="small"><b>${STEPS[idx][0]}</b>${f.onway&&st==='UPCOMING'&&!f.arrived?' · '+esc(o.name)+' is on the way':''}</p>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','errands'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','errandsdelivery'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
   if(st==='TASK_STARTED')h+=`<div class="card" style="margin-top:12px"><b>${f.checkin?esc(o.name)+' confirmed all OK':'Waiting for '+esc(o.name)+"'s safety check-in"}</b><p class="muted small" style="margin:4px 0 0">When a Tasker arrives, and again if a job runs long, we ask "All OK?". If there is no answer, support is notified. We cannot promise immediate contact, so call 000 in an emergency.</p></div>${f.missed?`<div class="notice bad" style="margin-top:10px"><b>No answer to the safety check-in</b>Support has been notified. We cannot promise immediate contact. If you are worried, call 000 or tap SOS.</div>`:''}`;
   if(st==='UPCOMING')h+=`<div class="card" style="margin-top:12px"><b>${f.confirmed?esc(o.name)+' has confirmed they will be there':'Waiting for '+esc(o.name)+' to confirm'}</b><p class="muted small" style="margin:4px 0 0">Taskers confirm 24 hours before the start and tap "On my way". If they have not checked in 15 minutes after the start time, you get a full refund and a quick re-match.</p></div><button class="btn secondary" style="margin-top:10px" data-a="noshow">${esc(o.name)} has not arrived: refund and re-match</button><p class="muted small center" style="margin-top:4px">In the real app this button unlocks 15 minutes after the start time.</p>`;
   if(st==='FIX_REQUESTED'&&S.fix)h+=`<div class="notice" style="margin-top:14px"><b>${isVacate()?'Re-clean':'Fix'} requested</b>${esc(S.fix.what)}${S.fix.text?': '+esc(S.fix.text):''}. ${esc(o.name)} has 48 hours to put it right. Your payment stays on hold.</div>`;

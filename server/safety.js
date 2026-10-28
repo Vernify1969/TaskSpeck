@@ -6,7 +6,8 @@ const LICENSED = 'TaskSpeck doesn\'t offer licensed work at the moment, so you\'
 
 const BLOCK = [
   [/\b(staff|staffing|waiters?|waitress\w*|bartend\w*|barista|kitchen ?hand|promo(tional)?|receptionist|personal assistant|shifts?|roster\w*|casual (worker|staff|role)|per hour|an hour|\/ ?hr|hourly|full.?time|part.?time)\b/i, 'TaskSpeck is for a fixed price for a job, not staffing, shifts or hourly roles.'],
-  [/(mount\w*|install\w*|hang\w*|wall|connect\w*|set ?up|wir\w*|cabl\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|install\w*|wall|bracket|connect\w*|set ?up|wir\w*|cabl\w*|antenna|hdmi|soundbar)|\b(antenna|soundbar|hdmi)\b/i, `TV mounting and antenna work can be electrical. ${LICENSED}`],
+  [/data ?cabl\w*|structured cabling|network cabling|\bantenna\b/i, `Data cabling and antenna installs need a registered cabler. ${LICENSED}`],
+  [/(mount\w*|hang\w*|wall|wir\w*|bracket).{0,40}\b(tv|tvs|television)\b|\b(tv|tvs|television)\b.{0,40}(mount\w*|hang\w*|wall|bracket|wir\w*)/i, `TV mounting can be electrical. ${LICENSED}`],
   [/electric|power ?point|wiring|rewir|switchboard|light fitting|circuit|air[\s-]?con|aircon|refrigerat/i, `This looks like electrical, air-conditioning or refrigeration work. ${LICENSED}`],
   [/\bgas\b/i, `This looks like gas work. ${LICENSED}`],
   [/plumb|hot water system|blocked drain|burst pipe|toilet install|tap install/i, `This looks like plumbing. ${LICENSED}`],
@@ -34,7 +35,7 @@ export function highRiskAnswer(answers = {}) {
   if (a.bio === 'Yes') return 'Mould, pest infestations, needles and other biohazards need a specialist cleaner and cannot be posted on TaskSpeck.';
   if (a.wet === 'Yes') return 'Wet-area waterproofing is licensed work. TaskSpeck doesn\'t offer licensed work at the moment, so you\'ll need a licensed tradesperson.';
   if (a.haz === 'Yes') return 'Hazardous waste (chemicals, paint, gas bottles, asbestos or sharps) can\'t be handled through TaskSpeck.';
-  if (a.cable === 'Yes') return 'New cabling or wiring is licensed electrical work. TaskSpeck doesn\'t offer licensed work at the moment, so you\'ll need a licensed tradesperson.';
+  if (a.cable === 'Yes') return 'Data cabling and antenna installs need a registered cabler. TaskSpeck doesn\'t offer licensed work at the moment, so you\'ll need a licensed tradesperson.';
   if (a.hazard === 'Yes') return 'Restricted or hazardous items cannot be handled through TaskSpeck.';
   return null;
 }

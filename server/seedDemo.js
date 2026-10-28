@@ -17,7 +17,7 @@ const JOBS = [
   { cat: 'garden', title: 'Tidy a small courtyard', text: 'Mow and weed a small courtyard in Richmond.', suburb: 'Richmond', price: 280 },
   { cat: 'home', title: 'Hang a mirror in the hallway', text: 'Hang a mirror in the hallway. Ground floor only. The owner has given permission.', suburb: 'East Melbourne', price: 160 },
   { cat: 'furniture', title: 'Assemble a desk and a bookshelf', text: 'Assemble a flat-pack desk and a bookshelf. All parts are in the box.', suburb: 'Southbank', price: 210 },
-  { cat: 'errands', title: 'Collect a parcel from the post office', text: 'Collect a parcel from the post office and bring it to the apartment lobby.', suburb: 'Melbourne', price: 55 },
+  { cat: 'errandsdelivery', title: 'Collect a parcel from the post office', text: 'Collect a parcel from the post office and bring it to the apartment lobby.', suburb: 'Melbourne', price: 55 },
   { cat: 'rubbish', title: 'Take an old sofa to the tip', text: 'Remove an old sofa and take it to the tip.', suburb: 'North Melbourne', price: 340 },
   { cat: 'painting', title: 'Paint one bedroom', text: 'Paint one bedroom, ground floor only. The paint is supplied.', suburb: 'Parkville', price: 820 },
   { cat: 'packing', title: 'Pack the kitchen into boxes', text: 'Pack the kitchen into boxes before a move. Boxes are supplied.', suburb: 'West Melbourne', price: 290 },

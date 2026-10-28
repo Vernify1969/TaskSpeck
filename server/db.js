@@ -20,11 +20,35 @@ import {
 } from '../shared/places.js';
 
 const FEE_PCT = 15;
-const RETIRED_CATS = new Set(['events', 'hosting', 'labour']);
+const CAT_ALIAS = {
+  events: 'other',
+  hosting: 'other',
+  labour: 'other',
+  admin: 'adminoffice',
+  office: 'adminoffice',
+  errand: 'errandsdelivery',
+  errands: 'errandsdelivery',
+  techsetup: 'tech',
+  'tech-setup': 'tech',
+};
+const ANIMAL_WORDS = /\b(dogs?|pupp(?:y|ies)|cats?|kittens?|pets?|litters?|cages?|aquariums?|fish|birds?|hamsters?|rabbits?)\b/i;
 
 function retireCat(cat) {
   const name = String(cat || '');
-  return RETIRED_CATS.has(name) ? 'other' : name;
+  return Object.prototype.hasOwnProperty.call(CAT_ALIAS, name) ? CAT_ALIAS[name] : name;
+}
+
+function isPlantOnly(text) {
+  const s = String(text || '');
+  if (!s.trim() || ANIMAL_WORDS.test(s)) return false;
+  if (/\b(houseplants?|pot plants?|indoor plants?|plant watering)\b/i.test(s)) return true;
+  return /\bwater(?:ing)?\b/i.test(s) && /\bplants?\b/i.test(s);
+}
+
+function migrateCat(cat, text) {
+  const next = retireCat(cat);
+  if ((cat === 'pets' || next === 'pets') && isPlantOnly(text)) return 'garden';
+  return next;
 }
 const DEMO_TASKERS = new Set(['Jordan', 'Sam', 'Priya', 'Marco']);
 const CONTACT_OR_CASH = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me on|text me/i;
@@ -160,8 +184,12 @@ function normalise() {
   store.geocodes ||= [];
   store.waitlist ||= [];
   for (const task of store.tasks) {
-    if (RETIRED_CATS.has(task.cat)) task.cat = 'other';
-    if (task.bundle && task.bundle.task && RETIRED_CATS.has(task.bundle.task.cat)) task.bundle.task.cat = 'other';
+    const hay = `${task.title || ''} ${task.text || ''}`;
+    task.cat = migrateCat(task.cat, hay);
+    if (task.bundle && task.bundle.task) {
+      const inner = task.bundle.task;
+      inner.cat = migrateCat(inner.cat, `${inner.title || ''} ${inner.text || ''} ${inner.desc || ''} ${hay}`);
+    }
     if (!task.stage) task.stage = stageFromLegacy(task);
     const p = pointFor(task.suburb);
     if (p) {
@@ -188,10 +216,10 @@ function normalise() {
     user.demoMode = !!user.demoMode;
   }
   for (const search of store.savedSearches) {
-    if (RETIRED_CATS.has(search.cat)) search.cat = 'other';
+    search.cat = migrateCat(search.cat, search.q || '');
   }
   for (const record of store.records) {
-    if (RETIRED_CATS.has(record.cat)) record.cat = 'other';
+    record.cat = migrateCat(record.cat, `${record.title || ''} ${record.note || ''}`);
   }
 }
 

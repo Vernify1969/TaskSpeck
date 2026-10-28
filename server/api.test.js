@@ -537,6 +537,30 @@ test('retired categories, including general help, are stored as Other', async ()
     text: 'Pack the kitchen into boxes', title: 'Pack the kitchen', cat: 'packing', suburb: 'Carlton', budgetLabel: '$180', priceNum: 180,
   }, alex);
   assert.equal(packed.task.cat, 'packing');
+  const filing = await db.publishListing((db.upsertListingText('File the invoices', null, alex)).task.id, {
+    text: 'Filing and data entry for a small office.', title: 'File the invoices', cat: 'office', suburb: 'Carlton', budgetLabel: '$90', priceNum: 90,
+  }, alex);
+  assert.equal(filing.task.cat, 'adminoffice');
+  const letters = await db.publishListing((db.upsertListingText('Post these letters', null, alex)).task.id, {
+    text: 'Post these letters and tidy the desk.', title: 'Post the letters', cat: 'admin', suburb: 'Carlton', budgetLabel: '$40', priceNum: 40,
+  }, alex);
+  assert.equal(letters.task.cat, 'adminoffice');
+  const grocery = await db.publishListing((db.upsertListingText('Collect groceries from Coles', null, alex)).task.id, {
+    text: 'Collect groceries from Coles and queue if needed.', title: 'Grocery run', cat: 'errand', suburb: 'Carlton', budgetLabel: '$25', priceNum: 25,
+  }, alex);
+  assert.equal(grocery.task.cat, 'errandsdelivery');
+  const laptop = await db.publishListing((db.upsertListingText('Set up my laptop', null, alex)).task.id, {
+    text: 'Help me set up my laptop and the printer.', title: 'Laptop setup', cat: 'techsetup', suburb: 'Carlton', budgetLabel: '$60', priceNum: 60,
+  }, alex);
+  assert.equal(laptop.task.cat, 'tech');
+  const plants = await db.publishListing((db.upsertListingText('Water the indoor plants', null, alex)).task.id, {
+    text: 'Water the houseplants while I am away.', title: 'Water the indoor plants', cat: 'pets', suburb: 'Carlton', budgetLabel: '$30', priceNum: 30,
+  }, alex);
+  assert.equal(plants.task.cat, 'pets');
+  const dog = await db.publishListing((db.upsertListingText('Walk my dog around the block', null, alex)).task.id, {
+    text: 'Walk my dog around the block.', title: 'Walk the dog', cat: 'pets', suburb: 'Carlton', budgetLabel: '$25', priceNum: 25,
+  }, alex);
+  assert.equal(dog.task.cat, 'pets');
   const hands = await db.publishListing((db.upsertListingText('An extra pair of hands for the afternoon', null, alex)).task.id, {
     text: 'An extra pair of hands for the afternoon', title: 'Extra hands', cat: 'labour', suburb: 'Carlton', budgetLabel: '$80', priceNum: 80,
   }, alex);
@@ -551,7 +575,10 @@ test('retired categories, including general help, are stored as Other', async ()
   raw.records.push({ id: 1, userId: alex.id, cat: 'events', title: 'Old party', date: '', paid: 0, suburb: 'Carlton' });
   raw.savedSearches.push({ id: 1, userId: alex.id, cat: 'hosting', q: 'party', km: 10, alert: false });
   raw.savedSearches.push({ id: 2, userId: alex.id, cat: 'labour', q: 'hands', km: null, alert: false });
+  raw.savedSearches.push({ id: 3, userId: alex.id, cat: 'pets', q: 'water the indoor plants', km: null, alert: false });
+  raw.savedSearches.push({ id: 4, userId: alex.id, cat: 'office', q: 'filing', km: null, alert: false });
   raw.records.push({ id: 2, userId: alex.id, cat: 'labour', title: 'Old general help', date: '', paid: 0, suburb: 'Carlton' });
+  raw.records.push({ id: 3, userId: alex.id, cat: 'errand', title: 'Grocery run record', date: '', paid: 20, suburb: 'Carlton' });
   const extra = raw.tasks.find((task) => task.title === 'Extra hands');
   extra.cat = 'labour';
   extra.bundle = { task: { cat: 'labour', title: 'Extra hands' } };
@@ -568,6 +595,13 @@ test('retired categories, including general help, are stored as Other', async ()
   assert.equal(again.tasks.find((task) => task.id === extra.id).bundle.task.cat, 'other');
   assert.equal(again.savedSearches.find((search) => search.q === 'hands').cat, 'other');
   assert.equal(again.records.find((record) => record.title === 'Old general help').cat, 'other');
+  assert.equal(again.tasks.find((task) => task.title === 'Water the indoor plants').cat, 'garden');
+  assert.equal(again.tasks.find((task) => task.title === 'Walk the dog').cat, 'pets');
+  assert.equal(again.savedSearches.find((search) => search.q === 'water the indoor plants').cat, 'garden');
+  assert.equal(again.savedSearches.find((search) => search.q === 'filing').cat, 'adminoffice');
+  assert.equal(again.records.find((record) => record.title === 'Grocery run record').cat, 'errandsdelivery');
+  assert.equal(again.tasks.find((task) => task.title === 'Laptop setup').cat, 'tech');
+  assert.equal(again.tasks.find((task) => task.title === 'File the invoices').cat, 'adminoffice');
 });
 
 test('demo logins stay hidden unless demo mode is on', async () => {
