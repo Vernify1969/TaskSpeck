@@ -38,13 +38,13 @@ body{background:var(--canvas);color:var(--ink);font:16px/1.5 'Plus Jakarta Sans'
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;text-align:left}
 input,textarea,select{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--brand);outline-offset:2px}
-#app{width:100%;max-width:430px;height:100%;max-height:900px;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
-@media (min-width:500px){#app{height:min(900px,calc(100% - 32px));border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.25)}}
+#app{width:100%;max-width:430px;height:100%;height:100dvh;max-height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+@media (min-width:500px){#app{height:min(900px,calc(100dvh - 32px));max-height:none;border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.25)}}
 .top{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:14px 16px 8px;flex:none}
 .logo{width:28px;height:28px;border-radius:9px;background:var(--gold);color:var(--on-gold);display:grid;place-items:center}
 .wordmark{font-weight:800;font-size:21px;letter-spacing:-.03em;flex:1;white-space:nowrap}
-.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
-.seg button{padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{width:100%;min-height:40px;padding:8px 10px;border-radius:999px;font-size:14px;font-weight:700;color:var(--muted);text-align:center}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
 .iconbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line)}
 .ttl{font-weight:800;font-size:19px;letter-spacing:-.02em}
@@ -88,7 +88,7 @@ button.card{text-align:left}
 .brand{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .brandtext{display:flex;flex-direction:column;min-width:0}
 .tagline{font-size:11px;font-weight:650;color:var(--muted);line-height:1.2}
-.top .seg{flex:1 0 100%;display:flex;justify-content:flex-end;margin-left:0}
+.top .seg{flex:1 0 100%;margin:2px 0 0}
 .perks{display:flex;flex-direction:column;gap:8px;margin-top:18px}
 .perk{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
 .perk svg{color:var(--brand);flex:none}
@@ -228,7 +228,10 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 }
 .fsearch{position:relative;margin:10px 0 2px}
 .fsearch>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);display:flex;pointer-events:none}
-.fsearch input{padding-left:44px;min-height:50px}
+.fsearch input{padding-left:44px;padding-right:44px;min-height:50px}
+.fsearch-x{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:999px;font-size:20px;line-height:1;font-weight:700;color:var(--muted);text-align:center}
+.fsearch-x[hidden]{display:none}
+.find-title{font-weight:800;font-size:28px;letter-spacing:-.03em;line-height:1.25;margin:2px 0 10px}
 .vt{display:inline-flex;background:var(--line);border-radius:12px;padding:3px;flex:none}
 .vt button{padding:7px 14px;border-radius:9px;font-weight:700;font-size:14px;min-height:36px;color:var(--muted)}
 .vt button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
@@ -245,12 +248,13 @@ label.f{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
 .map .you{fill:var(--brand);stroke:var(--surface);stroke-width:.9}
 .pin{position:absolute;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:hsl(var(--h) 62% 40%);display:grid;place-items:center;font-size:17px;line-height:1;border:2.5px solid var(--surface);box-shadow:0 2px 6px rgba(0,0,0,.3);padding:0;text-align:center}
 .pin[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px;z-index:2}
-#top{flex:none}
-.view-as{display:flex;align-items:center;gap:8px;padding:0 16px 10px}
-.view-as-l{flex:none;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
-.view-as-p{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
-.view-as-p button{min-width:0;min-height:36px;padding:6px 2px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap}
-.view-as-p button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+#top{flex:none;background:var(--bg);z-index:5}
+#view{min-height:0}
+.demo-switch{margin:4px 0 16px}
+.demo-switch h2{margin:0 0 4px;font-size:16px}
+.demo-switch-p{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px}
+.demo-switch-p button{min-width:0;min-height:40px;padding:6px 2px;border-radius:10px;font-size:14px;font-weight:700;color:var(--muted);text-align:center}
+.demo-switch-p button[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
 .top-actions{display:flex;align-items:center;gap:6px;flex:none}
 .top-actions .iconbtn{position:relative}
 .badge-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:2px solid var(--surface)}
@@ -304,11 +308,9 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   #app{max-width:1120px;width:100%;height:auto;min-height:100%;max-height:none;margin:0 auto;border-radius:0;box-shadow:none;overflow:visible}
   #view{overflow:visible;padding:8px 32px 48px}
   #nav{display:none!important}
-  #top{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px)}
+  #top{position:sticky;top:0;z-index:6;background:var(--bg)}
   .top{padding:16px 32px;gap:16px}
-  .view-as{padding:0 32px 12px}
-  .view-as-p{flex:0 1 440px;max-width:440px}
-  .top .seg{flex:0 0 auto;order:3}
+  .top .seg{flex:0 0 auto;width:240px;order:3;margin:0}
   .desk-nav{display:flex;gap:4px;order:2}
   .desk-nav button{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px;color:var(--muted)}
   .desk-nav button[aria-current="page"]{background:color-mix(in srgb,var(--brand) 12%,var(--surface));color:var(--brand)}
@@ -711,14 +713,14 @@ function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({
 function hydrateOffers(row,t){if(t._bundle.offers&&t._bundle.offers.length)return;const bids=Array.isArray(row.bids)?row.bids.filter(b=>b.status==='pending'||b.status==='accepted'):[];if(!bids.length)return;const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=bids.map(b=>({id:b.id,bidId:b.id,name:b.taskerName,fee:b.fee,km:1,rating:'New',done:1,comp:100,canc:0,ver:true,msg:b.message||'',cats:[],repeat:0,reply:'Usually replies the same day',age:'Demo',when,start:t.startMin||600,demo:b.source==='demo'}));const acc=bids.find(b=>b.status==='accepted');if(acc){t._bundle.offerId=acc.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:acc.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(row.payment)t._bundle.payment=row.payment;if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}}
 function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" data-demo-pay="1" style="margin-top:12px"><b>Demo payment</b>No real money moves. Amounts are only recorded in this demo.</div>`}
 function demoShort(name){const part=String(name||'').trim().split(/\s+/)[0];return part||'Demo'}
-function viewingAsBar(){
+function demoSwitchHtml(){
   const info=S.demoInfo;
   if(!S.serverDemo||!S.user||!info||!info.enabled||!(info.accounts||[]).length)return '';
   const buttons=info.accounts.map(a=>{
     const on=String(S.user.email||'').toLowerCase()===String(a.email||'').toLowerCase();
     return `<button type="button" data-a="viewAs" data-v="${esc(a.email)}" aria-pressed="${on}">${esc(demoShort(a.name))}</button>`;
   }).join('');
-  return `<div class="view-as" role="group" aria-label="Viewing as"><span class="view-as-l">Viewing as</span><div class="view-as-p">${buttons}</div></div>`;
+  return `<section class="demo-switch"><h2>Demo: switch person</h2><p class="muted small">This sample opens as Maya. Tap a name to look around as someone else. These are not real accounts.</p><div class="demo-switch-p" role="group" aria-label="Demo: switch person">${buttons}</div></section>`;
 }
 function applyWorkspace(data){S.user=data.user;S.demoMode=!!(data.user&&data.user.demoMode);S.tk.safety=!!(data.user&&data.user.safetyGuide);S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);if(data.user.notif)S.notif={...S.notif,...data.user.notif};if(data.user.avail)S.avail={...S.avail,...data.user.avail};if(data.user.bio)S.tprof.bio=data.user.bio;if(data.user.areas)S.tprof.areas=data.user.areas;if(data.user.vehicle)S.tprof.vehicle=data.user.vehicle;S.savedSearches=data.savedSearches||[];if((data.records||[]).length)S.history=data.records.map(r=>({prop:r.property||'My jobs',title:r.title,cat:r.cat,tasker:r.taskerName,date:r.date,paid:+r.paid||0,seed:false,note:r.note||''}));S.serverRecords=data.records||[];const notes=data.notifications||[];S.notifs=notes.map(n=>({id:n.id,m:n.body||n.title,t:n.at?new Date(n.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'',kind:n.kind,read:n.read}));S.notifSeen=S.notifs.filter(n=>n.read).length;S.sent=(data.bids||[]).filter(b=>b.status==='pending'||b.status==='withdrawn').map(b=>({tid:b.taskId,bidId:b.id,title:(b.task&&b.task.title)||'Task',date:(b.task&&b.task.date)||'',time:'',fee:b.fee,status:b.status,message:b.message||''}));const tasks=(data.tasks||[]).map(taskFromServer);S.myTasks=tasks;if(tasks.length)activateTask(tasks[0]);else S.task=null;const grouped={};for(const m of data.messages||[]){(grouped[m.taskId]=grouped[m.taskId]||[]).push(m)}S.askThreads=Object.keys(grouped).map(id=>{const msgs=grouped[id];const other=msgs.find(m=>m.fromUserId!==S.user.id);const task=(data.tasks||[]).find(t=>t.id===+id);return{listingId:+id,withName:other?other.fromName:(task&&task.requesterName)||'Messages',title:(task&&task.title)||'Task',messages:msgs.map(m=>({from:m.fromUserId===S.user.id?'me':'them',text:m.text,warning:!!m.warning}))}})}
 function myTaskList(){stashCurrent();return S.myTasks.filter(Boolean)}
@@ -828,7 +830,7 @@ function topRoot(backTitle){
   return `<div class="top"><div class="brand"><span class="logo" aria-hidden="true">${ic('check',16)}</span><span class="brandtext"><span class="wordmark">TaskSpeck</span><span class="tagline">Fair help, no booking fee${S.serverDemo?' · Demo':''}</span></span></div>
   <nav class="desk-nav" aria-label="Sections">${desk}</nav>
   <div class="top-actions"><button class="iconbtn" data-a="notifs" aria-label="Notifications${unread?': '+unread+' unread':''}">${ic('bell',20)}${unread?'<span class="badge-dot" aria-hidden="true"></span>':''}</button><button class="iconbtn" data-a="theme" aria-label="Toggle colour theme">◐</button></div>
-  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}${viewingAsBar()}`;
+  <div class="seg" role="group" aria-label="Switch mode"><button data-a="mode" data-v="requester" aria-pressed="${S.mode==='requester'}">Requester</button><button data-a="mode" data-v="tasker" aria-pressed="${S.mode==='tasker'}">Tasker</button></div></div>${backTitle?`<div class="subbar"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(backTitle)}</div></div>`:''}`;
 }
 const topBack=t=>`<div class="top"><button class="iconbtn" data-a="back" aria-label="Back">${ic('back')}</button><div class="ttl">${esc(t||'')}</div></div>`;
 function navHtml(){
@@ -1250,7 +1252,8 @@ thread(){
 profile(){
   const u=S.user||{name:meName(),suburb:'Melbourne CBD',email:''};
   return{html:`
-  <div class="row" style="margin-bottom:12px">${avatar(u.name||'You',64)}<div class="grow"><h1 class="display" style="font-size:26px;margin:0">${esc(u.name||'You')}</h1><p class="muted">${esc(u.suburb||'Melbourne CBD')} · ${esc(u.email||'')}</p></div></div>
+  <div class="row" style="margin-bottom:12px">${avatar(u.name||'You',64)}<div class="grow"><h1 class="display" style="font-size:26px;line-height:1.2;margin:0">${esc(u.name||'You')}</h1><p class="muted">${esc(u.suburb||'Melbourne CBD')} · ${esc(u.email||'')}</p></div></div>
+  ${demoSwitchHtml()}
   <div class="grid2"><div class="stat"><b>0</b><span>Tasks completed</span></div><div class="stat"><b>—</b><span>Rating (no reviews yet)</span></div></div>
   <h2>Verification</h2>
   <div class="card">
@@ -1292,11 +1295,11 @@ find(){
   const draft=f.draft||{km:f.km,cat:f.cat,sort:f.sort||'closest'};
   return{wide:true,html:`
   <div class="find-anchor">
-  <h1 class="display" style="font-size:28px;margin-bottom:0">Tasks near you</h1>
+  <h1 class="find-title">Tasks near you</h1>
   ${standingBanner()}
   ${S.tk.safety?'':`<button class="notice" style="text-align:left;width:100%;margin:8px 0" data-a="safetyguide"><b>Complete the 5-minute safety guide</b>Required before your first job. Tap to start.</button>`}
   <div class="findbar">
-    <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off"></div>
+    <div class="fsearch"><span aria-hidden="true">${ic('search',20)}</span><input type="text" id="fq" data-in="fq" value="${esc(f.q||'')}" placeholder="Search tasks" aria-label="Search tasks" autocomplete="off" enterkeyhint="search"><button type="button" class="fsearch-x" data-a="fclearq" aria-label="Clear search text" ${(f.q||'').trim()?'':'hidden'}>×</button></div>
     <button class="ficon" data-a="ffilt" aria-label="Filters" aria-expanded="${!!f.fopen}">${ic('filter',20)}${n?`<span class="fbadge">${n}</span>`:''}</button>
     <div class="vt" role="group" aria-label="Show tasks as">${[['list','List'],['map','Map']].map(([k,l])=>`<button data-a="fview" data-v="${k}" aria-pressed="${f.view===k}">${l}</button>`).join('')}</div>
   ${f.fopen?`<div class="filter-back" data-a="fclose"></div><div class="filter-pop" role="dialog" aria-label="Filters">
@@ -1403,15 +1406,18 @@ function taskCard(t){
 /* ---------- Find Tasks helpers: search, sort, map ---------- */
 const SORTS=[['closest','Closest'],['newest','Newest'],['price','Price low'],['pricehi','Price high']];
 const SORT_NOTE={closest:'Nearest first.',newest:'Most recently posted first.',price:'Lowest price first.',pricehi:'Highest price first.'};
-const STOP=new Set('the and for with need needs someone please help want who can get have that this from near any some one two out off its you your are was has but not too very just like also into onto over'.split(' '));
 const postedMins=p=>/min/.test(p)?parseInt(p):/hr/.test(p)?parseInt(p)*60:1440;
+function taskSearchHay(t){
+  const cat=(CATS[t.cat]||CATS.other).name;
+  return [t.title,t.desc,t.suburb,cat].filter(Boolean).join(' ').toLowerCase();
+}
 function findMatch(t,q){
-  q=q.trim().toLowerCase();if(!q)return true;
-  const hit=RULES.find(([,re])=>re.test(q));
-  const words=q.split(/[^a-z0-9]+/).filter(w=>w.length>2&&!STOP.has(w)).map(w=>w.replace(/(ing|ed|s)$/,''));
-  const hay=(t.title+' '+t.desc+' '+t.suburb+' '+(CATS[t.cat]||CATS.other).name).toLowerCase();
-  if(hit)return t.cat===hit[0];
-  return words.some(w=>w.length>2&&hay.includes(w));
+  q=String(q||'').trim().toLowerCase();
+  if(!q)return true;
+  const hay=taskSearchHay(t);
+  if(hay.includes(q))return true;
+  const words=q.split(/\s+/).filter(Boolean);
+  return words.length>1&&words.every(w=>hay.includes(w));
 }
 function ageMins(t){if(t&&t.at)return Math.max(0,(Date.now()-new Date(t.at).getTime())/60000);return postedMins((t&&t.posted)||'')}
 function findList(){
@@ -1439,7 +1445,7 @@ function activeFilterChips(f){
   if(f.km!=null)bits.push(`<button class="chip" data-a="fchip" data-v="km" aria-label="Remove ${f.km} km filter">${f.km} km ×</button>`);
   if(f.cat&&f.cat!=='all'&&CATS[f.cat])bits.push(`<button class="chip" data-a="fchip" data-v="cat" aria-label="Remove ${esc(CATS[f.cat].name)} filter">${esc(CATS[f.cat].name)} ×</button>`);
   if((f.sort||'closest')!=='closest'){const label=(SORTS.find(([k])=>k===f.sort)||[])[1]||'Sort';bits.push(`<button class="chip" data-a="fchip" data-v="sort" aria-label="Remove sort">${esc(label)} ×</button>`);}
-  if((f.q||'').trim())bits.push(`<button class="chip" data-a="fchip" data-v="q" aria-label="Clear search">“${esc(f.q.trim())}” ×</button>`);
+  if((f.q||'').trim())bits.push(`<button class="chip" data-a="fchip" data-v="q" aria-label="Remove search wording">“${esc(f.q.trim())}” ×</button>`);
   return bits.join('');
 }
 function resultsLine(f,l,extra){
@@ -1452,9 +1458,10 @@ function findResults(){
   const hit=q?RULES.find(([,re])=>re.test(q)):null;
   const head=resultsLine(f,l,hit?' · matched to '+(CATS[hit[0]]||CATS.other).name:'');
   if(!l.length){
-    return head+empty('search','No tasks near you yet',q?`Nothing matches “${esc(q)}” in this area right now. Try fewer words, a wider distance or another category.`:'New tasks appear here as soon as people post them. Try a wider distance or another category.')
+    if(q)return `<div class="empty"><div class="big">${ic('search',28)}</div><h3 style="color:var(--ink)">No tasks match</h3><p style="margin-top:6px">Nothing in the title, description, category or suburb matches “${esc(q)}”.</p></div><button class="btn secondary" data-a="fclearq">Clear search</button>`;
+    return head+empty('search','No tasks near you yet','New tasks appear here as soon as people post them. Try a wider distance or another category.')
     +(f.km!=null&&f.km<10?`<button class="btn secondary" data-a="fkm" data-v="10">Widen to 10 km</button>`:'')
-    +((q||f.cat!=='all')?`<button class="btn ghost" data-a="fclear">Clear search and category</button>`:'');
+    +(f.cat!=='all'?`<button class="btn secondary" data-a="fclear">Clear category</button>`:'');
   }
   return head+(f.view==='map'?mapHtml(l):`<div class="stack">${l.map(taskCard).join('')}</div>`);
 }
@@ -1687,7 +1694,24 @@ const INP={
    if(s)s.innerHTML=v>0?`<div class="card">${kv('Task price (the requester pays this)',money(v))}${S.tk.gst?kv('Includes GST (you pay this to the ATO)',money(gstOf(v))):''}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(v)))}${S.qtGst?kv('GST included in TaskSpeck’s fee',money(gstOf(calcFee(v)))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(Math.round((v-calcFee(v))*100)/100)}</b></div></div><p class="muted small" style="margin:6px 2px 0">The requester pays no booking fee. Nothing else is deducted.</p>`:`<div class="notice info">TaskSpeck keeps ${FEE_PCT}% of your price. Enter your price to see what you receive. The requester pays no booking fee.</div>`;
  },
  ok(){INP.fee()},
- fq(){const r=$('#fres');if(r){r.innerHTML=findResults();if(S.find.view==='map')mountJobMap(findList())}}
+ fq(){
+   const r=$('#fres');
+   if(r){r.innerHTML=findResults();if(S.find.view==='map')mountJobMap(findList())}
+   const x=document.querySelector('.fsearch-x');if(x)x.hidden=!String(S.find.q||'').trim();
+   const html=activeFilterChips(S.find);
+   let chips=document.querySelector('.active-filters');
+   if(html){
+     if(!chips){chips=document.createElement('div');chips.className='active-filters';if(r)r.before(chips)}
+     chips.innerHTML=html;
+   }else if(chips)chips.remove();
+   const host=document.querySelector('.findbar .ficon');
+   if(host){
+     const n=filterCount(S.find);
+     let badge=host.querySelector('.fbadge');
+     if(n){if(!badge){badge=document.createElement('span');badge.className='fbadge';host.appendChild(badge)}badge.textContent=String(n)}
+     else if(badge)badge.remove();
+   }
+ }
 };
 function startFrom(t){if(!t||!t.date)return null;const d=new Date(t.date);if(Number.isNaN(d.getTime()))return null;const m=t.startMin!=null?t.startMin:540;d.setHours(Math.floor(m/60),m%60,0,0);return d}
 async function publishTask(){
@@ -1934,6 +1958,7 @@ const A={
  freset(){S.find.draft={km:null,cat:'all',sort:'closest'};render()},
  fchip(v){if(v==='km')S.find.km=null;else if(v==='cat')S.find.cat='all';else if(v==='sort')S.find.sort='closest';else if(v==='q')S.find.q='';render()},
  fview(v){S.find.view=v;S.find.pin=null;render()},fpin(v){S.find.pin=+v;render()},fclear(){S.find.q='';S.find.cat='all';render()},
+ fclearq(){S.find.q='';render()},
  savedSearches(){go('savedSearches')},
  openFind(v){S.findId=+v;go('findTask')},
  save(){S.saved[S.findId]=!S.saved[S.findId];render()},
