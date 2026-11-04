@@ -350,10 +350,14 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { registeredWorkReason } from './shared/registeredWork.js';
+import { installLocalApi, resetDemoData } from './client/localApi.js';
 window.L = L;
 window.registeredWorkReason = registeredWorkReason;
+window.taskspeckResetDemo = resetDemoData;
+window.taskspeckReady = import.meta.env.VITE_LOCAL_API === '1' ? installLocalApi() : Promise.resolve();
 </script>
-<script>
+<script type="module">
+const PAGES = import.meta.env.VITE_LOCAL_API === '1';
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -622,6 +626,16 @@ const S={
 const meName=()=>(S.user&&S.user.name)||'You';
 const ev=l=>S.events.push({l,t:clock()});
 /* ---------- backend listing API (Vite middleware on :5173) ---------- */
+async function saveFile(path,filename){
+  const r=await fetch(path,{credentials:'same-origin'});
+  if(!r.ok){notify('Could not download the file.');return}
+  const blob=await r.blob();
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
 async function api(path,opts={}){
   const headers={'Content-Type':'application/json',...(opts.headers||{})};
   const body=opts.body==null?undefined:(typeof opts.body==='string'?opts.body:JSON.stringify(opts.body));
@@ -848,7 +862,7 @@ function renderShare(){
   $('#view').innerHTML=`<p class="muted small">Shared job record</p><h1 class="display" style="font-size:28px">Jobs</h1>
     <div class="notice info"><b>Private addresses are not included</b>This link shows the suburb, the work and the amount. It does not show the street or unit.</div>
     <div class="card" style="margin-top:12px">${rows.map(r=>`<div class="kv"><span>${esc(r.title)}<br><span class="muted small">${esc(r.taskerName||'')} · ${esc(r.date||'')} · ${esc(r.suburb||'')}${r.check?' · Checklist '+esc(r.check):''}</span></span><b>${money(+r.paid||0)}</b></div>`).join('')}<div class="kv"><span><b>Total</b></span><b>${money(total)}</b></div></div>
-    <a class="btn secondary" style="margin-top:12px;text-decoration:none" href="/api/shares/${esc(S.shareView)}.csv">Download CSV</a>
+    <button class="btn secondary" style="margin-top:12px" data-a="shareCsv">Download CSV</button>
     <p class="muted small" style="margin-top:8px">The CSV from this link also leaves the address out.</p>`;
 }
 function render(){
@@ -1262,6 +1276,7 @@ profile(){
    <button class="card" data-a="demoToggle">Demo mode <span class="pill ${S.demoMode?'warn':''}" style="float:right">${S.demoMode?'On':'Off'}</span></button>
    <button class="card" data-a="savedSearches">Saved searches<span class="pill" style="float:right">${(S.savedSearches||[]).length}</span></button>
    <button class="card" data-a="account">Edit profile</button>
+   ${PAGES?`<button class="card" data-a="resetDemo">Reset demo data</button>`:''}
    <button class="card" data-a="logout">Log out</button>
   </div>
   <p class="muted small" style="margin-top:16px">TaskSpeck is a marketplace that connects people. Taskers are not employees of TaskSpeck. Legal wording is a placeholder until reviewed by Australian legal counsel.</p>`};
@@ -2030,14 +2045,16 @@ const A={
    if(saved.error){notify(saved.error);return}
    const share=await TaskAPI.createShare(saved.ids);
    if(share.error){notify(share.error);return}
-   S.shareUrl=location.origin+'/?share='+share.token;
+   S.shareUrl=location.origin+(import.meta.env.BASE_URL||'/')+'?share='+share.token;
    render();notify('Share link ready. It does not include the street address.');
  },
  async exportCsv(){
    const rows=visibleHistory();
    if(rows.length){const saved=await TaskAPI.saveRecords(rows.map(r=>({title:r.title,cat:r.cat,taskerName:r.tasker,date:r.date,paid:r.paid,suburb:'Melbourne CBD',propPrivate:r.prop||'',check:r.check||'',note:r.note||'',photoCount:(r.photos&&r.photos.length)||r.photoCount||0})));if(saved.error){notify(saved.error);return}}
-   location.href='/api/me/records.csv';
- }
+   await saveFile('/api/me/records.csv','taskspeck-jobs.csv');
+ },
+ async shareCsv(){await saveFile('/api/shares/'+encodeURIComponent(S.shareView)+'.csv','taskspeck-shared-jobs.csv')},
+ resetDemo(){if(!window.confirm('Reset this phone to the sample demo? Tasks added on this phone will be removed.'))return;if(window.taskspeckResetDemo)window.taskspeckResetDemo();else location.reload()}
 };
 const OFFPLAT=/\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|don'?t worry about the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me|text me/i;
 function openAsk(info){
@@ -2098,6 +2115,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&S.sheet)closeSheet();
 });
 async function boot(){
+  if(window.taskspeckReady) await window.taskspeckReady;
   const share=new URLSearchParams(location.search).get('share');
   if(share){
     S.shareView=share;

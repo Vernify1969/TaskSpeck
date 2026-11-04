@@ -2,6 +2,22 @@
 
 TaskSpeck is a small marketplace for one-off jobs. A requester posts a task, Taskers make offers, and the requester picks who does the work. There is no booking fee. The payment is held until the job is done. Cancelling inside 24 hours of the start keeps a call-out fee for the Tasker and refunds the rest. A no-show is a full refund and the task can be matched again. Proof photos depend on the kind of job. The safety check blocks risky or licensed work. One account can post tasks and make offers.
 
+## Try it on a phone, from anywhere
+
+The public demo is a static page. It does not need a server. Each phone keeps its own sample data in the browser. It opens as Maya. Use Viewing as to switch to Sam, Priya, or Casey. No password is shown, and no real money moves. Profile has **Reset demo data** if you want the sample tasks back.
+
+The address is https://vernify1969.github.io/TaskSpeck/
+
+The first time, GitHub has to be told to publish the page:
+
+1. Open https://github.com/Vernify1969/TaskSpeck
+2. Click **Settings**
+3. Click **Pages** in the left menu
+4. Under **Build and deployment**, set **Source** to **GitHub Actions**
+5. If there is a **Save** button, click it
+
+After that, every update merged into `main` publishes the page. The first publish can take a minute. Then open the address above on a phone.
+
 ## How to run the demo
 
 The demo fills the app with sample people, sample tasks around inner Melbourne, offers, messages, and one finished job with a review. Payments are pretend. Nothing is charged.

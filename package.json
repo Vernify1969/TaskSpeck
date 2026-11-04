@@ -6,8 +6,10 @@
     "dev": "vite",
     "demo": "node scripts/run-demo.mjs",
     "build": "vite build",
+    "build:pages": "TASKSPECK_PAGES=1 VITE_LOCAL_API=1 vite build",
     "preview": "vite preview",
-    "test": "node --test --test-concurrency=1 server/api.test.js",
+    "preview:pages": "TASKSPECK_PAGES=1 vite preview --host 127.0.0.1 --port 5199 --strictPort",
+    "test": "node --test --test-concurrency=1 server/api.test.js server/pagesDemo.test.js",
     "test:e2e": "playwright test"
   },
   "dependencies": {
