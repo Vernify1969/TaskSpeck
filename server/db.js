@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { readLegacyTasks, readStoreFile, writeStoreFile } from './persist.js';
 import { hashPassword, verifyPassword, newSessionToken, hashToken } from './auth.js';
 import { deliver } from './notify.js';
 import { prohibitedReason, highRiskAnswer } from './safety.js';
@@ -62,16 +61,6 @@ const BOOKED_STAGES = new Set([
 ]);
 
 const PROOF_CATS = new Set(['rubbish', 'cleaning', 'furniture', 'home']);
-
-function dataDir() {
-  return process.env.TASKSPECK_DATA || path.join(process.cwd(), 'data');
-}
-function storeFile() {
-  return path.join(dataDir(), 'store.json');
-}
-function legacyFile() {
-  return path.join(dataDir(), 'tasks.json');
-}
 
 function emptyStore() {
   return {
@@ -236,9 +225,8 @@ function stageFromLegacy(task) {
 
 function loadStore() {
   try {
-    if (fs.existsSync(storeFile())) {
-      store = JSON.parse(fs.readFileSync(storeFile(), 'utf8'));
-    }
+    const raw = readStoreFile();
+    if (raw) store = raw;
   } catch {
     store = emptyStore();
   }
@@ -247,9 +235,8 @@ function loadStore() {
 }
 
 function persistNow() {
-  fs.mkdirSync(dataDir(), { recursive: true });
   const safe = JSON.parse(JSON.stringify(store));
-  fs.writeFileSync(storeFile(), JSON.stringify(safe, null, 2));
+  writeStoreFile(safe);
 }
 
 function schedulePersist() {
@@ -1858,10 +1845,10 @@ export function getStoreSnapshot(viewer) {
 }
 
 function migrateLegacyTasksFile() {
-  if (!fs.existsSync(legacyFile())) return;
+  let raw;
+  try { raw = readLegacyTasks(); } catch { return; }
+  if (!raw || !Array.isArray(raw.tasks) || store.tasks.length) return;
   try {
-    const raw = JSON.parse(fs.readFileSync(legacyFile(), 'utf8'));
-    if (!Array.isArray(raw.tasks) || store.tasks.length) return;
     for (const row of raw.tasks) {
       const task = {
         id: row.id,

@@ -52,16 +52,45 @@ export function oauthUnavailable(providerId) {
   };
 }
 
+function inBrowser() {
+  return typeof window !== 'undefined';
+}
+
+function demoDigest(salt, password) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x85ebca6b;
+  const text = `${salt}\0${password}`;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    h1 ^= code;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 = Math.imul(h2 ^ code, 0x27d4eb2d);
+  }
+  return `${(h1 >>> 0).toString(16).padStart(8, '0')}${(h2 >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
 export function hashPassword(password) {
+  if (inBrowser()) {
+    const salt = [...crypto.randomBytes(16)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return { algo: 'demo', salt, hash: demoDigest(salt, String(password)) };
+  }
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(String(password), salt, 32).toString('hex');
   return { algo: 'scrypt', salt, hash };
 }
 
 export function verifyPassword(password, stored) {
-  if (!stored || stored.algo !== 'scrypt' || !stored.salt || !stored.hash) return false;
+  if (!stored || !stored.salt || !stored.hash) return false;
+  if (stored.algo === 'demo') return demoDigest(stored.salt, String(password)) === stored.hash;
+  if (stored.algo !== 'scrypt') return false;
   const next = crypto.scryptSync(String(password), stored.salt, 32);
-  const prev = Buffer.from(stored.hash, 'hex');
+  const prev = hexToBytes(stored.hash);
   if (prev.length !== next.length) return false;
   return crypto.timingSafeEqual(prev, next);
 }
