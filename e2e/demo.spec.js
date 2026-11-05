@@ -346,8 +346,7 @@ for (const viewport of widths) {
       await maya.getByRole('button', { name: /Confirm attendance/ }).click();
       await maya.getByRole('button', { name: /I am on my way/ }).click();
       await maya.getByRole('button', { name: /I have arrived/ }).click();
-      const sample = maya.getByRole('button', { name: 'Use a sample photo' });
-      if (await sample.count()) await sample.click();
+      await maya.getByRole('button', { name: 'Use a sample photo' }).click();
       await maya.getByRole('button', { name: /Mark task complete/ }).click();
       await maya.getByRole('button', { name: 'Confirm completion' }).click();
       await maya.getByRole('button', { name: '5 stars' }).click();
@@ -399,6 +398,7 @@ for (const viewport of widths) {
       await maya.getByRole('button', { name: /Confirm attendance/ }).click();
       await maya.getByRole('button', { name: /I am on my way/ }).click();
       await maya.getByRole('button', { name: /I have arrived/ }).click();
+      await maya.getByRole('button', { name: 'Use a sample photo' }).click();
       await maya.getByRole('button', { name: /Mark task complete/ }).click();
       await maya.getByRole('button', { name: 'Report a problem' }).click();
       await maya.getByRole('button', { name: 'Damage', exact: true }).click();

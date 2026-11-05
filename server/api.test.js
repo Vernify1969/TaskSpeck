@@ -653,7 +653,19 @@ test('demo seed contains only the realistic sample tasks', () => {
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const store = JSON.parse(fs.readFileSync(path.join(seedDir, 'store.json'), 'utf8'));
   const bad = /\bmobile\b|\bdesktop\b|Cancel me|Dispute me|spare room/i;
-  assert.equal(store.tasks.length, 10);
+  assert.equal(store.tasks.length, 11);
+  assert.equal(store.tasks.filter((task) => task.repeatEvery === 'weekly').length, 1);
+  const sofa = store.tasks.find((task) => /old sofa/.test(task.title || ''));
+  assert.equal(sofa.stage, 'ON_THE_WAY');
+  assert.equal(sofa.beforePhotos.length, 1);
+  const clean = store.tasks.find((task) => /End-of-lease clean/.test(task.title || '') && task.stage === 'COMPLETED');
+  assert.equal(clean.afterPhotos.length, 1);
+  const aboutClean = store.reviews.filter((review) => review.taskId === clean.id);
+  assert.equal(aboutClean.length, 2);
+  const mirror = store.tasks.find((task) => /mirror/.test(task.title || ''));
+  assert.equal(mirror.stage, 'CANCELLED');
+  assert.equal(mirror.cancelledBy, 'tasker');
+  assert.equal(mirror.payment.status, 'REFUNDED');
   for (const task of store.tasks) {
     assert.equal(typeof task.title, 'string');
     assert.doesNotMatch(task.title, bad);

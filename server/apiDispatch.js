@@ -28,7 +28,10 @@ import {
   applyRefund,
   addReview,
   markStarted,
+  markOnTheWay,
+  saveBeforePhotos,
   markCompleted,
+  bookRepeat,
   approvePayment,
   postMessage,
   listMessages,
@@ -260,8 +263,11 @@ export async function dispatch({ method, path, query, body = {}, token = '', adm
     if (action === 'publish' && method === 'POST') return run(await publishListing(id, body, user));
     if (action === 'bids' && method === 'POST') return run(await placeBid(id, body, user));
     if (action === 'accept-bid' && method === 'POST') return run(await acceptBid(id, body, user));
+    if (action === 'on-the-way' && method === 'POST') return run(markOnTheWay(id, user));
+    if (action === 'before-photos' && method === 'POST') return run(saveBeforePhotos(id, user, body));
     if (action === 'start' && method === 'POST') return run(markStarted(id, user));
     if (action === 'complete' && method === 'POST') return run(markCompleted(id, user, body));
+    if (action === 'repeat' && method === 'POST') return run(bookRepeat(id, user, body));
     if (action === 'approve-payment' && method === 'POST') return run(await approvePayment(id, user));
     if (action === 'cancel' && method === 'POST') return run(await cancelTask(id, user, body));
     if (action === 'no-show' && method === 'POST') return run(await reportNoShow(id, user));

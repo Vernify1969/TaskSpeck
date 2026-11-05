@@ -55,7 +55,7 @@ const CONTACT_OR_CASH = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osk
 export const CONTACT_WARNING = 'Please don’t swap phone numbers or pay cash. TaskSpeck can only protect a job that stays in the app.';
 
 const BOOKED_STAGES = new Set([
-  'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'TASK_STARTED', 'TASKER_COMPLETED',
+  'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'ON_THE_WAY', 'TASK_STARTED', 'TASKER_COMPLETED',
   'FIX_REQUESTED', 'FIX_DONE', 'DISPUTED', 'REQUESTER_CONFIRMED', 'PAYMENT_RELEASED',
   'COMPLETED', 'RESOLVED',
 ]);
@@ -284,6 +284,30 @@ function acceptedTasker(task) {
   return findUser(bid.taskerId);
 }
 
+function reliabilityFor(user) {
+  if (!user) return null;
+  const done = new Set(['COMPLETED', 'PAYMENT_RELEASED', 'REQUESTER_CONFIRMED']);
+  const asTasker = store.tasks.filter((t) => acceptedBid(t)?.taskerId === user.id);
+  const asCustomer = store.tasks.filter((t) => t.requesterId === user.id && t.acceptedBidId);
+  const tDone = asTasker.filter((t) => done.has(t.stage));
+  const tCancel = asTasker.filter((t) => t.stage === 'NO_SHOW' || (t.stage === 'CANCELLED' && t.cancelledBy === 'tasker'));
+  const onTime = tDone.filter((t) => {
+    if (!t.startAt || !t.startedAt) return true;
+    return new Date(t.startedAt).getTime() <= new Date(t.startAt).getTime() + 30 * 60 * 1000;
+  });
+  const cDone = asCustomer.filter((t) => done.has(t.stage));
+  const cCancel = asCustomer.filter((t) => t.stage === 'CANCELLED' && t.cancelledBy !== 'tasker');
+  const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+  return {
+    taskerCompleted: tDone.length,
+    taskerOnTimePct: tDone.length ? pct(onTime.length, tDone.length) : null,
+    taskerCancelPct: asTasker.length ? pct(tCancel.length, asTasker.length) : 0,
+    customerCompleted: cDone.length,
+    customerCompletePct: asCustomer.length ? pct(cDone.length, asCustomer.length) : null,
+    customerCancelPct: asCustomer.length ? pct(cCancel.length, asCustomer.length) : 0,
+  };
+}
+
 export function publicUser(user) {
   if (!user) return null;
   return {
@@ -307,6 +331,7 @@ export function publicUser(user) {
     createdAt: user.createdAt,
     rating: user.rating ?? null,
     ratingCount: user.ratingCount || 0,
+    reliability: reliabilityFor(user),
   };
 }
 
@@ -322,6 +347,9 @@ function syncLegacy(task) {
     task.status = 'Assigned';
     task.published = true;
     task.paymentStatus = task.payment?.status || 'AUTHORISED';
+  } else if (s === 'ON_THE_WAY') {
+    task.status = 'OnTheWay';
+    task.published = true;
   } else if (s === 'TASK_STARTED' || s === 'FIX_REQUESTED' || s === 'DISPUTED') {
     task.status = 'Started';
     task.published = true;
@@ -465,6 +493,17 @@ export function publicTask(task, viewer) {
     budgetLabel: task.budgetLabel || 'Open to offers',
     priceNum: task.priceNum ?? null,
     photoCount: task.photoCount || 0,
+    beforeCount: (task.beforePhotos || []).length,
+    afterCount: (task.afterPhotos || []).length,
+    requesterRating: requesterOf(task)?.rating ?? null,
+    requesterRatingCount: requesterOf(task)?.ratingCount || 0,
+    repeatEvery: task.repeatEvery || null,
+    repeatOf: task.repeatOf || null,
+    cancelledBy: task.cancelledBy || null,
+    assignedAt: task.assignedAt || null,
+    onTheWayAt: task.onTheWayAt || null,
+    startedAt: task.startedAt || null,
+    doneAt: task.doneAt || null,
     bidCount: pendingCount,
     updatedAt: task.updatedAt,
     createdAt: task.createdAt,
@@ -488,10 +527,13 @@ export function publicTask(task, viewer) {
     bundle: task.requesterId === viewer?.id || isAcceptedTasker(task, viewer) ? task.bundle || null : null,
     notes: task.notes || [],
     special: task.special || [],
+    beforePhotos: task.beforePhotos || [],
+    afterPhotos: task.afterPhotos || [],
     reviews: store.reviews.filter((r) => r.taskId === task.id).map((r) => ({
       stars: r.stars,
       text: r.text,
       name: findUserAny(r.fromUserId)?.name || 'Demo',
+      role: r.fromUserId === task.requesterId ? 'customer' : 'tasker',
     })),
   };
 }
@@ -1159,6 +1201,7 @@ export async function acceptBid(taskId, { bidId, taskerName, fee } = {}, user) {
   }
   row.acceptedBidId = bid.id;
   row.stage = 'UPCOMING';
+  row.assignedAt = row.assignedAt || iso();
   row.payment = splitPay(bid.fee);
   row.paymentStatus = 'AUTHORISED';
   syncLegacy(row);
@@ -1196,10 +1239,14 @@ export async function cancelTask(taskId, user, { reason } = {}, now = new Date()
   if (!task) return { error: 'Task not found', code: 404 };
   const who = partyError(task, user);
   if (who) return who;
-  const allowed = ['POSTED', 'OFFERS_RECEIVED', 'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'TASK_STARTED'];
+  const allowed = ['POSTED', 'OFFERS_RECEIVED', 'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'ON_THE_WAY', 'TASK_STARTED'];
   if (!allowed.includes(task.stage)) return { error: 'This task cannot be cancelled at this stage', code: 409 };
-  const money = task.payment && task.payment.status === 'AUTHORISED' ? applyPolicyRefund(task, now) : { late: false, callout: 0, refund: 0 };
+  const byTasker = isAcceptedTasker(task, user) && !isRequester(task, user);
+  const money = task.payment && task.payment.status === 'AUTHORISED'
+    ? (byTasker ? fullRefund(task) : applyPolicyRefund(task, now))
+    : { late: false, callout: 0, refund: 0 };
   task.stage = 'CANCELLED';
+  task.cancelledBy = byTasker ? 'tasker' : 'requester';
   task.cancelReason = String(reason || '').slice(0, 200);
   syncLegacy(task);
   task.updatedAt = iso();
@@ -1207,7 +1254,9 @@ export async function cancelTask(taskId, user, { reason } = {}, now = new Date()
   await notifyUser(other, {
     kind: 'payment',
     title: 'Task cancelled',
-    body: `"${task.title || 'A task'}" was cancelled.${money.refund ? ` Refund: $${money.refund}.` : ''}`,
+    body: byTasker
+      ? `"${task.title || 'A task'}" was cancelled by the Tasker. The customer pays nothing.`
+      : `"${task.title || 'A task'}" was cancelled.${money.refund ? ` Refund: $${money.refund}.` : ''}`,
     taskId: task.id,
   });
   schedulePersist();
@@ -1220,11 +1269,12 @@ export async function reportNoShow(taskId, user) {
   const task = findTask(taskId);
   if (!task) return { error: 'Task not found', code: 404 };
   if (!isRequester(task, user)) return { error: 'Only the requester can report a no-show', code: 403 };
-  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED'].includes(task.stage)) {
+  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED', 'ON_THE_WAY'].includes(task.stage)) {
     return { error: 'A no-show can only be reported before the job has started', code: 409 };
   }
   const money = fullRefund(task);
   task.stage = 'NO_SHOW';
+  task.cancelledBy = 'tasker';
   const bid = acceptedBid(task);
   if (bid) bid.status = 'noshow';
   syncLegacy(task);
@@ -1437,33 +1487,182 @@ export function markStarted(taskId, user) {
   const task = findTask(taskId);
   if (!task) return { error: 'Task not found', code: 404 };
   if (!isParty(task, user)) return { error: 'Only the requester or the booked Tasker can start this task', code: 403 };
-  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED'].includes(task.stage)) {
+  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED', 'ON_THE_WAY'].includes(task.stage)) {
     return { error: 'Task must be booked before it can start', code: 409 };
   }
   task.stage = 'TASK_STARTED';
+  task.startedAt = task.startedAt || iso();
   syncLegacy(task);
+  task.updatedAt = iso();
+  schedulePersist();
+  const requester = findUser(task.requesterId);
+  void notifyUser(requester, {
+    kind: 'booking',
+    title: 'Job started',
+    body: `${user.name} has started "${task.title || 'your task'}".`,
+    taskId: task.id,
+  });
+  return { task: publicTask(task, user) };
+}
+
+const PHOTO_LIMIT = 120000;
+
+function cleanPhotos(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => String(item || ''))
+    .filter((item) => item.startsWith('data:image/') && item.length <= PHOTO_LIMIT)
+    .slice(0, 4);
+}
+
+export function markOnTheWay(taskId, user) {
+  const gate = requireUser(user);
+  if (gate) return gate;
+  const task = findTask(taskId);
+  if (!task) return { error: 'Task not found', code: 404 };
+  if (!isParty(task, user)) return { error: 'Only the customer or the booked Tasker can update this job', code: 403 };
+  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED'].includes(task.stage)) {
+    return { error: 'This job is not waiting to start', code: 409 };
+  }
+  task.stage = 'ON_THE_WAY';
+  task.onTheWayAt = iso();
+  syncLegacy(task);
+  task.updatedAt = iso();
+  schedulePersist();
+  void notifyUser(findUser(task.requesterId), {
+    kind: 'booking',
+    title: 'On the way',
+    body: `${user.name} is on the way for "${task.title || 'your task'}".`,
+    taskId: task.id,
+  });
+  return { task: publicTask(task, user) };
+}
+
+export function saveBeforePhotos(taskId, user, { photos } = {}) {
+  const gate = requireUser(user);
+  if (gate) return gate;
+  const task = findTask(taskId);
+  if (!task) return { error: 'Task not found', code: 404 };
+  if (!isParty(task, user)) return { error: 'You cannot add photos to this job', code: 403 };
+  if (!['UPCOMING', 'ACCEPTED', 'PAYMENT_CONFIRMED', 'ON_THE_WAY', 'TASK_STARTED'].includes(task.stage)) {
+    return { error: 'Before photos can be added before the job is marked done', code: 409 };
+  }
+  const next = cleanPhotos(photos);
+  if (!next.length) return { error: 'Add a photo first', code: 400 };
+  task.beforePhotos = next;
   task.updatedAt = iso();
   schedulePersist();
   return { task: publicTask(task, user) };
 }
 
-export function markCompleted(taskId, user, { photoCount } = {}) {
+export function markCompleted(taskId, user, { photoCount, afterPhotos } = {}) {
   const gate = requireUser(user);
   if (gate) return gate;
   const task = findTask(taskId);
   if (!task) return { error: 'Task not found', code: 404 };
   if (!isParty(task, user)) return { error: 'Only the requester or the booked Tasker can complete this task', code: 403 };
   if (task.stage !== 'TASK_STARTED') return { error: 'Task must be started before it can be completed', code: 409 };
-  const photos = Number(photoCount ?? task.photoCount ?? 0);
+  const stored = cleanPhotos(afterPhotos);
+  const photos = stored.length || Number(photoCount || 0) || (task.afterPhotos || []).length;
   if (!(photos > 0)) {
-    return { error: 'Add a photo showing the work is done before marking it complete', code: 400 };
+    return { error: 'Add an after photo before marking the job done', code: 400 };
   }
-  if (photos > 0) task.photoCount = photos;
+  if (stored.length) task.afterPhotos = stored;
+  task.photoCount = photos;
+  task.doneAt = iso();
   task.stage = 'TASKER_COMPLETED';
   syncLegacy(task);
   task.updatedAt = iso();
   schedulePersist();
+  void notifyUser(findUser(task.requesterId), {
+    kind: 'booking',
+    title: 'Job marked done',
+    body: `${user.name} marked "${task.title || 'your task'}" done. Check the after photo, then confirm.`,
+    taskId: task.id,
+  });
   return { task: publicTask(task, user) };
+}
+
+export function bookRepeat(taskId, user, { cadence } = {}) {
+  const gate = requireUser(user);
+  if (gate) return gate;
+  const src = findTask(taskId);
+  if (!src) return { error: 'Task not found', code: 404 };
+  if (!isRequester(src, user)) return { error: 'Only the customer can book this again', code: 403 };
+  if (!['COMPLETED', 'PAYMENT_RELEASED', 'REQUESTER_CONFIRMED'].includes(src.stage)) {
+    return { error: 'You can book again after the job is complete', code: 409 };
+  }
+  const every = cadence === 'weekly' || cadence === 'fortnightly' ? cadence : 'once';
+  const bid = acceptedBid(src);
+  if (!bid || !bid.taskerId) return { error: 'The Tasker from this job cannot be booked again', code: 409 };
+  const days = every === 'fortnightly' ? 14 : 7;
+  const now = iso();
+  const start = new Date(Date.now() + days * 864e5).toISOString();
+  const row = {
+    id: store.counters.taskId++,
+    requesterId: src.requesterId,
+    requesterName: src.requesterName,
+    text: src.text,
+    title: src.title,
+    cat: src.cat,
+    status: 'Assigned',
+    stage: 'UPCOMING',
+    published: true,
+    acceptedBidId: null,
+    paymentStatus: 'AUTHORISED',
+    payment: splitPay(bid.fee),
+    address: src.address || '',
+    suburb: src.suburb || '',
+    lat: src.lat,
+    lng: src.lng,
+    cityId: src.cityId || '',
+    date: null,
+    startAt: start,
+    startMin: src.startMin ?? 600,
+    durationMin: src.durationMin ?? null,
+    budgetLabel: bid.fee ? `$${bid.fee}` : src.budgetLabel,
+    priceNum: bid.fee,
+    photoCount: 0,
+    beforePhotos: [],
+    afterPhotos: [],
+    notes: src.notes || [],
+    special: src.special || [],
+    fixes: [],
+    dispute: null,
+    fixUsed: false,
+    bundle: null,
+    jobDayNotified: false,
+    propPrivate: src.propPrivate || '',
+    repeatOf: src.id,
+    repeatEvery: every,
+    assignedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const copy = {
+    id: store.counters.bidId++,
+    taskId: row.id,
+    taskerId: bid.taskerId,
+    taskerName: bid.taskerName,
+    fee: bid.fee,
+    message: 'Booked again',
+    status: 'accepted',
+    source: bid.source || 'tasker',
+    at: now,
+    updatedAt: now,
+  };
+  store.tasks.push(row);
+  store.bids.push(copy);
+  row.acceptedBidId = copy.id;
+  syncLegacy(row);
+  schedulePersist();
+  void notifyUser(findUser(bid.taskerId), {
+    kind: 'booking',
+    title: 'Booked again',
+    body: `${user.name} booked you ${every === 'once' ? 'again' : every} for "${row.title || 'a task'}".`,
+    taskId: row.id,
+  });
+  return { task: publicTask(row, user) };
 }
 
 export async function approvePayment(taskId, user) {

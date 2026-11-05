@@ -58,6 +58,14 @@ input,textarea,select{font:inherit;color:inherit}
 .sos-pair .btn{margin:0;min-height:64px;height:auto;white-space:normal;line-height:1.25;padding:14px 16px;font-size:17px}
 .sos-call{background:#c62828;color:#fff;border-color:#c62828}
 .sos-report{background:var(--surface);color:var(--ink);border-color:var(--ink)}
+.stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats3 .stat{text-align:center;min-width:0}
+.stats3 .stat b{font-size:18px}
+.ride{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px}
+.ride i{display:block;height:6px;border-radius:99px;background:var(--line)}
+.ride i.on{background:var(--brand)}
+.ride span{display:block;margin-top:4px;font-size:11px;font-weight:700;text-align:center;line-height:1.2}
+.ride time{display:block;font-size:10px;font-weight:500;color:var(--muted);text-align:center}
 #view{flex:1;overflow-y:auto;padding:8px 16px 28px;-webkit-overflow-scrolling:touch}
 .display{font-weight:800;font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.035em;margin:8px 0 12px}
 h2{font-weight:800;font-size:22px;letter-spacing:-.02em;margin:28px 0 12px}
@@ -637,7 +645,7 @@ const S={
 };
 const meName=()=>(S.user&&S.user.name)||'You';
 const SOS_KEY='taskspeck-sos-reports';
-function jobInProgress(t){return !!(t&&(t.status==='TASK_STARTED'||t.status==='Started'))}
+function jobInProgress(t){return !!(t&&(t.status==='TASK_STARTED'||t.status==='Started'||t.status==='ON_THE_WAY'))}
 function offerName(t){const b=t&&t._bundle;if(!b||!Array.isArray(b.offers)||!b.offers.length)return '';const o=b.offers.find(x=>x.id===b.offerId)||b.offers[0];return o&&o.name?o.name:''}
 function viewerOnThisJob(t){if(!t||!S.user)return false;const me=meName();if(t.requesterId&&S.user.id&&Number(t.requesterId)===Number(S.user.id))return true;if(t.requesterName&&t.requesterName===me)return true;return offerName(t)===me}
 function showSos(){const cur=S.stack[S.stack.length-1];return !!(cur&&cur.n==='task'&&jobInProgress(S.task)&&viewerOnThisJob(S.task))}
@@ -690,17 +698,18 @@ function inLaunchZone(t){return kmBetween(launchCenter(),taskPoint(t))<=launchRa
 function taskKm(t){return Math.round(kmBetween(mePoint(),taskPoint(t))*10)/10}
 function priceOf(t){if(typeof t==='number')return t;if(t&&t.priceNum!=null&&t.priceNum!==''&&!Number.isNaN(+t.priceNum))return +t.priceNum;const s=typeof t==='string'?t:(t&&t.budget)||'';const m=String(s).match(/\$(\d+)/);return m?+m[1]:1e9}
 function timeAgo(iso){if(!iso)return 'Just now';const m=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/60000));if(m<1)return 'Just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<36)return h+' hr ago';return 'Earlier'}
-function apiToNear(row){const p=parse(row.text||'');const st=row.stage||row.status||'Open';const open=st==='POSTED'||st==='OFFERS_RECEIVED'||row.status==='Open';const budget=row.budgetLabel||(p.budget&&p.budget.label)||'Open to offers';const when=row.startAt?new Date(row.startAt):null;const tstr=row.startMin!=null?hhmm(row.startMin):'10:00';const point=taskPoint(row);let cond='Live listing from a local requester';if(row.bid)cond=`Booked · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(!open)cond=row.status||st;return{id:row.id,fromApi:true,listingStatus:open?'Open':(row.status||st),stage:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',lat:point.lat,lng:point.lng,km:taskKm({...row,...point}),date:when&&!Number.isNaN(when.getTime())?fmtDate(when):(row.date||'Flexible'),t:tstr.length>5?tstr:tstr,d:row.durationMin||p.duration&&p.duration.min||90,budget,priceNum:row.priceNum!=null?row.priceNum:priceOf(budget),offers:row.bidCount||0,posted:timeAgo(row.updatedAt),at:row.updatedAt||null,suburb:row.suburb||'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:row.requesterName||'Requester',r:'New',n:1},photoCount:row.photoCount||0}}
+function apiToNear(row){const p=parse(row.text||'');const st=row.stage||row.status||'Open';const open=st==='POSTED'||st==='OFFERS_RECEIVED'||row.status==='Open';const budget=row.budgetLabel||(p.budget&&p.budget.label)||'Open to offers';const when=row.startAt?new Date(row.startAt):null;const tstr=row.startMin!=null?hhmm(row.startMin):'10:00';const point=taskPoint(row);let cond='Live listing from a local requester';if(row.bid)cond=`Booked · ${money(row.bid.fee)} from ${row.bid.taskerName}`;else if(!open)cond=row.status||st;return{id:row.id,fromApi:true,listingStatus:open?'Open':(row.status||st),stage:st,title:row.title||p.title||'Task',cat:row.cat||p.cat||'other',lat:point.lat,lng:point.lng,km:taskKm({...row,...point}),date:when&&!Number.isNaN(when.getTime())?fmtDate(when):(row.date||'Flexible'),t:tstr.length>5?tstr:tstr,d:row.durationMin||p.duration&&p.duration.min||90,budget,priceNum:row.priceNum!=null?row.priceNum:priceOf(budget),offers:row.bidCount||0,posted:timeAgo(row.updatedAt),at:row.updatedAt||null,suburb:row.suburb||'Melbourne CBD',indoor:true,desc:row.text||'',cond,req:{name:row.requesterName||'Requester',r:row.requesterRating!=null?row.requesterRating:'New',n:row.requesterRatingCount||0},photoCount:row.photoCount||0}}
 function allFindTasks(){const live=(S.apiListings||[]).map(apiToNear);return S.demoMode?[...live,...NEAR]:live}
 function getFindTask(id){const t=allFindTasks().find(x=>x.id===+id);if(!t)return null;const p=taskPoint(t);return{...t,lat:p.lat,lng:p.lng,km:taskKm(t)}}
 const TERMINAL_STATUS=new Set(['COMPLETED','CANCELLED','NO_SHOW','RESOLVED','EXPIRED']);
-const ACTIVE_ASSIGNMENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','FIX_REQUESTED','FIX_DONE','DISPUTED']);
+const ACTIVE_ASSIGNMENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','FIX_REQUESTED','FIX_DONE','DISPUTED']);
 const ALLOWED_TRANSITIONS={
  POSTED:['OFFERS_RECEIVED','UNDER_REVIEW','CANCELLED'],
  OFFERS_RECEIVED:['ACCEPTED','CANCELLED','UNDER_REVIEW'],
  ACCEPTED:['PAYMENT_CONFIRMED','CANCELLED'],
  PAYMENT_CONFIRMED:['UPCOMING','CANCELLED'],
- UPCOMING:['TASK_STARTED','CANCELLED','NO_SHOW'],
+ UPCOMING:['ON_THE_WAY','TASK_STARTED','CANCELLED','NO_SHOW'],
+ ON_THE_WAY:['TASK_STARTED','CANCELLED','NO_SHOW'],
  TASK_STARTED:['TASKER_COMPLETED','CANCELLED','DISPUTED','FIX_REQUESTED'],
  TASKER_COMPLETED:['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED','FIX_REQUESTED','DISPUTED'],
  FIX_REQUESTED:['FIX_DONE','DISPUTED'],
@@ -726,7 +735,7 @@ let bundleT;
 function saveBundleSoon(){if(!S.user||!S.task||!S.task.listingId)return;const id=S.task.listingId,bundle=captureBundle();clearTimeout(bundleT);bundleT=setTimeout(()=>{api('/api/tasks/'+id+'/bundle',{method:'PUT',body:{bundle}}).catch(()=>{})},500)}
 function stashCurrent(){if(!S.task)return;S.task._bundle=captureBundle();S.task._address=S.form.addr||S.task._address||'';const i=S.myTasks.findIndex(t=>t===S.task||(t.listingId&&S.task.listingId&&t.listingId===S.task.listingId));if(i<0)S.myTasks.unshift(S.task);else S.myTasks[i]=S.task;saveBundleSoon()}
 function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bundle||{};S.task=t;S.offers=b.offers||[];S.offerId=b.offerId??null;S.events=b.events||[];S.payment=b.payment??null;S.agreement=b.agreement??null;S.dispute=b.dispute??null;S.change=b.change??null;S.flags=b.flags||{};S.thread=b.thread??null;S.proof=b.proof||[];S.checklist=b.checklist||[];S.fix=b.fix??null;if(t._address)S.form.addr=t._address;if(!S.myTasks.includes(t))S.myTasks.unshift(t)}
-function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.requesterId=row.requesterId||t.requesterId||null;t.requesterName=row.requesterName||t.requesterName||'';t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];hydrateOffers(row,t);return t}
+function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.requesterId=row.requesterId||t.requesterId||null;t.requesterName=row.requesterName||t.requesterName||'';t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];t.beforePhotos=row.beforePhotos||t.beforePhotos||[];t.afterPhotos=row.afterPhotos||t.afterPhotos||[];t.assignedAt=row.assignedAt||t.assignedAt||null;t.onTheWayAt=row.onTheWayAt||t.onTheWayAt||null;t.startedAt=row.startedAt||t.startedAt||null;t.doneAt=row.doneAt||t.doneAt||null;t.repeatEvery=row.repeatEvery||t.repeatEvery||null;t.repeatOf=row.repeatOf||t.repeatOf||null;t.cancelledBy=row.cancelledBy||t.cancelledBy||null;if(row.afterPhotos&&row.afterPhotos.length&&(!t._bundle.proof||!t._bundle.proof.length))t._bundle.proof=row.afterPhotos.map((url,i)=>({name:'After photo '+(i+1),url}));hydrateOffers(row,t);return t}
 function hydrateOffers(row,t){if(t._bundle.offers&&t._bundle.offers.length)return;const bids=Array.isArray(row.bids)?row.bids.filter(b=>b.status==='pending'||b.status==='accepted'):[];if(!bids.length)return;const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=bids.map(b=>({id:b.id,bidId:b.id,name:b.taskerName,fee:b.fee,km:1,rating:'New',done:1,comp:100,canc:0,ver:true,msg:b.message||'',cats:[],repeat:0,reply:'Usually replies the same day',age:'Demo',when,start:t.startMin||600,demo:b.source==='demo'}));const acc=bids.find(b=>b.status==='accepted');if(acc){t._bundle.offerId=acc.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:acc.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(row.payment)t._bundle.payment=row.payment;if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}}
 function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" data-demo-pay="1" style="margin-top:12px"><b>Demo payment</b>No real money moves. Amounts are only recorded in this demo.</div>`}
 function demoShort(name){const part=String(name||'').trim().split(/\s+/)[0];return part||'Demo'}
@@ -905,8 +914,8 @@ const openSheet=(n,a)=>{S.sheet={n,a};render()};
 const closeSheet=()=>{S.sheet=null;S.sosView='ask';S.sosDemoMsg='';render()};
 /* ---------- shared fragments ---------- */
 const STATUS={
- POSTED:['Posted',''],OFFERS_RECEIVED:['Offers received','brand'],ACCEPTED:['Upcoming','ok'],PAYMENT_CONFIRMED:['Upcoming','ok'],UPCOMING:['Upcoming','ok'],
- TASK_STARTED:['In progress','brand'],TASKER_COMPLETED:['Needs your confirmation','warn'],REQUESTER_CONFIRMED:['Completed','ok'],PAYMENT_RELEASED:['Completed','ok'],COMPLETED:['Completed','ok'],
+ POSTED:['Posted',''],OFFERS_RECEIVED:['Offers received','brand'],ACCEPTED:['Assigned','ok'],PAYMENT_CONFIRMED:['Assigned','ok'],UPCOMING:['Assigned','ok'],
+ ON_THE_WAY:['On the way','brand'],TASK_STARTED:['Started','brand'],TASKER_COMPLETED:['Done','warn'],REQUESTER_CONFIRMED:['Completed','ok'],PAYMENT_RELEASED:['Completed','ok'],COMPLETED:['Completed','ok'],
  CANCELLED:['Cancelled','bad'],FIX_REQUESTED:['Fix requested','warn'],FIX_DONE:['Needs your confirmation','warn'],DISPUTED:['Problem reported','bad'],RESOLVED:['Resolved','ok'],NO_SHOW:['No-show reported','bad'],EXPIRED:['Expired',''],UNDER_REVIEW:['Under review','warn'],
  Draft:['Draft',''],Open:['Open','brand'],Assigned:['Upcoming','ok'],Started:['In progress','brand'],NoShow:['No-show reported','bad'],Cancelled:['Cancelled','bad']
 };
@@ -919,7 +928,7 @@ function taskSummary(t){
 }
 function feeBox(fee,gstOn){
   const f=calcFee(fee);
-  return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="perk" style="margin-top:8px">${ic('wallet',18)} No booking fee. TaskSpeck's share comes from the Tasker.</p>`;
+  return `<div class="card"><div class="kv"><span>Task price</span><b>${money(fee)}</b></div>${gstOn?`<div class="kv"><span>Includes GST (10%)</span><b>${money(gstOf(fee))}</b></div>`:''}<div class="kv"><span>Booking fee</span><b>${money(0)}</b></div><div class="kv"><span>You pay</span><b style="font-size:19px">${money(fee)}</b></div></div><p class="perk" style="margin-top:8px">${ic('wallet',18)} No booking fee. TaskSpeck keeps ${FEE_PCT}% of the whole amount the Tasker is paid, including materials.</p>`;
 }
 const empty=(icon,t,s)=>`<div class="empty"><div class="big">${ic(icon,28)}</div><h3 style="color:var(--ink)">${t}</h3><p style="margin-top:6px">${s}</p></div>`;
 /* ---------- screens ---------- */
@@ -1072,7 +1081,8 @@ confirm(){
   <div class="card">${kv('Task',esc(t.title))}${kv('Tasker',esc(o.name))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Time',o.when.split(', ')[1])}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Agreed fee',money(o.fee))}${kv('Location','Exact address shown privately after confirmation')}</div>
   <h2>What you will pay</h2>${feeBox(o.fee,(TASKERS[o.name]||{}).gst)}
   ${demoPayNote()}
-  ${PROMISE}${isVacate()?'<div class="notice info" style="margin-top:10px"><b>Re-clean promise</b>If your agent\'s inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</div>':''}<button class="btn ghost" style="margin-bottom:6px" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>
+  ${PROMISE}${isVacate()?'<div class="notice info" style="margin-top:10px"><b>Re-clean promise</b>If your agent\'s inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</div>':''}  <div class="notice" style="margin-top:12px"><b>If the Tasker cancels or does not arrive</b>You pay nothing. It counts on their cancellation rate.</div>
+  <button class="btn ghost" style="margin-bottom:6px" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>
   <button class="btn primary big" data-a="toPay">Accept and pay ${money(o.fee)}</button>`};
 },
 pay(){
@@ -1095,15 +1105,15 @@ agreement(){
   <p class="muted small" style="margin-top:8px">Earlier versions are kept and cannot be edited.</p>`};
 },
 review(){
-  const o=chosen(),f=S.form;const cats=['Communication','Reliability','Respect','Task accuracy'];
+  const o=chosen(),f=S.form,other=viewerIsTasker()?(S.task&&S.task.requesterName)||'the customer':(o&&o.name)||'them';const cats=['Communication','Reliability','Respect','Task accuracy'];
   return{title:'Leave a review',html:`
-  <div class="center"><div style="display:flex;justify-content:center">${avatar(o.name,64)}</div><h2 style="margin-top:10px">How was ${esc(o.name)}?</h2></div>
+  <div class="center"><div style="display:flex;justify-content:center">${avatar(other,64)}</div><h2 style="margin-top:10px">How was ${esc(other)}?</h2></div>
   <div class="stars" role="group" aria-label="Star rating">${[1,2,3,4,5].map(n=>`<button class="${(f.stars||0)>=n?'on':''}" data-a="star" data-v="${n}" aria-label="${n} star${n>1?'s':''}">★</button>`).join('')}</div>
   <p class="muted small center">What went well? (optional)</p>
   <div class="chips" style="justify-content:center;margin:8px 0 14px">${cats.map(c=>chip(c,(f.good||[]).includes(c),`data-a="good" data-v="${c}"`)).join('')}</div>
   <textarea data-in="review" placeholder="Add a short note (optional)" aria-label="Written review">${esc(f.review||'')}</textarea>
-  <p class="muted small" style="margin-top:8px">You can review ${esc(o.name)} because this task was completed and paid for. Reviews are only from real jobs, and critical reviews stay up unless they break our rules.</p>
-  <p class="muted small" style="margin:14px 0 6px">Add a tip for ${esc(o.name)} (optional)</p><div class="chips">${chip('No tip',!f.tip,'data-a="tip" data-v="0"')}${TIPS.map(x=>chip('$'+x,f.tip===x,`data-a="tip" data-v="${x}"`)).join('')}</div><p class="muted small" style="margin-top:6px">100% of your tip goes to ${esc(o.name)}. TaskSpeck takes nothing from tips.</p>
+  <p class="muted small" style="margin-top:8px">You can review ${esc(other)} because this task was completed and paid for. Reviews are only from real jobs, and critical reviews stay up unless they break our rules.</p>
+  ${viewerIsTasker()||!o?'':`<p class="muted small" style="margin:14px 0 6px">Add a tip for ${esc(o.name)} (optional)</p><div class="chips">${chip('No tip',!f.tip,'data-a="tip" data-v="0"')}${TIPS.map(x=>chip('$'+x,f.tip===x,`data-a="tip" data-v="${x}"`)).join('')}</div><p class="muted small" style="margin-top:6px">100% of your tip goes to ${esc(o.name)}. TaskSpeck takes nothing from tips.</p>`}
   <button class="btn primary big" style="margin-top:14px" data-a="submitReview">Submit review</button>`};
 },
 turnarounds(){
@@ -1228,7 +1238,7 @@ idcheck(){
 earnings(){
   const rows=S.payouts,net=r=>Math.round((r.price-calcFee(r.price))*100)/100,total=rows.reduce((a,r)=>a+net(r)+(r.tip||0),0),fees=rows.reduce((a,r)=>a+calcFee(r.price),0),tips=rows.reduce((a,r)=>a+(r.tip||0),0),gst=rows.filter(r=>r.gst).reduce((a,r)=>a+gstOf(r.price),0);
   return{title:'Earnings and payouts',html:`<div class="grid2"><div class="stat"><b>${money(Math.round(total*100)/100)}</b><span>You received</span></div><div class="stat"><b>${money(Math.round(fees*100)/100)}</b><span>TaskSpeck kept (${FEE_PCT}%)</span></div></div>
-  <div class="notice info" style="margin-top:12px"><b>How it works</b>TaskSpeck keeps ${FEE_PCT}% of each task price. You receive the other ${100-FEE_PCT}%${tips?', plus 100% of tips':''}. The requester pays no booking fee, and nothing else is deducted.</div>
+  <div class="notice info" style="margin-top:12px"><b>How it works</b>TaskSpeck keeps ${FEE_PCT}% of the whole amount you are paid, including materials. You receive the other ${100-FEE_PCT}%${tips?', plus 100% of tips':''}. The requester pays no booking fee, and nothing else is deducted.</div>
   <div class="card" style="margin-top:12px"><b>Tax settings</b>
    <div class="chips" style="margin-top:8px">${chip('I am registered for GST',S.tk.gst,'data-a="gstTog"')}</div>
    ${S.tk.gst?`<label class="f" for="abnn">ABN</label><input type="text" id="abnn" data-in="abnNum" inputmode="numeric" value="${esc(S.tk.abnNum)}" placeholder="11 digit ABN"><p class="muted small" style="margin-top:6px">Prices you enter include GST. GST included in your payouts so far: ${money(Math.round(gst*100)/100)}. You pay it to the ATO.</p>`:'<p class="muted small" style="margin-top:6px">You only have to register once your turnover reaches $75,000. Ask your accountant.</p>'}
@@ -1271,7 +1281,7 @@ profile(){
   return{html:`
   <div class="row" style="margin-bottom:12px">${avatar(u.name||'You',64)}<div class="grow"><h1 class="display" style="font-size:26px;line-height:1.2;margin:0">${esc(u.name||'You')}</h1><p class="muted">${esc(u.suburb||'Melbourne CBD')} · ${esc(u.email||'')}</p></div></div>
   ${demoSwitchHtml()}
-  <div class="grid2"><div class="stat"><b>0</b><span>Tasks completed</span></div><div class="stat"><b>—</b><span>Rating (no reviews yet)</span></div></div>
+  ${reliabilityBlock(u)}
   <h2>Verification</h2>
   <div class="card">
    <div class="kv"><span>Basic</span><b>${u.phone?'Email and phone ✓':'Email ✓'}</b></div>
@@ -1418,7 +1428,7 @@ function taskCard(t){
   return `<button class="card lift" data-a="openFind" data-v="${t.id}"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:17px">${esc(t.title)}</h3><span class="fee" style="font-size:18px">${t.budget.startsWith('$')?t.budget.split(' ')[0]:''}</span></div>
   <div class="wrap" style="margin:6px 0">${catPill(t.cat)}${t.fromApi?`<span class="pill ${t.listingStatus==='Open'?'ok':'warn'}">${esc(t.listingStatus)}</span>`:''}${postedMins(t.posted)<=180?'<span class="pill ok">New</span>':''}</div>
   <div class="wrap muted small"><span>${t.km} km away</span><span>${t.date}</span><span>${fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1])}</span><span>${dur}</span></div>
-  <div class="wrap muted small" style="margin-top:4px"><span>${t.budget.startsWith('$')?'Budget '+t.budget:'Open to offers'}</span><span>${t.offers} offer${t.offers===1?'':'s'}</span><span><b>Posted ${t.posted}</b></span></div></button>`;
+  <div class="wrap muted small" style="margin-top:4px"><span>${t.req?'Customer '+(t.req.r==='New'||t.req.r==null?'★ New':'★ '+t.req.r):''}</span><span>${t.budget.startsWith('$')?'Budget '+t.budget:'Open to offers'}</span><span>${t.offers} offer${t.offers===1?'':'s'}</span><span><b>Posted ${t.posted}</b></span></div></button>`;
 }
 /* ---------- Find Tasks helpers: search, sort, map ---------- */
 const SORTS=[['closest','Closest'],['newest','Newest'],['price','Price low'],['pricehi','Price high']];
@@ -1510,9 +1520,10 @@ function mountJobMap(list){
   S._map=map;
   setTimeout(()=>{try{map.invalidateSize()}catch(e){}},80);
 }
+function repeatLabel(t){return t&&t.repeatEvery==='weekly'?'Weekly':t&&t.repeatEvery==='fortnightly'?'Fortnightly':t&&t.repeatEvery==='once'?'One-off':''}
 function tasksReq(){
-  const list=[...myTaskList()].sort((a,b)=>Number(jobInProgress(b))-Number(jobInProgress(a))||((Number(b.listingId)||0)-(Number(a.listingId)||0)));
-  return{wide:true,html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(list.length?`<div class="stack">${list.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div><button class="btn primary" style="margin-top:12px" data-a="post">Post another task</button>`:empty('list','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
+  const list=[...myTaskList()].sort((a,b)=>(jobInProgress(a)?0:a.repeatEvery?1:2)-(jobInProgress(b)?0:b.repeatEvery?1:2)||((Number(b.listingId)||0)-(Number(a.listingId)||0)));
+  return{wide:true,html:`<h1 class="display" style="font-size:28px">My Tasks</h1>`+(list.length?`<div class="stack">${list.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${whenLabel(t)}${repeatLabel(t)?' · '+repeatLabel(t):''}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div><button class="btn primary" style="margin-top:12px" data-a="post">Post another task</button>`:empty('list','No tasks yet','Post your first task. It only takes a minute.')+`<button class="btn primary" data-a="post">Post a task</button>`)};
 }
 function tasksTasker(){
   return{wide:true,html:`<h1 class="display" style="font-size:28px">My Tasks</h1>
@@ -1520,7 +1531,7 @@ function tasksTasker(){
   <div class="grid2"><div class="stat"><b>${money(S.payouts.reduce((a,r)=>a+Math.round((r.price-calcFee(r.price))*100)/100,0))}</b><span>Earnings this week</span></div><div class="stat"><b>${S.sent.filter(s=>s.status!=='withdrawn').length}</b><span>Offers waiting</span></div></div>
   <button class="card" style="margin-top:12px" data-a="earnings"><b>Earnings and payouts</b><p class="muted small">See what TaskSpeck keeps (${FEE_PCT}%) and what you receive</p></button>
   <h2>Offers sent</h2>${S.sent.length?S.sent.map((s,i)=>`<div class="card" style="margin-bottom:10px"><div class="row"><div class="grow"><h3>${esc(s.title)}</h3><p class="muted small">${esc(s.date)}${s.time?', '+esc(s.time):''}</p></div><div class="fee" style="font-size:20px">${money(s.fee)}</div></div><p class="muted small" style="margin-top:6px">${s.status==='withdrawn'?'This offer was withdrawn.':`You receive ${money(Math.round((s.fee-calcFee(s.fee))*100)/100)} after TaskSpeck keeps ${FEE_PCT}%`}</p><span class="pill ${s.status==='withdrawn'?'':'warn'}" style="margin-top:8px">${s.status==='withdrawn'?'Withdrawn':'Waiting for the requester'}</span>${s.status==='withdrawn'?'':`<div class="row" style="margin-top:8px"><button class="chip" data-a="editSent" data-v="${i}">Edit offer</button><button class="chip" data-a="withdrawSent" data-v="${i}">Withdraw</button></div>`}</div>`).join(''):`<p class="muted">Nothing yet. Find a task nearby and make an offer.</p><button class="btn secondary" style="margin-top:10px" data-a="tab" data-v="find">Find tasks</button>`}
-  <h2>Active and upcoming</h2>${(()=>{const jobs=myTaskList().filter(t=>offerName(t)===meName()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED','Started','Assigned'].includes(t.status));return jobs.length?`<div class="stack">${jobs.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${esc(t.requesterName||'Requester')}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div>`:'<p class="muted">Accepted jobs show here once a requester books you.</p>'})()}`};
+  <h2>Active and upcoming</h2>${(()=>{const jobs=myTaskList().filter(t=>offerName(t)===meName()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED','Started','Assigned'].includes(t.status));return jobs.length?`<div class="stack">${jobs.map(t=>`<button class="card" data-a="viewTask" data-v="${t.listingId||t.id}"><div class="row"><div class="grow"><h3>${esc(t.title)}</h3><p class="muted small">${esc(t.requesterName||'Requester')}</p></div>${statusPill(t.status)}</div></button>`).join('')}</div>`:'<p class="muted">Accepted jobs show here once a requester books you.</p>'})()}`};
 }
 function offersBlock(){
   const t=S.task;let list=[...S.offers];
@@ -1535,16 +1546,50 @@ function offersBlock(){
   :`<div class="card center"><p class="dots"><span></span><span></span><span></span></p><p class="muted small" style="margin-top:8px">Waiting for offers. The task stays open for 7 days.</p></div>`}
   <div class="notice info" style="margin-top:14px">Your exact address stays private until you accept an offer.</div>${PROMISE}`;
 }
-const STEPS=[['Accepted and paid',['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING']],['Started',['TASK_STARTED']],['Marked complete',['TASKER_COMPLETED']],['Payment released',['REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED']]];
+const STEPS=[['Assigned',['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING']],['On the way',['ON_THE_WAY']],['Started',['TASK_STARTED']],['Done',['TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED']]];
+const RIDE_TIME={Assigned:'assignedAt','On the way':'onTheWayAt',Started:'startedAt',Done:'doneAt'};
+function stamp(iso){if(!iso)return '';const d=new Date(iso);if(Number.isNaN(d.getTime()))return '';return new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}).format(d)}
+function rideBar(t){const st=t.status;const idx=STEPS.findIndex(s=>s[1].includes(st));if(idx<0)return '';return `<div class="ride" aria-label="Job progress">${STEPS.map((s,i)=>`<div><i class="${i<=idx?'on':''}"></i><span>${s[0]}</span><time>${stamp(t[RIDE_TIME[s[0]]])}</time></div>`).join('')}</div>`}
+function shotRow(label,urls){const list=(urls||[]).map(safeImgUrl).filter(Boolean);if(!list.length)return '';return `<p class="small" style="margin:8px 0 2px"><b>${esc(label)}</b></p><div class="thumbs">${list.map(u=>`<img src="${u}" alt="${esc(label)}">`).join('')}</div>`}
+function viewerIsTasker(){return offerName(S.task)===meName()}
+function alreadyReviewed(){const me=meName();return (S.task&&S.task.reviews||[]).some(r=>r.name===me)}
+function pctLabel(n){return n==null?'—':Math.round(n)+'%'}
+function reliabilityBlock(u){
+  const r=(u&&u.reliability)||{};
+  const tasker=S.mode==='tasker'||(!((r.customerCompleted||0)>0)&&((r.taskerCompleted||0)>0||(r.taskerCancelPct||0)>0));
+  if(tasker)return `<div class="stats3" aria-label="Reliability"><div class="stat"><b>${r.taskerCompleted||0}</b><span>Jobs completed</span></div><div class="stat"><b>${pctLabel(r.taskerOnTimePct)}</b><span>On time</span></div><div class="stat"><b>${pctLabel(r.taskerCancelPct)}</b><span>Cancellation</span></div></div>`;
+  return `<div class="stats3" aria-label="Reliability"><div class="stat"><b>${r.customerCompleted||0}</b><span>Jobs completed</span></div><div class="stat"><b>${pctLabel(r.customerCompletePct)}</b><span>Completion</span></div><div class="stat"><b>${pctLabel(r.customerCancelPct)}</b><span>Cancellation</span></div></div>`;
+}
+function applyRide(row){
+  if(!row||!S.task)return;
+  if(row.stage)S.task.status=row.stage;
+  ['assignedAt','onTheWayAt','startedAt','doneAt','beforePhotos','afterPhotos','repeatEvery','repeatOf','cancelledBy','reviews'].forEach(k=>{if(row[k]!=null)S.task[k]=row[k]});
+  if(row.afterPhotos&&row.afterPhotos.length)S.proof=row.afterPhotos.map((url,i)=>({name:'After photo '+(i+1),url}));
+}
+function shrinkPhoto(file,cb){
+  const r=new FileReader();
+  r.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{const max=480,scale=Math.min(1,max/Math.max(img.width||1,img.height||1));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',0.72))};
+    img.onerror=()=>cb(String(r.result||''));
+    img.src=r.result;
+  };
+  r.readAsDataURL(file);
+}
 function activeBlock(){
   const t=S.task,o=chosen();if(!o)return taskSummary(t)+`<div class="notice" style="margin-top:12px">The accepted offer is not on this screen yet. Open the task again in a moment.</div>`;
   const st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
   let h=taskSummary(t);
-  if(t.reviews&&t.reviews.length)h+=t.reviews.map(r=>`<div class="card" style="margin-top:12px"><span class="pill warn">Demo</span> <b>Review from ${esc(r.name||'a demo account')}</b><p style="margin:6px 0">${'★'.repeat(r.stars||0)}</p><p>${esc(r.text||'')}</p></div>`).join('');
+  if(t.reviews&&t.reviews.length)h+=t.reviews.map(r=>`<div class="card" style="margin-top:12px"><b>${r.role==='tasker'?'Tasker review':'Customer review'} · ${esc(r.name||'')}</b><p style="margin:6px 0">${'★'.repeat(r.stars||0)}</p><p>${esc(r.text||'')}</p></div>`).join('');
   if(S.payment)h+=demoPayNote();
   h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
-  if(idx>=0)h+=`<div class="steps" aria-label="Progress" style="margin-top:14px">${STEPS.map((s,i)=>`<i class="${i<=idx?'on':''}"></i>`).join('')}</div><p class="small"><b>${STEPS[idx][0]}</b>${f.onway&&st==='UPCOMING'&&!f.arrived?' · '+esc(o.name)+' is on the way':''}</p>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','pickup'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
+  if(idx>=0)h+=rideBar(t);
+  h+=shotRow('Before',t.beforePhotos);
+  h+=shotRow('After',(t.afterPhotos&&t.afterPhotos.length)?t.afterPhotos:(S.proof||[]).map(p=>p.url));
+  if(viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING'].includes(st))h+=`<button class="btn primary big" style="margin-top:12px" data-a="ride" data-v="onway">I'm on the way</button>`;
+  if(viewerIsTasker()&&st==='ON_THE_WAY')h+=`<p class="small" style="margin:12px 0 6px"><b>Before photo</b> Optional, before you start.</p><label class="drop">${ic('camera',28)}<b>Add a before photo</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" data-in="beforePhoto" aria-label="Before photo"></label><button class="btn secondary" data-a="sampleBefore">Use a sample before photo</button><button class="btn primary big" data-a="ride" data-v="start">I've started</button>`;
+  if(viewerIsTasker()&&st==='TASK_STARTED')h+=`<p class="small" style="margin:12px 0 6px"><b>After photo</b> Add at least one before you mark the job done.</p><label class="drop">${ic('camera',28)}<b>Add an after photo</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" data-in="afterPhoto" aria-label="After photo"></label><button class="btn secondary" data-a="sampleProof">Use a sample after photo</button><button class="btn primary big" data-a="ride" data-v="done">Mark done</button>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','pickup'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
   if(st==='TASK_STARTED')h+=`<div class="card" style="margin-top:12px"><b>${f.checkin?esc(o.name)+' confirmed all OK':'Waiting for '+esc(o.name)+"'s safety check-in"}</b><p class="muted small" style="margin:4px 0 0">When a Tasker arrives, and again if a job runs long, we ask "All OK?". If there is no answer, support is notified. We cannot promise immediate contact, so call 000 in an emergency.</p></div>${f.missed?`<div class="notice bad" style="margin-top:10px"><b>No answer to the safety check-in</b>Support has been notified. We cannot promise immediate contact. If you are worried, call 000 or tap SOS.</div>`:''}`;
   if(st==='UPCOMING')h+=`<div class="card" style="margin-top:12px"><b>${f.confirmed?esc(o.name)+' has confirmed they will be there':'Waiting for '+esc(o.name)+' to confirm'}</b><p class="muted small" style="margin:4px 0 0">Taskers confirm 24 hours before the start and tap "On my way". If they have not checked in 15 minutes after the start time, you get a full refund and a quick re-match.</p></div><button class="btn secondary" style="margin-top:10px" data-a="noshow">${esc(o.name)} has not arrived: refund and re-match</button><p class="muted small center" style="margin-top:4px">In the real app this button unlocks 15 minutes after the start time.</p>`;
   if(st==='FIX_REQUESTED'&&S.fix)h+=`<div class="notice" style="margin-top:14px"><b>${isVacate()?'Re-clean':'Fix'} requested</b>${esc(S.fix.what)}${S.fix.text?': '+esc(S.fix.text):''}. ${esc(o.name)} has 48 hours to put it right. Your payment stays on hold.</div>`;
@@ -1552,13 +1597,14 @@ function activeBlock(){
   if(st==='RESOLVED'){const p=S.payment;h+=`<div class="notice ok" style="margin-top:14px"><b>Decision made</b>${p.status==='REFUNDED'?'You have been refunded in full.':p.status==='PART_RELEASE'?`${money(p.partial.tasker)} was paid to ${esc(o.name)} after TaskSpeck's fee, and ${money(p.partial.refund)} was refunded to you.`:'Payment was released to '+esc(o.name)+'.'}</div><button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`}
   if(st==='NO_SHOW')h+=`<div class="notice bad" style="margin-top:14px"><b>No-show confirmed</b>${esc(o.name)} did not arrive. You have been refunded in full. We recorded it on ${esc(o.name)}'s reliability record. Repeated no-shows lead to a review of their account.</div><button class="btn primary big" style="margin-top:12px" data-a="rematch">Find another Tasker</button>`;
   if(S.change)h+=`<div class="notice" style="margin-top:14px"><b>${esc(o.name)} requests a change</b>+30 minutes and +${money(15)} because the job is bigger than described.</div><button class="btn primary" style="margin-top:10px" data-a="sheet" data-v="change">Review change</button>`;
-  if(st==='TASKER_COMPLETED')h+=`<div class="card" style="margin-top:14px"><b>${esc(o.name)} says the task is complete.</b><p class="muted small" style="margin:4px 0 10px">“All done, everything is as described in the task.”</p>${S.proof.length?`<p class="small" style="margin:8px 0 4px"><b>${esc(proofLabel()||'Completion photo')}</b></p>${thumbs()}`:'<div class="card" style="text-align:center;padding:26px;background:var(--bg)">No completion photo supplied</div>'}${isVacate()?`<p class="small" style="margin:10px 0 4px"><b>Vacate checklist: ${S.checklist.filter(Boolean).length} of ${VACATE_LIST.length} done</b></p><ul class="muted small" style="margin:0 0 0 18px">${VACATE_LIST.map((x,i)=>`<li>${S.checklist[i]?'✓':'•'} ${esc(x)}</li>`).join('')}</ul>`:''}<p class="muted small" style="margin-top:8px">Your payment is held. If you do nothing it is released automatically 48 hours after completion. Something wrong? Tell us within 48 hours.</p></div><button class="btn primary big" style="margin-top:12px" data-a="confirmDone">Confirm completion</button>${t.fixUsed?'<p class="muted small" style="margin:8px 0">The free fix for this job has been used. For anything else, use Report a problem.</p>':`<button class="btn secondary" data-a="sheet" data-v="fix">${isVacate()?'Agent found issues? Request a free re-clean':'Not quite right? Ask for a fix'}</button>`}<button class="btn secondary" data-a="sheet" data-v="report">Report a problem</button>`;
-  if(['PAYMENT_RELEASED','COMPLETED','REQUESTER_CONFIRMED'].includes(st))h+=`<div class="notice ok" style="margin-top:14px"><b>Payment released</b>${money(S.payment.tasker)} has gone to ${esc(o.name)}. TaskSpeck kept ${FEE_PCT}% (${money(S.payment.fee)}) of the ${money(S.payment.gross)} price from the Tasker. You paid nothing extra.</div>${t.reviewed?'':`<button class="btn primary" style="margin-top:12px" data-a="toReview">Leave a review</button>`}<button class="btn secondary" style="margin-top:8px" data-a="bookAgain">Book ${esc(o.name)} again</button><button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`;
+  if(st==='TASKER_COMPLETED')h+=`<div class="card" style="margin-top:14px"><b>${esc(o.name)} says the task is done.</b><p class="muted small" style="margin:4px 0 10px">Look at the after photo above, then confirm or tell us it is not right.</p>${(S.proof.length||(t.afterPhotos||[]).length)?'':`<div class="card" style="text-align:center;padding:26px;background:var(--bg)">No after photo supplied</div>`}${isVacate()?`<p class="small" style="margin:10px 0 4px"><b>Vacate checklist: ${S.checklist.filter(Boolean).length} of ${VACATE_LIST.length} done</b></p><ul class="muted small" style="margin:0 0 0 18px">${VACATE_LIST.map((x,i)=>`<li>${S.checklist[i]?'✓':'•'} ${esc(x)}</li>`).join('')}</ul>`:''}<p class="muted small" style="margin-top:8px">Your payment is held. If you do nothing it is released automatically 48 hours after completion. Something wrong? Tell us within 48 hours.</p></div>${viewerIsTasker()?'':`<button class="btn primary big" style="margin-top:12px" data-a="confirmDone">Confirm completion</button>`}${t.fixUsed?'<p class="muted small" style="margin:8px 0">The free fix for this job has been used. For anything else, use Report a problem.</p>':`<button class="btn secondary" data-a="sheet" data-v="fix">${isVacate()?'Agent found issues? Request a free re-clean':'Not quite right? Ask for a fix'}</button>`}<button class="btn secondary" data-a="sheet" data-v="report">Report a problem</button>`;
+  if(['PAYMENT_RELEASED','COMPLETED','REQUESTER_CONFIRMED'].includes(st))h+=`<div class="notice ok" style="margin-top:14px"><b>Payment released</b>${money(S.payment.tasker)} has gone to ${esc(o.name)}. TaskSpeck kept ${FEE_PCT}% (${money(S.payment.fee)}) of the ${money(S.payment.gross)} price from the Tasker. You paid nothing extra.</div>${alreadyReviewed()||t.reviewed?'':`<button class="btn primary" style="margin-top:12px" data-a="toReview">Leave a review</button>`}${viewerIsTasker()?'':`<button class="btn secondary" style="margin-top:8px" data-a="bookAgain">Book ${esc(o.name)} again</button>`}<button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`;
   if(S.dispute&&st==='DISPUTED'){const d=['OPEN','EVIDENCE_REQUESTED','UNDER_REVIEW','RESOLVED'];h+=`<div class="notice bad" style="margin-top:14px"><b>${S.dispute.reason}</b>Your payment stays on hold while we review both sides: the agreement, messages and photos. We aim to decide within ${DISPUTE_AIM} of having both sides' information, and will tell you if it will take longer.${S.dispute.taskerPhotos?`<p class="small" style="margin:8px 0 2px"><b>${esc(o.name)}'s photos</b></p><div class="thumbs">${S.dispute.taskerPhotos.map(u=>`<img src="${u}" alt="Photo from the Tasker">`).join('')}</div>`:''}<div class="steps" style="margin-top:8px">${d.map((x,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</div><span class="small">Status: Open</span><br><button class="chip" style="margin-top:8px;width:auto" data-a="sheet" data-v="disputes">How disputes work</button></div>`;}
-  if(st==='CANCELLED')h+=`<div class="notice bad" style="margin-top:14px"><b>Task cancelled</b>${S.payment&&S.payment.callout?'Your payment is being refunded, minus a call-out fee of '+money(S.payment.callout)+' paid to the Tasker.':'Your payment is being refunded in full.'}</div>`;
+  if(st==='CANCELLED')h+=`<div class="notice bad" style="margin-top:14px"><b>Task cancelled</b>${t.cancelledBy==='tasker'?'The Tasker cancelled. You pay nothing, and it counts on their cancellation rate.':S.payment&&S.payment.callout?'Your payment is being refunded, minus a call-out fee of '+money(S.payment.callout)+' paid to the Tasker.':'Your payment is being refunded in full.'}</div>`;
   h+=`<div class="stack" style="margin-top:14px"><button class="card" data-a="agreementScreen">View agreement <span class="pill" style="float:right">v${S.agreement.version}</span></button>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(st))h+=`<div class="card"><b>Location shared with ${esc(o.name)}</b><p class="muted small">${esc(S.form.addr||'Address')} · only ${esc(o.name)} can see it</p></div><button class="card" data-a="sheet" data-v="safety">${ic('shield',18)} Safety Centre</button>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="sheet" data-v="cancel">Cancel task</button><button class="btn ghost" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<div class="card"><b>Location shared with ${esc(o.name)}</b><p class="muted small">${esc(S.form.addr||'Address')} · only ${esc(o.name)} can see it</p></div><button class="card" data-a="sheet" data-v="safety">${ic('shield',18)} Safety Centre</button>`;
+  if(!viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="sheet" data-v="cancel">Cancel task</button><button class="btn ghost" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>`;
+  if(viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="taskerCancel">Cancel this job</button><p class="muted small">If you cancel, the customer pays nothing. It counts on your cancellation rate.</p>`;
   h+='</div>';
   h+=demoPanel();
   h+=`<h2>Timeline</h2><ol class="tl">${S.events.map(e=>`<li>${esc(e.l)}<time>${e.t}</time></li>`).join('')}</ol>`;
@@ -1567,14 +1613,15 @@ function activeBlock(){
 function demoPanel(){
   if(!S.demoMode)return '';
   const st=S.task.status,f=S.flags,o=chosen();let b='';
-  if(st==='UPCOMING'){
+  const mine=viewerIsTasker();
+  if(!mine&&st==='UPCOMING'){
     if(!f.confirmed)b+=`<button class="btn secondary" data-a="demo" data-v="confirm">${esc(o.name)}: Confirm attendance (24 hours before)</button>`;
-    else b+=!f.onway?`<button class="btn secondary" data-a="demo" data-v="onway">${esc(o.name)}: I am on my way</button>`:`<button class="btn secondary" data-a="demo" data-v="arrived">${esc(o.name)}: I have arrived</button>`;
-  }else if(st==='TASK_STARTED'){const pl=proofLabel();
+    else b+=`<button class="btn secondary" data-a="demo" data-v="onway">${esc(o.name)}: I am on my way</button>`;
+  }else if(!mine&&st==='ON_THE_WAY')b+=`<button class="btn secondary" data-a="demo" data-v="arrived">${esc(o.name)}: I have arrived</button>`;
+  else if(st==='TASK_STARTED'){const pl=proofLabel();
     if(!f.checkin&&!f.missed)b+=`<button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="checkin">${esc(o.name)}: Answer the safety check-in (All OK)</button><button class="btn secondary" style="margin-bottom:8px" data-a="demo" data-v="nocheckin">Skip ahead: ${esc(o.name)} does not answer</button>`;
     if(isVacate())b+=`<p class="small" style="margin:6px 0"><b>Vacate checklist</b> (every item must be ticked)</p><div class="stack">${VACATE_LIST.map((x,i)=>`<label class="card" style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-in="vc${i}" ${S.checklist[i]?'checked':''}><span class="small">${esc(x)}</span></label>`).join('')}</div><button class="btn secondary" style="margin:8px 0" data-a="tickAll">Tick all (demo)</button>`;
-    if(pl)b+=`<p class="small" style="margin:6px 0"><b>Proof required:</b> ${esc(pl)}</p>${photoDrop('proofFile','Add photos')}${thumbs()}${S.demoMode?'<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button>':''}`;
-    b+=`<button class="btn secondary" data-a="demo" data-v="complete">${esc(o.name)}: Mark task complete</button>`;
+    if(!mine){b+=`<p class="small" style="margin:6px 0"><b>After photo</b> Required.${pl?' '+esc(pl):''}</p>${photoDrop('proofFile','Add an after photo')}${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button><button class="btn secondary" data-a="demo" data-v="complete">${esc(o.name)}: Mark task complete</button>`}
   }else if(st==='TASKER_COMPLETED')b+=`<button class="btn secondary" data-a="demo" data-v="autorelease">Skip ahead 48 hours (automatic release)</button>`;
   else if(st==='FIX_REQUESTED')b+=`<p class="small" style="margin:6px 0"><b>New photo of the fix required</b></p><input type="file" accept="image/*" multiple data-in="proofFile" style="margin:4px 0 8px">${thumbs()}<button class="btn secondary" style="margin-bottom:8px" data-a="sampleProof">Use a sample photo</button><button class="btn secondary" data-a="demo" data-v="fixed">${esc(o.name)}: Mark as fixed</button><button class="btn secondary" data-a="demo" data-v="nofix">Skip ahead 48 hours (no fix made)</button><p class="small" style="margin:10px 0 6px"><b>Or respond if the request is not fair</b></p><div class="chips">${['The work matches the agreed scope','Access was blocked','Extra mess or items were left','Other'].map(x=>chip(x,S.form.tr===x,`data-a="trChip" data-v="${x}"`)).join('')}</div><button class="btn secondary" style="margin-top:8px" data-a="demo" data-v="disagree">${esc(o.name)}: Disagree and send my photos</button>`;
   else if(st==='DISPUTED')b+=`<p class="small" style="margin:6px 0"><b>Support decision</b> (a person decides in the real app)</p><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="refund">Full refund to the requester</button><button class="btn secondary" style="margin-bottom:8px" data-a="decide" data-v="partial">Part payment: Tasker 50%, requester 50% back</button><button class="btn secondary" data-a="decide" data-v="full">Pay the Tasker in full</button>`;
@@ -1651,13 +1698,17 @@ disputes(){
 policy(){
   return `<h2 style="margin-top:0">Cancellation and no-show policy</h2><div class="stack">
   <div class="card"><b>You cancel</b><p class="muted small">More than 24 hours before the start: full refund. Within 24 hours: the Tasker receives a call-out fee of 20% of the task price and the rest is refunded.</p></div>
-  <div class="card"><b>Tasker cancels or does not arrive</b><p class="muted small">Full refund and a quick re-match. Repeated no-shows or late cancellations pause a Tasker's account.</p></div>
+  <div class="card"><b>Tasker cancels or does not arrive</b><p class="muted small">You pay nothing. The job is recorded on the Tasker's cancellation rate. You can book someone else.</p></div>
   <div class="card"><b>A problem with the work</b><p class="muted small">Tell us within 48 hours of completion. One free fix per job, for the agreed scope only; extras are a new paid task. Your payment stays on hold while the Tasker has 48 hours to put it right, and the Tasker can respond with their own photos. If it is not fixed or the request is disputed, we review both sides and decide: full payment, part payment or a refund. See How disputes work.</p></div>
   <div class="card"><b>Re-clean promise (vacate cleans)</b><p class="muted small">If your agent's inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</p></div>
   <div class="card"><b>When payment is released</b><p class="muted small">Your payment is held until you confirm. If you do nothing, it is released automatically 48 hours after the Tasker marks the job complete.</p></div>
   <button class="card" data-a="sheet" data-v="disputes"><b>How disputes work</b><p class="muted small">What we can decide, how long it takes, and your legal rights.</p></button>
   <div class="card"><b>Price changes</b><p class="muted small">The price only changes if you approve a change request.</p></div></div>
   <p class="muted small" style="margin-top:10px">Draft pilot policy. To be confirmed by a solicitor before launch.</p><button class="btn ghost" data-a="close">Close</button>`;
+},
+repeat(){
+  const o=chosen();
+  return `<h2 id="sheetTitle" style="margin-top:0">Book ${esc(o?o.name:'them')} again</h2><p class="muted">Same task, same Tasker. Pick how often.</p><div class="stack" style="margin-top:12px"><button class="btn primary big" data-a="repeatBook" data-v="once">One-off</button><button class="btn primary big" data-a="repeatBook" data-v="weekly">Weekly</button><button class="btn primary big" data-a="repeatBook" data-v="fortnightly">Fortnightly</button><button class="btn ghost" data-a="close">Not now</button></div>`;
 },
 change(){
   const o=chosen();
@@ -1666,7 +1717,7 @@ change(){
   <button class="btn primary" data-a="chgOk">Accept change</button><button class="btn secondary" data-a="chgNo">Reject change</button>`;
 },
 safety(){
-  const live=S.task&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','TASK_STARTED'].includes(S.task.status);
+  const live=S.task&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(S.task.status);
   return `<h2 id="sheetTitle" style="margin-top:0">Safety Centre</h2>
   ${live?`<button class="card" data-a="sheet" data-v="safeexit"><b>I feel unsafe: leave this job</b><p class="muted small">No fee, no penalty, full refund.</p></button>`:''}
   <div class="stack" style="margin-top:10px">
@@ -1707,7 +1758,7 @@ const INP={
  fee(){
    const v=parseFloat(S.form.fee),ok=v>0&&S.form.ok,b=$('#sendOffer'),s=$('#feesum');
    if(b)b.disabled=!ok;
-   if(s)s.innerHTML=v>0?`<div class="card">${kv('Task price (the requester pays this)',money(v))}${S.tk.gst?kv('Includes GST (you pay this to the ATO)',money(gstOf(v))):''}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(v)))}${S.qtGst?kv('GST included in TaskSpeck’s fee',money(gstOf(calcFee(v)))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(Math.round((v-calcFee(v))*100)/100)}</b></div></div><p class="muted small" style="margin:6px 2px 0">The requester pays no booking fee. Nothing else is deducted.</p>`:`<div class="notice info">TaskSpeck keeps ${FEE_PCT}% of your price. Enter your price to see what you receive. The requester pays no booking fee.</div>`;
+   if(s)s.innerHTML=v>0?`<div class="card">${kv('Task price (the requester pays this)',money(v))}${S.tk.gst?kv('Includes GST (you pay this to the ATO)',money(gstOf(v))):''}${kv('TaskSpeck fee ('+FEE_PCT+'%)','−'+money(calcFee(v)))}${S.qtGst?kv('GST included in TaskSpeck’s fee',money(gstOf(calcFee(v)))):''}<div class="kv"><span><b>You receive</b></span><b style="font-size:19px">${money(Math.round((v-calcFee(v))*100)/100)}</b></div></div><p class="muted small" style="margin:6px 2px 0">TaskSpeck keeps ${FEE_PCT}% of the whole amount you are paid, including materials. The requester pays no booking fee.</p>`:`<div class="notice info">TaskSpeck keeps ${FEE_PCT}% of the whole amount you are paid, including materials. Enter your price to see what you receive. The requester pays no booking fee.</div>`;
  },
  ok(){INP.fee()},
  fq(){
@@ -1804,7 +1855,7 @@ const A={
  },
  toPreview(){go('preview')},
  publish(){publishTask();S.draft={text:'',answers:{}}},
- viewTask(v){if(S.mode!=='requester')S.mode='requester';if(v){stashCurrent();const t=S.myTasks.find(x=>String(x.listingId)===String(v)||String(x.id)===String(v));if(t)activateTask(t)}S.stack=[{n:'home'},{n:'task'}];render()},
+ viewTask(v){if(v){stashCurrent();const t=S.myTasks.find(x=>String(x.listingId)===String(v)||String(x.id)===String(v));if(t)activateTask(t)}if(!(S.task&&offerName(S.task)===meName())&&S.mode!=='requester')S.mode='requester';S.stack=[{n:'home'},{n:'task'}];render()},
  sort(v){S.sort=v;render()},
  offer(v){const o=S.offers.find(x=>x.id===+v);if(!o||o.declined){notify('That offer is no longer available.');return}S.offerId=+v;go('offer')},
  decline(){const o=chosen();o.declined=true;S.offerId=null;back();notify(`Offer from ${o.name} declined.`)},
@@ -1841,8 +1892,8 @@ const A={
  send(){const t=(S.form.msg||'').trim();if(t){S.form.msg='';sendMsg(t)}},
  async demo(v){
    const o=chosen(),f=S.flags;
-   if(v==='onway'){f.onway=true;ev(o.name+' is on the way');notify(`${o.name} is on the way.`)}
-   else if(v==='arrived'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'start');if(d&&d.error){notify(d.error);return}}f.arrived=true;setStatus('TASK_STARTED');ev(o.name+' has arrived. Task started');notify(`${o.name} has arrived.`);saveBundleSoon()}
+   if(v==='onway'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'on-the-way');if(d&&d.error){notify(d.error);return}applyRide(d.task)}f.onway=true;setStatus('ON_THE_WAY');ev(o.name+' is on the way');notify(`${o.name} is on the way.`);saveBundleSoon()}
+   else if(v==='arrived'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'start');if(d&&d.error){notify(d.error);return}applyRide(d.task)}f.arrived=true;setStatus('TASK_STARTED');ev(o.name+' has arrived. Task started');notify(`${o.name} has arrived.`);saveBundleSoon()}
    else if(v==='checkin'){f.checkin=true;ev(o.name+' answered the safety check-in: all OK');notify(`${o.name} confirmed all OK.`)}
    else if(v==='nocheckin'){f.missed=true;S.incidents.unshift({kind:'Missed check-in',when:clock(),task:S.task.title,who:o.name});ev('No answer to the safety check-in. Support notified');notify('No answer to the safety check-in. Support has been notified.')}
    else if(v==='confirm'){f.confirmed=true;ev(o.name+' confirmed attendance');notify(`${o.name} confirmed they will be there.`)}
@@ -1850,11 +1901,20 @@ const A={
    else if(v==='fixed'){if(S.proof.length<=S.fix.proofBefore){notify('Add a photo of the fix first.');return}const fl=S.task.fixLog&&S.task.fixLog[S.task.fixLog.length-1];if(fl){fl.done=fmtDate(new Date());fl.photos=S.proof.slice(S.fix.proofBefore).map(x=>x.url)}setStatus('FIX_DONE');ev(o.name+' says it is fixed');notify(`${o.name} says it is fixed.`)}
    else if(v==='disagree'){if(!S.form.tr){notify('Choose a reason first.');return}if(S.proof.length<=S.fix.proofBefore){notify('Add your photos first.');return}S.dispute={reason:o.name+' disagrees with the '+(isVacate()?'re-clean':'fix')+' request: '+S.form.tr,status:'OPEN',taskerPhotos:S.proof.slice(S.fix.proofBefore).map(x=>x.url)};setStatus('DISPUTED');S.payment.status='DISPUTED';ev(o.name+' disagrees and sent photos. We will review both sides');S.form.tr=null;notify('Dispute opened. We will review both sides.')}
    else if(v==='nofix'){S.dispute={reason:'Fix not made within 48 hours',status:'OPEN'};setStatus('DISPUTED');S.payment.status='DISPUTED';ev('No fix within 48 hours. We will review and decide');notify('Dispute opened. We will review both sides.')}
-   else if(v==='complete'){const pl=proofLabel();if(pl&&!S.proof.length){notify('Add the proof photo first.');return}if(isVacate()&&VACATE_LIST.some((x,i)=>!S.checklist[i])){notify('Tick every item on the vacate checklist first.');return}if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'complete',{photoCount:Math.max(1,S.proof.length)});if(d&&d.error){notify(d.error);return}}setStatus('TASKER_COMPLETED');ev(o.name+' marked the task complete');notify('Your task has been marked complete.');saveBundleSoon()}
+   else if(v==='complete'){const photos=(S.proof||[]).map(p=>p.url).filter(u=>String(u).startsWith('data:image/'));if(!photos.length){notify('Add an after photo first.');return}if(isVacate()&&VACATE_LIST.some((x,i)=>!S.checklist[i])){notify('Tick every item on the vacate checklist first.');return}if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'complete',{photoCount:photos.length,afterPhotos:photos});if(d&&d.error){notify(d.error);return}applyRide(d.task)}setStatus('TASKER_COMPLETED');ev(o.name+' marked the task complete');notify('Your task has been marked complete. Check the after photo.');saveBundleSoon()}
    else if(v==='change'){S.change={};ev(o.name+' requested a change');notify(`${o.name} requested a change to your task.`)}
    render();
  },
- sampleProof(){S.proof.push({name:'Sample receipt',url:SAMPLE_PHOTO});render()},
+ sampleProof(){S.proof.push({name:'After photo',url:SAMPLE_PHOTO});if(S.task)S.task.afterPhotos=[...(S.task.afterPhotos||[]),SAMPLE_PHOTO].slice(0,4);render()},
+ async sampleBefore(){const t=S.task;if(!t)return;t.beforePhotos=[...(t.beforePhotos||[]),SAMPLE_PHOTO].slice(0,4);if(t.listingId){const d=await TaskAPI.sync(t.listingId,'before-photos',{photos:t.beforePhotos});if(d&&d.error){notify(d.error);return}applyRide(d.task)}render()},
+ async ride(v){
+   const t=S.task,o=chosen();if(!t||!t.listingId){notify('This task is not saved yet.');return}
+   if(v==='onway'){const d=await TaskAPI.sync(t.listingId,'on-the-way');if(d&&d.error){notify(d.error);return}applyRide(d.task);S.flags.onway=true;setStatus('ON_THE_WAY');ev((o?o.name:'Tasker')+' is on the way');notify('The customer can see you are on the way.');}
+   else if(v==='start'){const d=await TaskAPI.sync(t.listingId,'start');if(d&&d.error){notify(d.error);return}applyRide(d.task);S.flags.arrived=true;setStatus('TASK_STARTED');ev('Job started');notify('The customer can see you have started.');}
+   else if(v==='done'){const photos=[...(t.afterPhotos||[]),...(S.proof||[]).map(p=>p.url)].filter((u,i,a)=>String(u).startsWith('data:image/')&&a.indexOf(u)===i);if(!photos.length){notify('Add an after photo first.');return}const d=await TaskAPI.sync(t.listingId,'complete',{photoCount:photos.length,afterPhotos:photos});if(d&&d.error){notify(d.error);return}applyRide(d.task);setStatus('TASKER_COMPLETED');ev('Marked done');notify('Marked done. The customer can confirm.');}
+   saveBundleSoon();render();
+ },
+ async taskerCancel(){const t=S.task;if(!t||!t.listingId)return;const d=await TaskAPI.sync(t.listingId,'cancel',{reason:'Tasker cancelled'});if(d&&d.error){notify(d.error);return}if(d.task)applyRide(d.task);t.cancelledBy='tasker';setStatus('CANCELLED');if(S.payment){S.payment.status='REFUNDED';S.payment.callout=0}ev('You cancelled. The customer pays nothing.');saveBundleSoon();render();notify('Cancelled. The customer pays nothing. This counts on your cancellation rate.')},
  async noshow(){const o=chosen();if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'no-show');if(d&&d.error){notify(d.error);return}}S.dispute=null;setStatus('NO_SHOW');if(S.payment)S.payment.status='REFUNDED';o.canc=Math.min(99,o.canc+1);ev(`No-show reported: ${o.name} did not arrive`);ev('Full refund issued');ev(`No-show recorded on ${o.name}'s reliability record`);saveBundleSoon();render();notify('No-show recorded. You have been refunded in full.')},
  async rematch(){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'rematch');if(d&&d.error){notify(d.error);return}}const bad=S.offerId;S.offers=S.offers.filter(x=>x.id!==bad);S.offers.forEach(x=>{x.declined=false});S.offerId=null;S.thread=null;S.agreement=null;S.payment=null;S.flags={};S.proof=[];S.checklist=[];S.fix=null;S.dispute=null;S.change=null;setStatus('OFFERS_RECEIVED');ev('Task re-opened for new offers');scheduleOffers();S.stack=[{n:'home'},{n:'task'}];saveBundleSoon();render();notify('Your task is open again. Other Taskers can offer now.')},
  agentTog(){S.agent=!S.agent;render()},
@@ -1886,7 +1946,17 @@ const A={
    if(S.dispute)S.dispute.status='RESOLVED';saveBundleSoon();render();notify('Decision recorded.')},
  samplePostPhoto(){S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(SAMPLE_ITEM);render()},
  rmPostPhoto(v){(S.draft.photos||[]).splice(+v,1);render()},
- bookAgain(){const t=S.task,o=chosen();if(!t||!o)return;A.startRebook({title:t.title,cat:t.cat,prop:t.prop,tasker:o.name,price:(S.payment&&S.payment.status==='RELEASED')?S.payment.gross:null})},
+ bookAgain(){if(!S.task)return;openSheet('repeat')},
+ async repeatBook(v){
+   const t=S.task;if(!t||!t.listingId){notify('Open a completed job first.');return}
+   const d=await TaskAPI.sync(t.listingId,'repeat',{cadence:v});
+   if(!d||d.error){notify((d&&d.error)||'Could not book again.');return}
+   S.sheet=null;
+   const me=await api('/api/auth/me');
+   if(me&&me.user)applyWorkspace(me);
+   const label=v==='weekly'?'every week':v==='fortnightly'?'every fortnight':'as a one-off';
+   root('tasks');notify('Booked '+label+'. It is in My Tasks.');
+ },
  rebook(v){const r=S.history[+v];if(!r)return;A.startRebook({title:r.title,cat:r.cat,prop:r.prop==='My jobs'?'':r.prop,tasker:r.tasker,price:r.note?null:r.paid})},
  startRebook(x){S.draft={text:x.title,answers:{},budgetMode:x.price?'set':'open',budgetAmt:x.price?String(x.price):'',budgetTouched:!!x.price,photos:[],preferred:{name:x.tasker,fee:x.price||null}};S.form={prop:x.prop||''};S.stack=[{n:'home'},{n:'post',a:{cat:x.cat}}];render();notify('Filled in for you. '+x.tasker+' will be offered first.')},
  viewProfile(v){S.profName=v;go('taskerprofile')},
@@ -2140,7 +2210,8 @@ document.addEventListener('input',e=>{
   if(k==='idConsent'){S.idc.consent=e.target.checked;return}
   if(k==='tpPhoto'){[...(e.target.files||[])].slice(0,6).forEach(f=>{const r=new FileReader();r.onload=()=>{if(S.tprof.photos.length<6)S.tprof.photos.push(r.result);render()};r.readAsDataURL(f)});return}
   if(k==='postPhoto'){[...(e.target.files||[])].slice(0,5).forEach(f=>{const r=new FileReader();r.onload=()=>{S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(r.result);render()};r.readAsDataURL(f)});return}
-  if(k==='proofFile'){[...(e.target.files||[])].slice(0,5).forEach(f=>{const r=new FileReader();r.onload=()=>{S.proof.push({name:f.name,url:r.result});render()};r.readAsDataURL(f)});return}
+  if(k==='proofFile'){[...(e.target.files||[])].slice(0,4).forEach(f=>shrinkPhoto(f,url=>{S.proof.push({name:f.name,url});if(S.task)S.task.afterPhotos=[...(S.task.afterPhotos||[]),url].slice(0,4);render()}));return}
+  if(k==='beforePhoto'||k==='afterPhoto'){const f=(e.target.files||[])[0];if(!f||!S.task)return;shrinkPhoto(f,async url=>{if(k==='beforePhoto'){S.task.beforePhotos=[...(S.task.beforePhotos||[]),url].slice(0,4);if(S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'before-photos',{photos:S.task.beforePhotos});if(d&&d.error){notify(d.error);return}applyRide(d.task)}}else{S.proof.push({name:f.name,url});S.task.afterPhotos=[...(S.task.afterPhotos||[]),url].slice(0,4)}render()});return}
   const v=e.target.type==='checkbox'?e.target.checked:e.target.value;
   if(k==='text'){S.draft.text=v;queueDraftSave()}
   else if(k==='bamt')S.draft.budgetAmt=v;

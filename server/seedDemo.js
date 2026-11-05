@@ -11,6 +11,8 @@ function hoursFromNow(hours) {
   return new Date(Date.now() + hours * 3600 * 1000).toISOString();
 }
 
+const SAMPLE_SHOT = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#E8EFEA"/><rect x="16" y="24" width="32" height="20" rx="3" fill="#0E5A4B"/></svg>');
+
 const JOBS = [
   { cat: 'moving', title: 'Help carry boxes to a new apartment', text: 'Help carry about 20 boxes from the lobby to level 6 in Carlton on Saturday.', suburb: 'Carlton', price: 220 },
   { cat: 'cleaning', title: 'End-of-lease clean for a one-bedroom', text: 'End-of-lease clean for a one-bedroom apartment in Fitzroy. Kitchen, bathroom and floors.', suburb: 'Fitzroy', price: 680 },
@@ -65,19 +67,26 @@ export async function seedDemo(db) {
   must(await db.postMessage(tasks.furniture.id, maya, { text: 'Yes, the instructions are there. Demo message only.' }), 'furniture reply');
   must(await db.placeBid(tasks.garden.id, { fee: 260, message: 'I can tidy the courtyard on Saturday.' }, sam), 'garden offer');
   must(await db.placeBid(tasks.packing.id, { fee: 270, message: 'I can pack the kitchen in one visit.' }, priya), 'packing offer');
-  const cleanOffer = must(await db.placeBid(tasks.cleaning.id, { fee: 640, message: 'I can do the end-of-lease clean.' }, sam), 'clean offer');
+  const cleanOffer = must(await db.placeBid(tasks.cleaning.id, { fee: 640, message: 'I can do the end-of-lease clean.' }, priya), 'clean offer');
   must(await db.acceptBid(tasks.cleaning.id, { bidId: cleanOffer.bid.id }, maya), 'accept clean');
-  must(db.markStarted(tasks.cleaning.id, sam), 'start clean');
-  must(db.markCompleted(tasks.cleaning.id, sam, { photoCount: 2 }), 'complete clean');
+  must(db.markOnTheWay(tasks.cleaning.id, priya), 'clean on the way');
+  must(db.markStarted(tasks.cleaning.id, priya), 'start clean');
+  must(db.markCompleted(tasks.cleaning.id, priya, { afterPhotos: [SAMPLE_SHOT], photoCount: 1 }), 'complete clean');
   must(await db.approvePayment(tasks.cleaning.id, maya), 'pay clean');
-  must(await db.addReview(tasks.cleaning.id, maya, { stars: 5, text: 'Demo review: the clean was careful and the photos were clear.', tags: ['Reliability'] }), 'review');
+  must(await db.addReview(tasks.cleaning.id, maya, { stars: 5, text: 'The clean was careful and the after photo was clear.', tags: ['Reliability'] }), 'customer review');
+  must(await db.addReview(tasks.cleaning.id, priya, { stars: 5, text: 'Maya was ready on time and the place was easy to work in.', tags: ['Respect'] }), 'tasker review');
+  must(db.bookRepeat(tasks.cleaning.id, maya, { cadence: 'weekly' }), 'weekly clean');
   const sofaOffer = must(await db.placeBid(tasks.rubbish.id, { fee: 320, message: 'I have a ute for the sofa.' }, priya), 'rubbish offer');
   must(await db.acceptBid(tasks.rubbish.id, { bidId: sofaOffer.bid.id }, maya), 'accept rubbish');
-  must(db.markStarted(tasks.rubbish.id, priya), 'start rubbish');
+  must(db.markOnTheWay(tasks.rubbish.id, priya), 'sofa on the way');
+  must(db.saveBeforePhotos(tasks.rubbish.id, priya, { photos: [SAMPLE_SHOT] }), 'sofa before photo');
+  const mirrorOffer = must(await db.placeBid(tasks.home.id, { fee: 140, message: 'I can hang the mirror on Saturday.' }, priya), 'mirror offer');
+  must(await db.acceptBid(tasks.home.id, { bidId: mirrorOffer.bid.id }, maya), 'accept mirror');
+  must(await db.cancelTask(tasks.home.id, priya, { reason: 'I cannot make this time.' }), 'priya cancel');
   must(db.saveRecords(maya, [{
     title: 'End-of-lease clean for a one-bedroom',
     cat: 'cleaning',
-    taskerName: 'Sam Taylor',
+    taskerName: 'Priya Nair',
     date: 'Sat 31 Oct',
     paid: 640,
     suburb: 'Fitzroy',
