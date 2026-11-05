@@ -29,10 +29,12 @@ test('the phone demo keeps each visitor’s data and the same rules', () => {
     const me = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: maya.tokenSet });
     if (!me.json.tasks.some((task) => /Assemble a desk/.test(task.title || ''))) throw new Error('sample tasks missing');
     const sofa = me.json.tasks.find((task) => /old sofa/.test(task.title || ''));
-    if (!sofa || sofa.stage !== 'TASK_STARTED' || !sofa.bid || sofa.bid.taskerName !== 'Priya Nair') throw new Error('Maya is missing an in-progress job with Priya');
+    if (!sofa || sofa.stage !== 'ON_THE_WAY' || !sofa.bid || sofa.bid.taskerName !== 'Priya Nair' || !sofa.beforeCount) throw new Error('Maya is missing an on-the-way job with Priya');
     const priya = await dispatch({ method: 'POST', path: '/api/demo/view', query, body: { email: 'priya.demo@taskspeck.test' }, token: '' });
     const priyaMe = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: priya.tokenSet });
-    if (!priyaMe.json.tasks.some((task) => task.stage === 'TASK_STARTED' && /old sofa/.test(task.title || ''))) throw new Error('Priya cannot open the in-progress job');
+    if (!priyaMe.json.tasks.some((task) => task.stage === 'ON_THE_WAY' && /old sofa/.test(task.title || ''))) throw new Error('Priya cannot open the on-the-way job');
+    if (!priyaMe.json.user.reliability || !(priyaMe.json.user.reliability.taskerCancelPct > 0)) throw new Error('Priya cancellation rate missing');
+    if (!me.json.tasks.some((task) => task.repeatEvery === 'weekly' && /clean/.test(task.title || ''))) throw new Error('weekly repeat missing');
     const user = db.userFromToken(maya.tokenSet);
     const licensed = db.upsertListingText('Rewire the kitchen power points', null, user);
     const blocked = await db.publishListing(licensed.task.id, { text: 'Rewire the kitchen power points', title: 'Rewire', cat: 'home', priceNum: 80 }, user);
@@ -49,7 +51,7 @@ test('the phone demo keeps each visitor’s data and the same rules', () => {
     await seedDemo(db);
     const restored = await dispatch({ method: 'POST', path: '/api/demo/view', query, body: { email: 'maya.demo@taskspeck.test' }, token: '' });
     const restoredMe = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: restored.tokenSet });
-    if (!restoredMe.json.tasks.some((task) => task.stage === 'TASK_STARTED' && /old sofa/.test(task.title || '') && task.bid && task.bid.taskerName === 'Priya Nair')) throw new Error('reset did not restore the in-progress job');
+    if (!restoredMe.json.tasks.some((task) => task.stage === 'ON_THE_WAY' && /old sofa/.test(task.title || '') && task.bid && task.bid.taskerName === 'Priya Nair')) throw new Error('reset did not restore the on-the-way job');
     console.log('pages-demo-ok');
   `;
   const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
