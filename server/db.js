@@ -1797,7 +1797,9 @@ export async function sweepJobDays(now = new Date()) {
 }
 
 export function workspace(user) {
-  const tasks = store.tasks.filter((t) => t.requesterId === user.id).map((t) => publicTask(t, user));
+  const own = store.tasks.filter((t) => t.requesterId === user.id);
+  const assigned = store.tasks.filter((t) => t.requesterId !== user.id && isAcceptedTasker(t, user));
+  const tasks = [...own, ...assigned].map((t) => publicTask(t, user));
   const bids = store.bids.filter((b) => b.taskerId === user.id).map((b) => ({ ...publicBid(b), task: briefTask(findTask(b.taskId)) }));
   const taskIds = new Set([
     ...tasks.map((t) => t.id),

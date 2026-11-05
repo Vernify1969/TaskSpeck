@@ -71,8 +71,9 @@ export async function seedDemo(db) {
   must(db.markCompleted(tasks.cleaning.id, sam, { photoCount: 2 }), 'complete clean');
   must(await db.approvePayment(tasks.cleaning.id, maya), 'pay clean');
   must(await db.addReview(tasks.cleaning.id, maya, { stars: 5, text: 'Demo review: the clean was careful and the photos were clear.', tags: ['Reliability'] }), 'review');
-  const upcoming = must(await db.placeBid(tasks.rubbish.id, { fee: 320, message: 'I have a ute for the sofa.' }, priya), 'rubbish offer');
-  must(await db.acceptBid(tasks.rubbish.id, { bidId: upcoming.bid.id }, maya), 'accept rubbish');
+  const sofaOffer = must(await db.placeBid(tasks.rubbish.id, { fee: 320, message: 'I have a ute for the sofa.' }, priya), 'rubbish offer');
+  must(await db.acceptBid(tasks.rubbish.id, { bidId: sofaOffer.bid.id }, maya), 'accept rubbish');
+  must(db.markStarted(tasks.rubbish.id, priya), 'start rubbish');
   must(db.saveRecords(maya, [{
     title: 'End-of-lease clean for a one-bedroom',
     cat: 'cleaning',

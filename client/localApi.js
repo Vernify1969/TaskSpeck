@@ -16,6 +16,7 @@ export function resetDemoData() {
   try {
     localStorage.removeItem(BROWSER_STORE_KEY);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('taskspeck-sos-reports');
   } catch { /* private mode keeps only this tab */ }
   location.reload();
 }

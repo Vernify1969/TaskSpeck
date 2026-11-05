@@ -28,6 +28,11 @@ test('the phone demo keeps each visitor’s data and the same rules', () => {
     if (maya.json.user.name !== 'Maya Chen' || !maya.tokenSet) throw new Error('did not open as Maya');
     const me = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: maya.tokenSet });
     if (!me.json.tasks.some((task) => /Assemble a desk/.test(task.title || ''))) throw new Error('sample tasks missing');
+    const sofa = me.json.tasks.find((task) => /old sofa/.test(task.title || ''));
+    if (!sofa || sofa.stage !== 'TASK_STARTED' || !sofa.bid || sofa.bid.taskerName !== 'Priya Nair') throw new Error('Maya is missing an in-progress job with Priya');
+    const priya = await dispatch({ method: 'POST', path: '/api/demo/view', query, body: { email: 'priya.demo@taskspeck.test' }, token: '' });
+    const priyaMe = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: priya.tokenSet });
+    if (!priyaMe.json.tasks.some((task) => task.stage === 'TASK_STARTED' && /old sofa/.test(task.title || ''))) throw new Error('Priya cannot open the in-progress job');
     const user = db.userFromToken(maya.tokenSet);
     const licensed = db.upsertListingText('Rewire the kitchen power points', null, user);
     const blocked = await db.publishListing(licensed.task.id, { text: 'Rewire the kitchen power points', title: 'Rewire', cat: 'home', priceNum: 80 }, user);
@@ -41,6 +46,10 @@ test('the phone demo keeps each visitor’s data and the same rules', () => {
     mem.delete(BROWSER_STORE_KEY);
     mem.delete('taskspeck-demo-token');
     if (mem.has(BROWSER_STORE_KEY)) throw new Error('reset did not clear the saved demo');
+    await seedDemo(db);
+    const restored = await dispatch({ method: 'POST', path: '/api/demo/view', query, body: { email: 'maya.demo@taskspeck.test' }, token: '' });
+    const restoredMe = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: restored.tokenSet });
+    if (!restoredMe.json.tasks.some((task) => task.stage === 'TASK_STARTED' && /old sofa/.test(task.title || '') && task.bid && task.bid.taskerName === 'Priya Nair')) throw new Error('reset did not restore the in-progress job');
     console.log('pages-demo-ok');
   `;
   const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
