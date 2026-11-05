@@ -30,6 +30,12 @@ test('the phone demo keeps each visitor’s data and the same rules', () => {
     if (!me.json.tasks.some((task) => /Assemble a desk/.test(task.title || ''))) throw new Error('sample tasks missing');
     const sofa = me.json.tasks.find((task) => /old sofa/.test(task.title || ''));
     if (!sofa || sofa.stage !== 'ON_THE_WAY' || !sofa.bid || sofa.bid.taskerName !== 'Priya Nair' || !sofa.beforeCount) throw new Error('Maya is missing an on-the-way job with Priya');
+    if (!sofa.phones || sofa.phones.tasker !== '0414 000 333' || !/Curzon/.test(sofa.address || '')) throw new Error('booked job should show the phone and street');
+    const desk = me.json.tasks.find((task) => /Assemble a desk/.test(task.title || ''));
+    const samOffer = (desk && desk.bids || []).find((bid) => /Sam/.test(bid.taskerName || ''));
+    if (!samOffer || samOffer.taskerName !== 'Sam T' || desk.phones) throw new Error('an open offer should hide the full name and phone');
+    const clean = me.json.tasks.find((task) => task.stage === 'COMPLETED' && /End-of-lease clean/.test(task.title || ''));
+    if (!clean || clean.phones || !/Gore/.test(clean.address || '') || !clean.bid || clean.bid.taskerName !== 'Priya Nair') throw new Error('a finished job should hide the phone and keep the address');
     const priya = await dispatch({ method: 'POST', path: '/api/demo/view', query, body: { email: 'priya.demo@taskspeck.test' }, token: '' });
     const priyaMe = await dispatch({ method: 'GET', path: '/api/auth/me', query, body: {}, token: priya.tokenSet });
     if (!priyaMe.json.tasks.some((task) => task.stage === 'ON_THE_WAY' && /old sofa/.test(task.title || ''))) throw new Error('Priya cannot open the on-the-way job');

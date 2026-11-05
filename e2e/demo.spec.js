@@ -334,7 +334,7 @@ for (const viewport of widths) {
       await expect(maya.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await settle(maya);
       await maya.getByRole('button', { name: title }).click();
-      await maya.getByRole('button', { name: /Sam Taylor/ }).first().click();
+      await maya.getByRole('button', { name: /Sam T(?!aylor)/ }).first().click();
       await maya.getByRole('button', { name: 'Accept offer' }).click();
       await expect(maya.locator('[data-demo-pay]')).toBeVisible();
       await maya.getByRole('button', { name: /Accept and pay/ }).click();
@@ -372,7 +372,7 @@ for (const viewport of widths) {
       await expect(maya.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await settle(maya);
       await maya.getByRole('button', { name: cancelTitle }).click();
-      await maya.getByRole('button', { name: /Sam Taylor/ }).first().click();
+      await maya.getByRole('button', { name: /Sam T(?!aylor)/ }).first().click();
       await maya.getByRole('button', { name: 'Accept offer' }).click();
       await maya.getByRole('button', { name: /Accept and pay/ }).click();
       await maya.locator('#paybtn').click();
@@ -390,7 +390,7 @@ for (const viewport of widths) {
       await expect(maya.getByRole('heading', { name: 'Fair help, without a booking fee.' })).toBeVisible();
       await settle(maya);
       await maya.getByRole('button', { name: disputeTitle }).click();
-      await maya.getByRole('button', { name: /Sam Taylor/ }).first().click();
+      await maya.getByRole('button', { name: /Sam T(?!aylor)/ }).first().click();
       await maya.getByRole('button', { name: 'Accept offer' }).click();
       await maya.getByRole('button', { name: /Accept and pay/ }).click();
       await maya.locator('#paybtn').click();
@@ -403,7 +403,7 @@ for (const viewport of widths) {
       await maya.getByRole('button', { name: 'Report a problem' }).click();
       await maya.getByRole('button', { name: 'Damage', exact: true }).click();
       await maya.getByRole('button', { name: 'Submit report' }).click();
-      await expect(maya.getByText(/Problem reported|Damage/)).toBeVisible();
+      await expect(maya.getByText(/Problem reported|Damage/).first()).toBeVisible();
       await mayaContext.close();
       await samContext.close();
     });

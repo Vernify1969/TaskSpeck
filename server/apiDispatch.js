@@ -35,6 +35,7 @@ import {
   approvePayment,
   postMessage,
   listMessages,
+  fileReport,
   saveBundle,
   saveSearch,
   updateSearch,
@@ -279,6 +280,7 @@ export async function dispatch({ method, path, query, body = {}, token = '', adm
     if (action === 'review' && method === 'POST') return run(await addReview(id, user, body));
     if (action === 'messages' && method === 'GET') return run(listMessages(id, user));
     if (action === 'messages' && method === 'POST') return run(await postMessage(id, user, body));
+    if (action === 'report' && method === 'POST') return run(fileReport(id, user, body));
     if (action === 'bundle' && method === 'PUT') return run(saveBundle(id, user, body.bundle ?? body));
   }
 

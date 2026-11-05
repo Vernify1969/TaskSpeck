@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword, newSessionToken, hashToken } from './auth
 import { deliver } from './notify.js';
 import { prohibitedReason, highRiskAnswer } from './safety.js';
 import { registeredWorkReason } from '../shared/registeredWork.js';
+import { CHAT_WARNING, HIDDEN, RULE_REMINDER, guardMessage, shortName } from '../shared/chatGuard.js';
 import {
   resolveSuburb as resolveKnownSuburb,
   searchSuburbs,
@@ -59,6 +60,15 @@ const BOOKED_STAGES = new Set([
   'FIX_REQUESTED', 'FIX_DONE', 'DISPUTED', 'REQUESTER_CONFIRMED', 'PAYMENT_RELEASED',
   'COMPLETED', 'RESOLVED',
 ]);
+const NAME_OPEN = new Set([
+  'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'ON_THE_WAY', 'TASK_STARTED', 'TASKER_COMPLETED',
+  'FIX_REQUESTED', 'FIX_DONE', 'DISPUTED', 'REQUESTER_CONFIRMED', 'PAYMENT_RELEASED',
+  'COMPLETED', 'RESOLVED',
+]);
+const PHONE_OPEN = new Set([
+  'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'ON_THE_WAY', 'TASK_STARTED',
+  'FIX_REQUESTED', 'FIX_DONE', 'DISPUTED',
+]);
 
 const PROOF_CATS = new Set(['rubbish', 'cleaning', 'furniture', 'home']);
 
@@ -78,6 +88,7 @@ function emptyStore() {
     shares: [],
     reviews: [],
     records: [],
+    reports: [],
     outbox: [],
     geocodes: [],
     waitlist: [],
@@ -455,8 +466,62 @@ function showDemoBids(task, viewer) {
   return !!(viewer && viewer.demoMode && viewer.id === task.requesterId);
 }
 
+function namesOpen(task) {
+  return !!(task && NAME_OPEN.has(task.stage));
+}
+
+function phonesOpen(task) {
+  return !!(task && PHONE_OPEN.has(task.stage));
+}
+
+function displayName(full, viewer, task, ownerId) {
+  const name = String(full || '').trim();
+  if (!name) return name;
+  if (viewer && ownerId && viewer.id === ownerId) return name;
+  if (namesOpen(task) && isParty(task, viewer)) return name;
+  return shortName(name);
+}
+
+function presentBid(bid, viewer, task) {
+  const row = publicBid(bid);
+  row.taskerName = displayName(bid.taskerName, viewer, task, bid.taskerId);
+  return row;
+}
+
+function presentMessage(message, task, viewer) {
+  const copy = { ...message };
+  if (!(viewer && message.fromUserId === viewer.id)) {
+    copy.fromName = namesOpen(task) && isParty(task, viewer) ? message.fromName : shortName(message.fromName);
+  }
+  return copy;
+}
+
+function partyPhones(task) {
+  return {
+    requester: requesterOf(task)?.phone || '',
+    tasker: acceptedTasker(task)?.phone || '',
+  };
+}
+
+function needsReminder(task, viewer) {
+  const counts = {};
+  for (const message of store.messages) {
+    if (!message.warning || message.fromUserId === viewer.id) continue;
+    if (task && message.taskId !== task.id) continue;
+    counts[message.fromUserId] = (counts[message.fromUserId] || 0) + 1;
+  }
+  if (Object.values(counts).some((n) => n >= 2)) return true;
+  const reports = {};
+  for (const report of store.reports || []) {
+    if (!report.aboutUserId || report.fromUserId !== viewer.id) continue;
+    if (task && report.taskId !== task.id) continue;
+    reports[report.aboutUserId] = (reports[report.aboutUserId] || 0) + 1;
+  }
+  return Object.values(reports).some((n) => n >= 2);
+}
+
 function visibleBids(task, viewer) {
-  let bids = bidsForTask(task.id).map(publicBid);
+  let bids = bidsForTask(task.id).map((bid) => presentBid(bid, viewer, task));
   if (!showDemoBids(task, viewer)) bids = bids.filter((b) => b.source !== 'demo');
   if (viewer && viewer.id === task.requesterId) return bids;
   if (!viewer) return [];
@@ -474,7 +539,7 @@ export function publicTask(task, viewer) {
   const base = {
     id: task.id,
     requesterId: task.requesterId,
-    requesterName: task.requesterName || requesterOf(task)?.name || 'Requester',
+    requesterName: displayName(task.requesterName || requesterOf(task)?.name || 'Requester', viewer, task, task.requesterId),
     text: task.text || '',
     title: task.title || '',
     cat: retireCat(task.cat) || 'other',
@@ -508,7 +573,13 @@ export function publicTask(task, viewer) {
     updatedAt: task.updatedAt,
     createdAt: task.createdAt,
     bid: acceptedPublic
-      ? { taskerName: acceptedPublic.taskerName, fee: acceptedPublic.fee, at: acceptedPublic.at, id: acceptedPublic.id, demo: acceptedPublic.source === 'demo' }
+      ? {
+        taskerName: displayName(acceptedPublic.taskerName, viewer, task, acceptedPublic.taskerId),
+        fee: acceptedPublic.fee,
+        at: acceptedPublic.at,
+        id: acceptedPublic.id,
+        demo: acceptedPublic.source === 'demo',
+      }
       : undefined,
     milestones: (task.milestones || []).map((m) => ({ ...m })),
   };
@@ -532,9 +603,10 @@ export function publicTask(task, viewer) {
     reviews: store.reviews.filter((r) => r.taskId === task.id).map((r) => ({
       stars: r.stars,
       text: r.text,
-      name: findUserAny(r.fromUserId)?.name || 'Demo',
+      name: displayName(findUserAny(r.fromUserId)?.name || 'Demo', viewer, task, r.fromUserId),
       role: r.fromUserId === task.requesterId ? 'customer' : 'tasker',
     })),
+    ...(phonesOpen(task) ? { phones: partyPhones(task) } : {}),
   };
 }
 
@@ -1108,7 +1180,7 @@ export async function placeBid(id, { taskerName, fee, message } = {}, user) {
     await notifyUser(requester, {
       kind: 'offer',
       title: 'New offer',
-      body: `${user.name} offered $${amount} for "${row.title || 'your task'}".`,
+      body: `${shortName(user.name)} offered $${amount} for "${row.title || 'your task'}".`,
       taskId: row.id,
     });
   }
@@ -1736,13 +1808,17 @@ export async function postMessage(taskId, user, { text } = {}) {
   const body = String(text || '').trim();
   if (!body) return { error: 'Write a message first', code: 400 };
   if (body.length > 2000) return { error: 'That message is too long', code: 400 };
-  const warning = CONTACT_OR_CASH.test(body);
+  const guarded = guardMessage(body, { phonesAllowed: phonesOpen(task) });
+  const hidden = guarded.changed || guarded.text.includes(HIDDEN);
+  const cash = !hidden && (CONTACT_OR_CASH.test(body) || CONTACT_OR_CASH.test(guarded.text));
+  const warning = hidden || cash;
+  const warningText = hidden ? CHAT_WARNING : cash ? CONTACT_WARNING : null;
   const msg = {
     id: store.counters.messageId++,
     taskId: task.id,
     fromUserId: user.id,
     fromName: user.name,
-    text: body,
+    text: guarded.text,
     at: iso(),
     warning,
   };
@@ -1761,12 +1837,42 @@ export async function postMessage(taskId, user, { text } = {}) {
     await notifyUser(person, {
       kind: 'message',
       title: 'New message',
-      body: `${user.name} wrote about "${task.title || 'a task'}".`,
+      body: `${namesOpen(task) ? user.name : shortName(user.name)} wrote about "${task.title || 'a task'}".`,
       taskId: task.id,
     });
   }
   schedulePersist();
-  return { message: msg, warning, warningText: warning ? CONTACT_WARNING : null };
+  return {
+    message: presentMessage(msg, task, user),
+    warning,
+    warningText,
+    reminder: needsReminder(task, user),
+    hidden: HIDDEN,
+  };
+}
+
+export function fileReport(taskId, user, { reason } = {}) {
+  const gate = requireUser(user);
+  if (gate) return gate;
+  const task = findTask(taskId);
+  if (!task) return { error: 'Task not found', code: 404 };
+  if (!canMessage(task, user)) return { error: 'You cannot report on this task', code: 403 };
+  const why = String(reason || '').trim().slice(0, 200);
+  if (!why) return { error: 'Choose what happened', code: 400 };
+  const other = user.id === task.requesterId ? acceptedTasker(task) : findUser(task.requesterId);
+  store.reports ||= [];
+  store.counters.reportId = (store.counters.reportId || 1) + 1;
+  store.reports.push({
+    id: store.counters.reportId,
+    taskId: task.id,
+    fromUserId: user.id,
+    aboutUserId: other ? other.id : null,
+    reason: why,
+    at: iso(),
+  });
+  schedulePersist();
+  const reminder = needsReminder(task, user);
+  return { ok: true, reminder, reminderText: reminder ? RULE_REMINDER : null };
 }
 
 export function listMessages(taskId, user) {
@@ -1779,7 +1885,12 @@ export function listMessages(taskId, user) {
   if (!isRequester(task, user) && !isAcceptedTasker(task, user)) {
     messages = messages.filter((m) => m.fromUserId === user.id || m.fromUserId === task.requesterId);
   }
-  return { messages: messages.map((m) => ({ ...m })), warningText: CONTACT_WARNING };
+  return {
+    messages: messages.map((m) => presentMessage(m, task, user)),
+    warningText: CONTACT_WARNING,
+    reminder: needsReminder(task, user),
+    reminderText: RULE_REMINDER,
+  };
 }
 
 export function saveBundle(taskId, user, bundle) {
@@ -2004,7 +2115,10 @@ export function workspace(user) {
     ...tasks.map((t) => t.id),
     ...bids.map((b) => b.taskId),
   ]);
-  const messages = store.messages.filter((m) => taskIds.has(m.taskId) || m.fromUserId === user.id).map((m) => ({ ...m }));
+  const messages = store.messages.filter((m) => taskIds.has(m.taskId) || m.fromUserId === user.id).map((m) => {
+    const task = findTask(m.taskId);
+    return task ? presentMessage(m, task, user) : { ...m };
+  });
   return {
     user: publicUser(user),
     tasks,
