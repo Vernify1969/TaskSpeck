@@ -4,7 +4,7 @@ TaskSpeck is a small marketplace for one-off jobs. A requester posts a task, Tas
 
 ## Try it on a phone, from anywhere
 
-The public demo is a static page. It does not need a server. Each phone keeps its own sample data in the browser. It opens as Maya. Use Viewing as to switch to Sam, Priya, or Casey. No password is shown, and no real money moves. Profile has **Reset demo data** if you want the sample tasks back.
+The public demo is a static page. It does not need a server. Each phone keeps its own sample data in the browser. It opens as Maya. On Profile, **Demo: switch person** changes to Sam, Priya, or Casey. No password is shown, and no real money moves. Profile also has **Reset demo data** if you want the sample tasks back.
 
 The address is https://vernify1969.github.io/TaskSpeck/
 
@@ -31,7 +31,7 @@ npm run demo
 
 On Windows, double-click `start-demo.bat` in this folder. The first time, it installs the app. It then starts the demo and opens a browser at http://127.0.0.1:5173/ .
 
-The demo opens straight into the app as Maya. A Viewing as switch under the header changes to Sam, Priya, or Casey with one tap. No password is shown. A yellow Demo label shows wherever the sample data appears. A Demo payment note shows when a price is recorded. No real money moves.
+The demo opens straight into the app as Maya. On Profile, **Demo: switch person** changes to Sam, Priya, or Casey with one tap. No password is shown. A yellow Demo label shows wherever the sample data appears. A Demo payment note shows when a price is recorded. No real money moves.
 
 The server listens on every network address on your computer, not only this machine. The terminal prints a second address such as http://192.168.1.20:5173/ . On a phone connected to the same Wi-Fi, type that address into the browser. Leave the terminal window open while you look around.
 
