@@ -241,6 +241,65 @@ test('people can message before an offer is accepted', async () => {
   assert.equal(db.getTaskById(pub.task.id, sam).stage, 'POSTED');
 });
 
+test('contact details stay hidden until booking and phone numbers return after it is done', async () => {
+  db.resetStore();
+  const maya = await account('Maya Chen', 'maya-hide@example.com');
+  const sam = await account('Sam Taylor', 'sam-hide@example.com');
+  db.updateProfile(maya, { phone: '0412 000 111' });
+  db.updateProfile(sam, { phone: '0413 000 222' });
+  const draft = db.upsertListingText('Assemble a bookshelf', null, maya);
+  const pub = await db.publishListing(draft.task.id, {
+    text: 'Assemble a bookshelf', title: 'Assemble a bookshelf', cat: 'furniture',
+    budgetLabel: '$120', priceNum: 120, startAt: future(48), startMin: 600,
+    suburb: 'Southbank', address: '30 City Rd, Southbank VIC 3006',
+  }, maya);
+  const peek = db.getTaskById(pub.task.id, sam);
+  assert.equal(peek.requesterName, 'Maya C');
+  assert.equal(peek.address, undefined);
+  assert.equal(peek.phones, undefined);
+  const phone = await db.postMessage(pub.task.id, sam, { text: 'text me on 0412 345 678' });
+  assert.equal(phone.warning, true);
+  assert.match(phone.warningText, /once the job is booked/);
+  assert.match(phone.message.text, /\[hidden until booking\]/);
+  assert.equal(phone.message.text.includes('0412'), false);
+  const ordinary = await db.postMessage(pub.task.id, maya, { text: 'The budget is $120 and 2pm still works. 200 Spencer St is the building, postcode 3000.' });
+  assert.equal(ordinary.warning, false);
+  assert.match(ordinary.message.text, /\$120/);
+  assert.match(ordinary.message.text, /2pm/);
+  assert.match(ordinary.message.text, /Spencer St/);
+  assert.match(ordinary.message.text, /3000/);
+  const bid = await db.placeBid(pub.task.id, { fee: 120 }, sam);
+  assert.equal(bid.bid.taskerName, 'Sam Taylor');
+  const offers = db.getTaskById(pub.task.id, maya);
+  assert.equal(offers.bids.find((row) => row.id === bid.bid.id).taskerName, 'Sam T');
+  const accepted = await db.acceptBid(pub.task.id, { bidId: bid.bid.id }, maya);
+  assert.equal(accepted.task.bid.taskerName, 'Sam Taylor');
+  assert.equal(accepted.task.phones.tasker, '0413 000 222');
+  assert.equal(accepted.task.phones.requester, '0412 000 111');
+  assert.match(accepted.task.address, /City Rd/);
+  const late = await db.postMessage(pub.task.id, sam, { text: 'Running late, call 0413 000 222' });
+  assert.equal(late.warning, false);
+  assert.match(late.message.text, /0413 000 222/);
+  const mail = await db.postMessage(pub.task.id, sam, { text: 'or sam at gmail dot com' });
+  assert.equal(mail.warning, true);
+  assert.match(mail.message.text, /\[hidden until booking\]/);
+  assert.equal(db.markOnTheWay(pub.task.id, sam).error, undefined);
+  assert.equal(db.markStarted(pub.task.id, sam).error, undefined);
+  const finished = db.markCompleted(pub.task.id, sam, { afterPhotos: ['data:image/svg+xml,x'], photoCount: 1 });
+  assert.equal(finished.error, undefined);
+  const done = db.getTaskById(pub.task.id, maya);
+  assert.equal(done.phones, undefined);
+  assert.equal(done.bid.taskerName, 'Sam Taylor');
+  assert.match(done.address, /City Rd/);
+  const hiddenAgain = await db.postMessage(pub.task.id, sam, { text: 'call 0413 000 222 tomorrow' });
+  assert.match(hiddenAgain.message.text, /\[hidden until booking\]/);
+  const first = db.fileReport(pub.task.id, maya, { reason: 'Asked for my contact details' });
+  assert.equal(first.ok, true);
+  const second = db.fileReport(pub.task.id, maya, { reason: 'Asked to pay cash or outside TaskSpeck' });
+  assert.equal(second.reminder, true);
+  assert.match(second.reminderText, /stay in TaskSpeck/);
+});
+
 test('saved-search alerts follow availability, and job-day notices send once', async () => {
   db.resetStore();
   const alex = await account('Alex', 'alex@example.com');

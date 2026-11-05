@@ -14,16 +14,16 @@ function hoursFromNow(hours) {
 const SAMPLE_SHOT = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#E8EFEA"/><rect x="16" y="24" width="32" height="20" rx="3" fill="#0E5A4B"/></svg>');
 
 const JOBS = [
-  { cat: 'moving', title: 'Help carry boxes to a new apartment', text: 'Help carry about 20 boxes from the lobby to level 6 in Carlton on Saturday.', suburb: 'Carlton', price: 220 },
-  { cat: 'cleaning', title: 'End-of-lease clean for a one-bedroom', text: 'End-of-lease clean for a one-bedroom apartment in Fitzroy. Kitchen, bathroom and floors.', suburb: 'Fitzroy', price: 680 },
-  { cat: 'garden', title: 'Tidy a small courtyard', text: 'Mow and weed a small courtyard in Richmond.', suburb: 'Richmond', price: 280 },
-  { cat: 'home', title: 'Hang a mirror in the hallway', text: 'Hang a mirror in the hallway. Ground floor only. The owner has given permission.', suburb: 'East Melbourne', price: 160 },
-  { cat: 'furniture', title: 'Assemble a desk and a bookshelf', text: 'Assemble a flat-pack desk and a bookshelf. All parts are in the box.', suburb: 'Southbank', price: 210 },
-  { cat: 'pickup', title: 'Collect a parcel from the post office', text: 'Collect a parcel from the post office and bring it to the apartment lobby.', suburb: 'Melbourne', price: 55 },
-  { cat: 'rubbish', title: 'Take an old sofa to the tip', text: 'Remove an old sofa and take it to the tip.', suburb: 'North Melbourne', price: 340 },
-  { cat: 'painting', title: 'Paint one bedroom', text: 'Paint one bedroom, ground floor only. The paint is supplied.', suburb: 'Parkville', price: 820 },
-  { cat: 'packing', title: 'Pack the kitchen into boxes', text: 'Pack the kitchen into boxes before a move. Boxes are supplied.', suburb: 'West Melbourne', price: 290 },
-  { cat: 'other', title: 'Sort a wardrobe', text: 'Help sort a wardrobe into keep and donate piles.', suburb: 'Collingwood', price: null },
+  { cat: 'moving', title: 'Help carry boxes to a new apartment', text: 'Help carry about 20 boxes from the lobby to level 6 in Carlton on Saturday.', suburb: 'Carlton', price: 220, address: '18 Rathdowne St, Carlton VIC 3053' },
+  { cat: 'cleaning', title: 'End-of-lease clean for a one-bedroom', text: 'End-of-lease clean for a one-bedroom apartment in Fitzroy. Kitchen, bathroom and floors.', suburb: 'Fitzroy', price: 680, address: '8 Gore St, Fitzroy VIC 3065' },
+  { cat: 'garden', title: 'Tidy a small courtyard', text: 'Mow and weed a small courtyard in Richmond.', suburb: 'Richmond', price: 280, address: '22 Docker St, Richmond VIC 3121' },
+  { cat: 'home', title: 'Hang a mirror in the hallway', text: 'Hang a mirror in the hallway. Ground floor only. The owner has given permission.', suburb: 'East Melbourne', price: 160, address: '6 Powlett St, East Melbourne VIC 3002' },
+  { cat: 'furniture', title: 'Assemble a desk and a bookshelf', text: 'Assemble a flat-pack desk and a bookshelf. All parts are in the box.', suburb: 'Southbank', price: 210, address: '30 City Rd, Southbank VIC 3006' },
+  { cat: 'pickup', title: 'Collect a parcel from the post office', text: 'Collect a parcel from the post office and bring it to the apartment lobby.', suburb: 'Melbourne', price: 55, address: '200 Spencer St, Melbourne VIC 3000' },
+  { cat: 'rubbish', title: 'Take an old sofa to the tip', text: 'Remove an old sofa and take it to the tip.', suburb: 'North Melbourne', price: 340, address: '14 Curzon St, North Melbourne VIC 3051' },
+  { cat: 'painting', title: 'Paint one bedroom', text: 'Paint one bedroom, ground floor only. The paint is supplied.', suburb: 'Parkville', price: 820, address: '40 Gatehouse St, Parkville VIC 3052' },
+  { cat: 'packing', title: 'Pack the kitchen into boxes', text: 'Pack the kitchen into boxes before a move. Boxes are supplied.', suburb: 'West Melbourne', price: 290, address: '12 Adderley St, West Melbourne VIC 3003' },
+  { cat: 'other', title: 'Sort a wardrobe', text: 'Help sort a wardrobe into keep and donate piles.', suburb: 'Collingwood', price: null, address: '50 Smith St, Collingwood VIC 3066' },
 ];
 
 async function makeAccount(db, spec) {
@@ -31,6 +31,7 @@ async function makeAccount(db, spec) {
   const user = db.userFromToken(signed.token);
   must(db.updateProfile(user, {
     suburb: spec.suburb,
+    phone: spec.phone || '',
     demoMode: true,
     safetyGuide: !!spec.tasker,
     bio: spec.tasker ? 'Demo Tasker. Sample profile only.' : 'Demo requester. Sample profile only.',
@@ -54,6 +55,7 @@ export async function seedDemo(db) {
       title: job.title,
       cat: job.cat,
       suburb: job.suburb,
+      address: job.address || '',
       budgetLabel: job.price ? `$${job.price}` : 'Request quotes',
       priceNum: job.price,
       startAt: hoursFromNow(72),

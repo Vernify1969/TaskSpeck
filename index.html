@@ -377,6 +377,7 @@ window.taskspeckResetDemo = resetDemoData;
 window.taskspeckReady = import.meta.env.VITE_LOCAL_API === '1' ? installLocalApi() : Promise.resolve();
 </script>
 <script type="module">
+import { guardMessage, shortName, CHAT_WARNING, RULE_REMINDER } from './shared/chatGuard.js';
 const PAGES = import.meta.env.VITE_LOCAL_API === '1';
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -644,6 +645,15 @@ const S={
   user:null,myTasks:[],askThreads:[],ask:null,savedSearches:[],shareUrl:'',shareView:null,shareData:null,authMode:'login',editIdx:0
 };
 const meName=()=>(S.user&&S.user.name)||'You';
+const NAME_OPEN_CLIENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED','TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED','FIX_REQUESTED','FIX_DONE','DISPUTED','RESOLVED','Assigned','OnTheWay','Started','Completed','PaymentReleased']);
+const PHONE_OPEN_CLIENT=new Set(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED','FIX_REQUESTED','FIX_DONE','DISPUTED','Assigned','OnTheWay','Started']);
+const KEEP_REPORT=new Set(['Asked to pay cash or outside TaskSpeck','Asked for my contact details','Other']);
+function namesOpenClient(task){return !!(task&&NAME_OPEN_CLIENT.has(task.status||task.stage))}
+function phonesOpenClient(task){return !!(task&&PHONE_OPEN_CLIENT.has(task.status||task.stage))}
+function shownName(name,task){if(!name)return '';if(name===meName())return name;if(namesOpenClient(task))return name;return shortName(name)}
+function otherPhone(task){if(!phonesOpenClient(task)||!task||!task.phones)return '';return viewerIsTasker()?(task.phones.requester||''):(task.phones.tasker||'')}
+function taskForThread(th){return myTaskList().find(t=>th&&t.listingId&&th.listingId&&t.listingId===th.listingId)||null}
+function completedWith(name){return myTaskList().filter(t=>offerName(t)===name&&['COMPLETED','PAYMENT_RELEASED','REQUESTER_CONFIRMED'].includes(t.status)).sort((a,b)=>(Number(b.listingId)||0)-(Number(a.listingId)||0))[0]||null}
 const SOS_KEY='taskspeck-sos-reports';
 function jobInProgress(t){return !!(t&&(t.status==='TASK_STARTED'||t.status==='Started'||t.status==='ON_THE_WAY'))}
 function offerName(t){const b=t&&t._bundle;if(!b||!Array.isArray(b.offers)||!b.offers.length)return '';const o=b.offers.find(x=>x.id===b.offerId)||b.offers[0];return o&&o.name?o.name:''}
@@ -735,8 +745,9 @@ let bundleT;
 function saveBundleSoon(){if(!S.user||!S.task||!S.task.listingId)return;const id=S.task.listingId,bundle=captureBundle();clearTimeout(bundleT);bundleT=setTimeout(()=>{api('/api/tasks/'+id+'/bundle',{method:'PUT',body:{bundle}}).catch(()=>{})},500)}
 function stashCurrent(){if(!S.task)return;S.task._bundle=captureBundle();S.task._address=S.form.addr||S.task._address||'';const i=S.myTasks.findIndex(t=>t===S.task||(t.listingId&&S.task.listingId&&t.listingId===S.task.listingId));if(i<0)S.myTasks.unshift(S.task);else S.myTasks[i]=S.task;saveBundleSoon()}
 function activateTask(t){if(!t){S.task=null;return}reviveTask(t);const b=t._bundle||{};S.task=t;S.offers=b.offers||[];S.offerId=b.offerId??null;S.events=b.events||[];S.payment=b.payment??null;S.agreement=b.agreement??null;S.dispute=b.dispute??null;S.change=b.change??null;S.flags=b.flags||{};S.thread=b.thread??null;S.proof=b.proof||[];S.checklist=b.checklist||[];S.fix=b.fix??null;if(t._address)S.form.addr=t._address;if(!S.myTasks.includes(t))S.myTasks.unshift(t)}
-function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.requesterId=row.requesterId||t.requesterId||null;t.requesterName=row.requesterName||t.requesterName||'';t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];t.beforePhotos=row.beforePhotos||t.beforePhotos||[];t.afterPhotos=row.afterPhotos||t.afterPhotos||[];t.assignedAt=row.assignedAt||t.assignedAt||null;t.onTheWayAt=row.onTheWayAt||t.onTheWayAt||null;t.startedAt=row.startedAt||t.startedAt||null;t.doneAt=row.doneAt||t.doneAt||null;t.repeatEvery=row.repeatEvery||t.repeatEvery||null;t.repeatOf=row.repeatOf||t.repeatOf||null;t.cancelledBy=row.cancelledBy||t.cancelledBy||null;if(row.afterPhotos&&row.afterPhotos.length&&(!t._bundle.proof||!t._bundle.proof.length))t._bundle.proof=row.afterPhotos.map((url,i)=>({name:'After photo '+(i+1),url}));hydrateOffers(row,t);return t}
+function taskFromServer(row){const snap=row.bundle&&row.bundle.task?reviveTask({...row.bundle.task}):null;const t=snap||{id:'T-'+row.id,title:row.title||String(row.text||'').slice(0,80)||'Task',cat:row.cat||'other',desc:row.text||'',status:row.stage||'POSTED',date:row.startAt?new Date(row.startAt):null,startMin:row.startMin,flexible:!row.startAt,budget:{type:row.priceNum?'SET':'OPEN',amount:row.priceNum,label:row.budgetLabel||'Open to offers'},duration:row.durationMin?{label:'About '+row.durationMin+' minutes',min:row.durationMin}:null,notes:row.notes||[],special:row.special||[],prop:row.propPrivate||'',photos:[]};t.listingId=row.id;t.requesterId=row.requesterId||t.requesterId||null;t.requesterName=row.requesterName||t.requesterName||'';t.status=row.stage||t.status;t._address=row.address||'';t._bundle=row.bundle||{};if(row.payment)t._bundle.payment=row.payment;if((!t._bundle.offers||!t._bundle.offers.length)&&row.bid){const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=[{id:row.bid.id,bidId:row.bid.id,name:row.bid.taskerName,fee:row.bid.fee,km:1,rating:'New',done:0,comp:100,canc:0,ver:true,msg:'',cats:[],repeat:0,reply:'',age:'',when,start:t.startMin||600}];t._bundle.offerId=row.bid.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:row.bid.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}if(!t.budget)t.budget={label:row.budgetLabel||'Open to offers',type:'OPEN'};if(!t.title||(t.title==='Task'&&row.text))t.title=String(row.title||row.text||'Task').slice(0,80);t.reviews=Array.isArray(row.reviews)?row.reviews:[];t.beforePhotos=row.beforePhotos||t.beforePhotos||[];t.afterPhotos=row.afterPhotos||t.afterPhotos||[];t.assignedAt=row.assignedAt||t.assignedAt||null;t.onTheWayAt=row.onTheWayAt||t.onTheWayAt||null;t.startedAt=row.startedAt||t.startedAt||null;t.doneAt=row.doneAt||t.doneAt||null;t.repeatEvery=row.repeatEvery||t.repeatEvery||null;t.repeatOf=row.repeatOf||t.repeatOf||null;t.cancelledBy=row.cancelledBy||t.cancelledBy||null;if(row.afterPhotos&&row.afterPhotos.length&&(!t._bundle.proof||!t._bundle.proof.length))t._bundle.proof=row.afterPhotos.map((url,i)=>({name:'After photo '+(i+1),url}));hydrateOffers(row,t);freshenContact(row,t);return t}
 function hydrateOffers(row,t){if(t._bundle.offers&&t._bundle.offers.length)return;const bids=Array.isArray(row.bids)?row.bids.filter(b=>b.status==='pending'||b.status==='accepted'):[];if(!bids.length)return;const when=t.date?fmtDate(t.date instanceof Date?t.date:new Date(t.date)):'Booked';t._bundle.offers=bids.map(b=>({id:b.id,bidId:b.id,name:b.taskerName,fee:b.fee,km:1,rating:'New',done:1,comp:100,canc:0,ver:true,msg:b.message||'',cats:[],repeat:0,reply:'Usually replies the same day',age:'Demo',when,start:t.startMin||600,demo:b.source==='demo'}));const acc=bids.find(b=>b.status==='accepted');if(acc){t._bundle.offerId=acc.id;t._bundle.agreement=t._bundle.agreement||{version:1,fee:acc.fee,start:fmtTime(t.startMin||600),dur:t.duration?t.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};if(row.payment)t._bundle.payment=row.payment;if(!t._bundle.events)t._bundle.events=[{l:'Offer accepted',t:''}]}}
+function freshenContact(row,t){t.suburb=row.suburb||t.suburb||'';t.requesterName=row.requesterName||t.requesterName||'';t._address=row.address||'';t.phones=row.phones||null;const offers=t._bundle&&t._bundle.offers;if(!Array.isArray(offers))return;const rows=[...(Array.isArray(row.bids)?row.bids:[]),...(row.bid?[row.bid]:[])];for(const b of rows){if(!b||!b.taskerName)continue;const hit=offers.find(o=>o.id===b.id||o.bidId===b.id)||(offers.length===1?offers[0]:null);if(hit)hit.name=b.taskerName}}
 function demoPayNote(){if(!S.serverDemo)return '';return `<div class="notice" data-demo-pay="1" style="margin-top:12px"><b>Demo payment</b>No real money moves. Amounts are only recorded in this demo.</div>`}
 function demoShort(name){const part=String(name||'').trim().split(/\s+/)[0];return part||'Demo'}
 function demoSwitchHtml(){
@@ -924,7 +935,7 @@ const verBadge=o=>o.ver?'<span class="pill ok">Identity verified</span>':'<span 
 function taskSummary(t){
   return `<div class="card"><div class="row" style="align-items:flex-start"><h3 class="grow" style="font-size:19px">${esc(t.title)}</h3>${statusPill(t.status)}</div>
   <div style="margin:8px 0">${catPill(t.cat)}</div>
-  ${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Location',(t.suburb||'Suburb')+' only')}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>`;
+  ${kv('When',whenLabel(t))}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Budget',t.budget.label)}${kv('Location',namesOpenClient(t)&&t._address?esc(t._address):esc((t.suburb||'Suburb')+' only'))}${t.photos&&t.photos.length?`<p class="muted small" style="margin:8px 0 2px">Photos</p><div class="thumbs">${t.photos.map(u=>{const url=safeImgUrl(u);return url?`<img src="${url}" alt="Photo from the requester">`:''}).join('')}</div>`:''}</div>`;
 }
 function feeBox(fee,gstOn){
   const f=calcFee(fee);
@@ -1061,8 +1072,9 @@ task(){
 },
 offer(){
   const o=chosen();if(!o)return{title:'Offer',html:''};const f=calcFee(o.fee);
-  return{title:o.name+"'s offer",html:`
-  <div class="row">${avatar(o.name,56)}<div class="grow"><h3 style="font-size:20px">${esc(o.name)}</h3><div style="margin-top:4px">${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
+  const who=shownName(o.name,S.task);
+  return{title:who+"'s offer",html:`
+  <div class="row">${avatar(who,56)}<div class="grow"><h3 style="font-size:20px">${esc(who)}</h3><div style="margin-top:4px">${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
   <button class="chip" style="margin-top:10px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>
   <div class="card" style="margin-top:14px"><b>Proposed time</b><p>${esc(o.when)}</p><p class="muted small" style="margin-top:4px">${o.km} km away</p>${o.msg?`<p class="quote">“${esc(o.msg)}”</p>`:''}</div>
   <div class="grid2" style="margin-top:12px">
@@ -1078,7 +1090,7 @@ offer(){
 confirm(){
   const o=chosen(),t=S.task;
   return{title:'Confirm task',html:`
-  <div class="card">${kv('Task',esc(t.title))}${kv('Tasker',esc(o.name))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Time',o.when.split(', ')[1])}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Agreed fee',money(o.fee))}${kv('Location','Exact address shown privately after confirmation')}</div>
+  <div class="card">${kv('Task',esc(t.title))}${kv('Tasker',esc(shownName(o.name,t)))}${kv('Date',t.date?fmtDate(t.date):o.when.split(',')[0])}${kv('Time',o.when.split(', ')[1])}${kv('Duration',t.duration?t.duration.label:'Not stated')}${kv('Agreed fee',money(o.fee))}${kv('Location','Phone and street address are shared after you book')}</div>
   <h2>What you will pay</h2>${feeBox(o.fee,(TASKERS[o.name]||{}).gst)}
   ${demoPayNote()}
   ${PROMISE}${isVacate()?'<div class="notice info" style="margin-top:10px"><b>Re-clean promise</b>If your agent\'s inspection finds issues, your Tasker returns within 48 hours at no extra cost. We cannot guarantee your bond, because the agent and landlord decide that.</div>':''}  <div class="notice" style="margin-top:12px"><b>If the Tasker cancels or does not arrive</b>You pay nothing. It counts on their cancellation rate.</div>
@@ -1175,7 +1187,10 @@ taskerprofile(){
   const n=S.profName,you=n==='You',o=S.offers.find(x=>x.name===n)||{rating:'New',done:0,comp:100,canc:0,repeat:0,reply:'New to TaskSpeck',cats:[]};
   const T=you?{bio:S.tprof.bio,since:'2026',langs:S.tprof.langs,vehicle:S.tprof.vehicle,areas:S.tprof.areas,badges:[S.verified&&'ID checked',S.tk.abn&&'ABN on file',S.tk.police&&'Police check clear',S.tk.ins&&'Insurance on file',S.tk.safety&&'Safety guide done'].filter(Boolean),photos:0,reviews:[]}:(TASKERS[n]||{bio:'',since:'2026',langs:['English'],vehicle:'',areas:'Melbourne CBD',badges:[],photos:0,reviews:[]});
   const works=you?S.tprof.photos:Array.from({length:T.photos||0},(_,i)=>i%2?SAMPLE_ITEM:SAMPLE_PHOTO);
-  return{title:you?'How requesters see you':n,html:`<div class="row">${avatar(n==='You'?'Y':n,64)}<div class="grow"><h2 style="margin:0">${you?'Your profile':esc(n)}</h2><p class="muted small">★ ${o.rating} · ${o.done} tasks · Member since ${esc(T.since)}</p></div></div>
+  const again=you?null:completedWith(n);
+  const title=you?'Your profile':esc(again?n:shownName(n,S.task));
+  return{title:you?'How requesters see you':(again?n:shownName(n,S.task)),html:`<div class="row">${avatar(n==='You'?'Y':n,64)}<div class="grow"><h2 style="margin:0">${title}</h2><p class="muted small">★ ${o.rating} · ${o.done} tasks · Member since ${esc(T.since)}</p></div></div>
+  ${again?`<button class="btn primary big" style="margin-top:12px" data-a="bookAgainFor" data-v="${esc(n)}">Book again</button>`:''}
   <div class="wrap" style="margin:10px 0">${T.badges.length?T.badges.map(b=>`<span class="pill ok">${esc(b)}</span>`).join(''):'<span class="pill">No checks completed yet</span>'}</div>
   <div class="notice info"><b>Demo profile</b>Badges here are examples. In the real app each badge only shows after that check is done.</div>
   <div class="card" style="margin-top:12px"><b>About</b><p class="muted small" style="margin-top:4px">${esc(T.bio||'No description yet.')}</p></div>
@@ -1254,26 +1269,32 @@ payments(){
 },
 msgs(){
   const rows=[];
-  if(S.thread&&S.task&&chosen()){const o=chosen(),last=S.thread[S.thread.length-1];rows.push(`<button class="card" data-a="openThread"><div class="row">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">Booked · ${esc(last?last.text:'Message')}</p></div></div></button>`)}
-  (S.askThreads||[]).forEach((th,i)=>{const last=th.messages[th.messages.length-1];rows.push(`<button class="card" data-a="openAsk" data-v="${i}"><div class="row">${avatar(th.withName||'?')}<div class="grow"><b>${esc(th.withName||'Question')}</b><p class="muted small">${esc(th.title||'')} · ${esc(last?last.text:'Ask a question')}</p></div></div></button>`)});
-  return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+(rows.length?`<div class="stack">${rows.join('')}</div><p class="muted small" style="margin-top:10px">You can ask a question before anyone accepts. Please don’t swap phone numbers or pay cash.</p>`:empty('chat','No messages yet','Ask a question from a task, or chat here after you accept an offer. Phone numbers stay in the app.'))};
+  if(S.thread&&S.task&&chosen()){const o=chosen(),last=S.thread[S.thread.length-1],who=shownName(o.name,S.task);rows.push(`<button class="card" data-a="openThread"><div class="row">${avatar(who)}<div class="grow"><b>${esc(who)}</b><p class="muted small">Booked · ${esc(last?last.text:'Message')}</p></div></div></button>`)}
+  (S.askThreads||[]).forEach((th,i)=>{const last=th.messages[th.messages.length-1],who=shownName(th.withName,taskForThread(th));rows.push(`<button class="card" data-a="openAsk" data-v="${i}"><div class="row">${avatar(who||'?')}<div class="grow"><b>${esc(who||'Question')}</b><p class="muted small">${esc(th.title||'')} · ${esc(last?last.text:'Ask a question')}</p></div></div></button>`)});
+  return{html:`<h1 class="display" style="font-size:28px">Messages</h1>`+(rows.length?`<div class="stack">${rows.join('')}</div><p class="muted small" style="margin-top:10px">You can ask a question before anyone accepts. Phone, email and links stay hidden until the job is booked.</p>`:empty('chat','No messages yet','Ask a question from a task, or chat here after you book. Phone numbers stay hidden until the job is booked.'))};
 },
 ask(){
   const th=S.ask;if(!th)return{title:'Question',html:empty('chat','No conversation','Open a task and tap Ask a question.')};
-  return{title:th.withName||'Question',html:`
-  <div class="notice"><b>Before anyone accepts</b>Ask about the task here. Please don’t swap phone numbers or arrange to pay cash. TaskSpeck can only protect a job that stays in the app.</div>
+  const who=shownName(th.withName,taskForThread(th)||S.task);
+  return{title:who||'Question',html:`
+  <div class="notice"><b>Before anyone accepts</b>Ask about the task here. Phone, email and links stay hidden until the job is booked. Please don’t arrange to pay cash.</div>
+  ${reminderBox(th.messages)}
   <p class="muted small" style="margin:8px 0">${esc(th.title||'')}</p>
-  <div id="msgs">${(th.messages||[]).map(m=>`${m.warning?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.</div>`:''}<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
-  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Ask ${esc(th.withName||'them')}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="askSend">Send</button></div>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
+  <div id="msgs">${(th.messages||[]).map(m=>`${m.warning?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>${esc(String(m.text||'').includes('[hidden until booking]')?CHAT_WARNING:'Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.')}</div>`:''}<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Ask ${esc(who||'them')}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="askSend">Send</button></div>
+  ${chatWarnBox()}
+  <button class="btn secondary" style="margin-top:8px" data-a="sheet" data-v="report">Report a problem</button>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
 },
 thread(){
-  const o=chosen();const quick=["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."];
-  return{title:o.name,html:`
-  <div class="notice"><b>Keep phone numbers and cash in the app</b>If a message asks to swap numbers or pay outside TaskSpeck, you’ll see a reminder. Jobs paid in the app stay protected.</div>
-  <div id="msgs">${S.thread.map(m=>m.sys?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.</div>`:`<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
+  const o=chosen();const who=shownName(o&&o.name,S.task);const quick=["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."];
+  return{title:who,html:`
+  <div class="notice"><b>Keep it in TaskSpeck</b>${phonesOpenClient(S.task)?'Phone numbers are shared for this booked job. Emails, links and other apps stay in TaskSpeck.':'This job is finished, so phone numbers are hidden again. Chat stays open for follow-up.'}</div>
+  ${reminderBox(S.thread)}
+  <div id="msgs">${(S.thread||[]).map(m=>m.sys?`<div class="notice" style="margin:10px 0"><b>Keep it in TaskSpeck</b>Swapping phone numbers or paying cash means we may not be able to help if something goes wrong.</div>`:`<div class="bubble ${m.from}">${esc(m.text)}</div>`).join('')}</div>
   <div class="chips scroll" style="margin-top:12px">${quick.map((q,i)=>`<button class="chip" data-a="quick" data-v="${i}">${esc(q)}</button>`).join('')}</div>
-  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Message ${esc(o.name)}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="send">Send</button></div>
-  <div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="report">Report</button><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="block">Block</button></div>
+  <div class="row" style="margin-top:10px"><input type="text" id="msgin" data-in="msg" placeholder="Message ${esc(who)}" aria-label="Message" value="${esc(S.form.msg||'')}"><button class="btn primary" style="width:90px;flex:none" data-a="send">Send</button></div>
+  ${chatWarnBox()}
+  <div class="row" style="margin-top:8px;gap:6px"><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="report">Report a problem</button><button class="btn ghost" style="min-height:40px" data-a="sheet" data-v="block">Block</button></div>
   <p class="muted small" style="margin-top:6px">Try sending “Can I pay cash instead?” to see the off-platform notice.</p>`,after(){const m=$('#view');m.scrollTop=m.scrollHeight}};
 },
 profile(){
@@ -1361,8 +1382,8 @@ findTask(){
   <div class="card"><h3 style="font-size:20px">${esc(t.title)}</h3><div class="wrap" style="margin:8px 0">${catPill(t.cat)}<span class="pill">${t.km} km away</span>${t.fromApi?`<span class="pill ${openOnly?'ok':'warn'}">${esc(t.listingStatus)}</span>`:''}</div>
   <p style="margin:6px 0 10px">${esc(t.desc)}</p>
   ${kv('Date',t.date)}${kv('Time',fmtTime(+t.t.split(':')[0]*60+ +t.t.split(':')[1]))}${kv('Duration',t.d<60?t.d+' minutes':t.d/60+' hour'+(t.d>60?'s':''))}${kv('Budget',t.budget)}${kv('Area',t.suburb+' (approximate)')}${kv('Special conditions',t.cond)}${kv('Posted',t.posted)}${kv('Offers so far',String(t.offers))}${(t.photoCount||0)>0?`<p class="muted small" style="margin:8px 0 2px">Photos from the requester</p>${photoThumbs(Array.from({length:t.photoCount},()=>SAMPLE_ITEM))}`:''}</div>
-  <div class="card row" style="margin-top:12px">${avatar(t.req.name)}<div class="grow"><b>${esc(t.req.name)}</b><p class="muted small">★ ${t.req.r} · ${t.req.n} tasks posted</p></div><span class="pill ok">Identity verified</span></div>
-  <p class="muted small" style="margin:10px 2px">Exact address is shared only if your offer is accepted. The map shows the suburb only.</p>
+  <div class="card row" style="margin-top:12px">${avatar(shownName(t.req.name,{status:t.stage}))}<div class="grow"><b>${esc(shownName(t.req.name,{status:t.stage}))}</b><p class="muted small">★ ${t.req.r} · ${t.req.n} tasks posted</p></div><span class="pill ok">Identity verified</span></div>
+  <p class="muted small" style="margin:10px 2px">Phone, email and the street address stay hidden until your offer is accepted. The map shows the suburb only.</p>
   ${!openOnly&&t.fromApi?`<div class="notice ok"><b>${esc(t.listingStatus)}</b>This listing is no longer open for new bids.</div>`:sent?`<div class="notice ok"><b>Bid sent</b>You offered ${money(sent.fee)}. Waiting for the requester to accept.</div><button class="btn secondary" data-a="editSentByTask" data-v="${t.id}">Edit offer</button><button class="btn ghost" data-a="withdrawSentByTask" data-v="${t.id}">Withdraw offer</button>`:`<button class="btn secondary" data-a="askAbout">Ask a question</button><button class="btn primary big" data-a="makeOffer">Make an offer</button>`}
   <div class="row" style="margin-top:6px"><button class="btn secondary" data-a="save">${S.saved[t.id]?'Saved ✓':'Save task'}</button><button class="btn secondary" data-a="sheet" data-v="report">Report</button></div>`};
 },
@@ -1539,12 +1560,13 @@ function offersBlock(){
   return `<h2>${list.length?list.length+' offer'+(list.length>1?'s':''):'Offers'}</h2>
   ${list.length?`<div class="chips" style="margin-bottom:12px">${chip('Newest',S.sort==='new','data-a="sort" data-v="new"')}${chip('Lowest price',S.sort==='price','data-a="sort" data-v="price"')}${chip('Nearest',S.sort==='near','data-a="sort" data-v="near"')}</div>
   <div class="stack">${list.map(o=>`<button class="card ${o.declined?'dim':''}" data-a="offer" data-v="${o.id}">
-    <div class="row">${avatar(o.name)}<div class="grow"><b style="font-size:17px">${esc(o.name)}</b><div style="margin-top:3px">${o.demo?'<span class="pill warn">Demo</span> ':''}${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
+    <div class="row">${avatar(shownName(o.name,t))}<div class="grow"><b style="font-size:17px">${esc(shownName(o.name,t))}</b><div style="margin-top:3px">${o.demo?'<span class="pill warn">Demo</span> ':''}${verBadge(o)}${o.prev?' <span class="pill ok">Booked before</span>':''}</div></div><div class="fee">${money(o.fee)}</div></div>
     <div class="wrap small" style="margin-top:10px"><span>★ ${o.rating}</span><span>${o.done} tasks</span><span>${o.comp}% completed</span><span>${o.canc}% cancelled</span><span>${o.km} km away</span></div>
     <p style="margin-top:8px;font-weight:600;font-size:14.5px">${esc(o.when)}</p>${o.msg?`<p class="quote">“${esc(o.msg)}”</p>`:''}${o.declined?'<p class="small muted" style="margin-top:6px">Declined</p>':''}</button>`).join('')}</div>
   <p class="muted small" style="margin-top:12px">Offers are shown in the order you choose. You make the final call.</p>`
   :`<div class="card center"><p class="dots"><span></span><span></span><span></span></p><p class="muted small" style="margin-top:8px">Waiting for offers. The task stays open for 7 days.</p></div>`}
-  <div class="notice info" style="margin-top:14px">Your exact address stays private until you accept an offer.</div>${PROMISE}`;
+  <div class="notice info" style="margin-top:14px"><b>Contact stays in TaskSpeck</b>You see a first name and initial until you book. Phone, email and the street address are shared after you book, and the phone is hidden again once the job is done.</div>${PROMISE}
+  <button class="btn secondary" style="margin-top:10px" data-a="sheet" data-v="report">Report a problem</button>`;
 }
 const STEPS=[['Assigned',['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING']],['On the way',['ON_THE_WAY']],['Started',['TASK_STARTED']],['Done',['TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED']]];
 const RIDE_TIME={Assigned:'assignedAt','On the way':'onTheWayAt',Started:'startedAt',Done:'doneAt'};
@@ -1576,20 +1598,34 @@ function shrinkPhoto(file,cb){
   };
   r.readAsDataURL(file);
 }
+function contactCard(t,o){
+  if(!t||!o||!namesOpenClient(t))return '';
+  const who=viewerIsTasker()?shownName(t.requesterName,t):shownName(o.name,t);
+  const phone=otherPhone(t);
+  const addr=t._address||'';
+  const done=['TASKER_COMPLETED','REQUESTER_CONFIRMED','PAYMENT_RELEASED','COMPLETED','RESOLVED','Completed','PaymentReleased'].includes(t.status);
+  let body=`<b>${esc(who||'Contact')}</b>`;
+  if(phone)body+=`<p style="margin:4px 0 0">Phone ${esc(phone)}</p>`;
+  else if(done)body+=`<p class="muted small" style="margin:4px 0 0">Phone numbers are hidden again now this job is done. Chat stays open for follow-up.</p>`;
+  if(addr)body+=`<p class="muted small" style="margin:4px 0 0">${esc(addr)}</p>`;
+  if(!viewerIsTasker())body+=`<button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>`;
+  return `<div class="card" data-contact="${phone?'open':done?'done':'booked'}" style="margin-top:10px">${body}</div>`;
+}
 function activeBlock(){
   const t=S.task,o=chosen();if(!o)return taskSummary(t)+`<div class="notice" style="margin-top:12px">The accepted offer is not on this screen yet. Open the task again in a moment.</div>`;
   const st=t.status,f=S.flags,idx=STEPS.findIndex(s=>s[1].includes(st));
   let h=taskSummary(t);
   if(t.reviews&&t.reviews.length)h+=t.reviews.map(r=>`<div class="card" style="margin-top:12px"><b>${r.role==='tasker'?'Tasker review':'Customer review'} · ${esc(r.name||'')}</b><p style="margin:6px 0">${'★'.repeat(r.stars||0)}</p><p>${esc(r.text||'')}</p></div>`).join('');
   if(S.payment)h+=demoPayNote();
-  h+=`<div class="card row" style="margin-top:12px">${avatar(o.name)}<div class="grow"><b>${esc(o.name)}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
+  h+=`<div class="card row" style="margin-top:12px">${avatar(shownName(o.name,t))}<div class="grow"><b>${esc(shownName(o.name,t))}</b><p class="muted small">${money(S.agreement.fee)} agreed · ${esc(o.when)}</p></div><button class="btn secondary" style="width:auto;min-height:40px;padding:0 14px" data-a="openThread">Message</button></div>`;
+  h+=contactCard(t,o);
   if(idx>=0)h+=rideBar(t);
   h+=shotRow('Before',t.beforePhotos);
   h+=shotRow('After',(t.afterPhotos&&t.afterPhotos.length)?t.afterPhotos:(S.proof||[]).map(p=>p.url));
   if(viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING'].includes(st))h+=`<button class="btn primary big" style="margin-top:12px" data-a="ride" data-v="onway">I'm on the way</button>`;
   if(viewerIsTasker()&&st==='ON_THE_WAY')h+=`<p class="small" style="margin:12px 0 6px"><b>Before photo</b> Optional, before you start.</p><label class="drop">${ic('camera',28)}<b>Add a before photo</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" data-in="beforePhoto" aria-label="Before photo"></label><button class="btn secondary" data-a="sampleBefore">Use a sample before photo</button><button class="btn primary big" data-a="ride" data-v="start">I've started</button>`;
   if(viewerIsTasker()&&st==='TASK_STARTED')h+=`<p class="small" style="margin:12px 0 6px"><b>After photo</b> Add at least one before you mark the job done.</p><label class="drop">${ic('camera',28)}<b>Add an after photo</b><span class="muted small">Camera or photo library</span><input type="file" accept="image/*" data-in="afterPhoto" aria-label="After photo"></label><button class="btn secondary" data-a="sampleProof">Use a sample after photo</button><button class="btn primary big" data-a="ride" data-v="done">Mark done</button>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(o.name)} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','pickup'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(o.name)} sets off. Check them before handing over any items.</p>`:''}</div>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<div class="card" style="margin-top:10px"><div class="row"><div class="grow"><b>Who is coming</b><p class="muted small" style="margin:2px 0 0">${esc(shownName(o.name,t))} · ★ ${o.rating} · ${o.done} tasks</p></div>${verBadge(o)}</div><button class="chip" style="margin-top:8px;width:auto" data-a="viewProfile" data-v="${esc(o.name)}">View profile</button>${['moving','rubbish','pickup'].includes(t.cat)?`<p class="muted small" style="margin-top:6px">Vehicle details appear here when ${esc(shownName(o.name,t))} sets off. Check them before handing over any items.</p>`:''}</div>`;
   if(st==='TASK_STARTED')h+=`<div class="card" style="margin-top:12px"><b>${f.checkin?esc(o.name)+' confirmed all OK':'Waiting for '+esc(o.name)+"'s safety check-in"}</b><p class="muted small" style="margin:4px 0 0">When a Tasker arrives, and again if a job runs long, we ask "All OK?". If there is no answer, support is notified. We cannot promise immediate contact, so call 000 in an emergency.</p></div>${f.missed?`<div class="notice bad" style="margin-top:10px"><b>No answer to the safety check-in</b>Support has been notified. We cannot promise immediate contact. If you are worried, call 000 or tap SOS.</div>`:''}`;
   if(st==='UPCOMING')h+=`<div class="card" style="margin-top:12px"><b>${f.confirmed?esc(o.name)+' has confirmed they will be there':'Waiting for '+esc(o.name)+' to confirm'}</b><p class="muted small" style="margin:4px 0 0">Taskers confirm 24 hours before the start and tap "On my way". If they have not checked in 15 minutes after the start time, you get a full refund and a quick re-match.</p></div><button class="btn secondary" style="margin-top:10px" data-a="noshow">${esc(o.name)} has not arrived: refund and re-match</button><p class="muted small center" style="margin-top:4px">In the real app this button unlocks 15 minutes after the start time.</p>`;
   if(st==='FIX_REQUESTED'&&S.fix)h+=`<div class="notice" style="margin-top:14px"><b>${isVacate()?'Re-clean':'Fix'} requested</b>${esc(S.fix.what)}${S.fix.text?': '+esc(S.fix.text):''}. ${esc(o.name)} has 48 hours to put it right. Your payment stays on hold.</div>`;
@@ -1598,11 +1634,11 @@ function activeBlock(){
   if(st==='NO_SHOW')h+=`<div class="notice bad" style="margin-top:14px"><b>No-show confirmed</b>${esc(o.name)} did not arrive. You have been refunded in full. We recorded it on ${esc(o.name)}'s reliability record. Repeated no-shows lead to a review of their account.</div><button class="btn primary big" style="margin-top:12px" data-a="rematch">Find another Tasker</button>`;
   if(S.change)h+=`<div class="notice" style="margin-top:14px"><b>${esc(o.name)} requests a change</b>+30 minutes and +${money(15)} because the job is bigger than described.</div><button class="btn primary" style="margin-top:10px" data-a="sheet" data-v="change">Review change</button>`;
   if(st==='TASKER_COMPLETED')h+=`<div class="card" style="margin-top:14px"><b>${esc(o.name)} says the task is done.</b><p class="muted small" style="margin:4px 0 10px">Look at the after photo above, then confirm or tell us it is not right.</p>${(S.proof.length||(t.afterPhotos||[]).length)?'':`<div class="card" style="text-align:center;padding:26px;background:var(--bg)">No after photo supplied</div>`}${isVacate()?`<p class="small" style="margin:10px 0 4px"><b>Vacate checklist: ${S.checklist.filter(Boolean).length} of ${VACATE_LIST.length} done</b></p><ul class="muted small" style="margin:0 0 0 18px">${VACATE_LIST.map((x,i)=>`<li>${S.checklist[i]?'✓':'•'} ${esc(x)}</li>`).join('')}</ul>`:''}<p class="muted small" style="margin-top:8px">Your payment is held. If you do nothing it is released automatically 48 hours after completion. Something wrong? Tell us within 48 hours.</p></div>${viewerIsTasker()?'':`<button class="btn primary big" style="margin-top:12px" data-a="confirmDone">Confirm completion</button>`}${t.fixUsed?'<p class="muted small" style="margin:8px 0">The free fix for this job has been used. For anything else, use Report a problem.</p>':`<button class="btn secondary" data-a="sheet" data-v="fix">${isVacate()?'Agent found issues? Request a free re-clean':'Not quite right? Ask for a fix'}</button>`}<button class="btn secondary" data-a="sheet" data-v="report">Report a problem</button>`;
-  if(['PAYMENT_RELEASED','COMPLETED','REQUESTER_CONFIRMED'].includes(st))h+=`<div class="notice ok" style="margin-top:14px"><b>Payment released</b>${money(S.payment.tasker)} has gone to ${esc(o.name)}. TaskSpeck kept ${FEE_PCT}% (${money(S.payment.fee)}) of the ${money(S.payment.gross)} price from the Tasker. You paid nothing extra.</div>${alreadyReviewed()||t.reviewed?'':`<button class="btn primary" style="margin-top:12px" data-a="toReview">Leave a review</button>`}${viewerIsTasker()?'':`<button class="btn secondary" style="margin-top:8px" data-a="bookAgain">Book ${esc(o.name)} again</button>`}<button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button>`;
+  if(['PAYMENT_RELEASED','COMPLETED','REQUESTER_CONFIRMED'].includes(st))h+=`${viewerIsTasker()?'':`<button class="btn primary big" style="margin-top:14px" data-a="bookAgain">Book again</button>`}<div class="notice ok" style="margin-top:14px"><b>Payment released</b>${money(S.payment.tasker)} has gone to ${esc(shownName(o.name,t))}. TaskSpeck kept ${FEE_PCT}% (${money(S.payment.fee)}) of the ${money(S.payment.gross)} price from the Tasker. You paid nothing extra.</div>${alreadyReviewed()||t.reviewed?'':`<button class="btn secondary" style="margin-top:12px" data-a="toReview">Leave a review</button>`}<button class="btn secondary" style="margin-top:8px" data-a="openRecord">View job record</button><button class="btn secondary" style="margin-top:8px" data-a="sheet" data-v="report">Report a problem</button>`;
   if(S.dispute&&st==='DISPUTED'){const d=['OPEN','EVIDENCE_REQUESTED','UNDER_REVIEW','RESOLVED'];h+=`<div class="notice bad" style="margin-top:14px"><b>${S.dispute.reason}</b>Your payment stays on hold while we review both sides: the agreement, messages and photos. We aim to decide within ${DISPUTE_AIM} of having both sides' information, and will tell you if it will take longer.${S.dispute.taskerPhotos?`<p class="small" style="margin:8px 0 2px"><b>${esc(o.name)}'s photos</b></p><div class="thumbs">${S.dispute.taskerPhotos.map(u=>`<img src="${u}" alt="Photo from the Tasker">`).join('')}</div>`:''}<div class="steps" style="margin-top:8px">${d.map((x,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</div><span class="small">Status: Open</span><br><button class="chip" style="margin-top:8px;width:auto" data-a="sheet" data-v="disputes">How disputes work</button></div>`;}
   if(st==='CANCELLED')h+=`<div class="notice bad" style="margin-top:14px"><b>Task cancelled</b>${t.cancelledBy==='tasker'?'The Tasker cancelled. You pay nothing, and it counts on their cancellation rate.':S.payment&&S.payment.callout?'Your payment is being refunded, minus a call-out fee of '+money(S.payment.callout)+' paid to the Tasker.':'Your payment is being refunded in full.'}</div>`;
   h+=`<div class="stack" style="margin-top:14px"><button class="card" data-a="agreementScreen">View agreement <span class="pill" style="float:right">v${S.agreement.version}</span></button>`;
-  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<div class="card"><b>Location shared with ${esc(o.name)}</b><p class="muted small">${esc(S.form.addr||'Address')} · only ${esc(o.name)} can see it</p></div><button class="card" data-a="sheet" data-v="safety">${ic('shield',18)} Safety Centre</button>`;
+  if(['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<button class="card" data-a="sheet" data-v="safety">${ic('shield',18)} Safety Centre</button><button class="btn secondary" data-a="sheet" data-v="report">Report a problem</button>`;
   if(!viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="sheet" data-v="cancel">Cancel task</button><button class="btn ghost" data-a="sheet" data-v="policy">Cancellation and no-show policy</button>`;
   if(viewerIsTasker()&&['ACCEPTED','PAYMENT_CONFIRMED','UPCOMING','ON_THE_WAY','TASK_STARTED'].includes(st))h+=`<button class="btn ghost" style="color:var(--bad-ink)" data-a="taskerCancel">Cancel this job</button><p class="muted small">If you cancel, the customer pays nothing. It counts on your cancellation rate.</p>`;
   h+='</div>';
@@ -1637,14 +1673,15 @@ function buildTask(){
   return{title:S.form.title!=null&&S.form.title.trim()?S.form.title.trim():p.title,cat:p.cat,desc:p.text,date:p.date,flexible:p.flexible,part:p.part,startMin:p.startMin,duration:p.duration,budget:p.budget,materials:p.materials,special,notes:r.notes||[],risk:r.risk,prop:(S.form.prop||'').trim(),photos:(S.draft.photos||[]).slice(),preferred:(S.draft.preferred&&S.draft.preferred.name)||null,preferredFee:(S.draft.preferred&&S.draft.preferred.fee)||null};
 }
 /* ---------- sheets ---------- */
-const REP_REQ=['Task not completed','Partially completed','Different task completed','Damage','Tasker did not arrive','Tasker arrived but could not complete task','Payment issue','Safety issue','Other'];
+const REP_REQ=['Asked to pay cash or outside TaskSpeck','Asked for my contact details','Task not completed','Partially completed','Different task completed','Damage','Tasker did not arrive','Tasker arrived but could not complete task','Payment issue','Safety issue','Other'];
+const REP_CHAT=['Asked to pay cash or outside TaskSpeck','Asked for my contact details','Other','Abusive behaviour','Suspicious request','Off-platform payment request','Safety concern'];
+function reasonButton(label){const on=S.form.rep===label;return `<button class="btn ${on?'primary':'secondary'}" style="white-space:normal" data-a="rep" data-v="${esc(label)}">${esc(label)}</button>`}
 const SHEETS={
 report(){
-  const fromTask=S.task&&['UPCOMING','TASK_STARTED','TASKER_COMPLETED','FIX_DONE','FIX_REQUESTED','ACCEPTED','PAYMENT_CONFIRMED'].includes(S.task.status)&&S.stack[S.stack.length-1].n==='task';
-  if(!fromTask)return `<h2 style="margin-top:0">Report</h2><p class="muted" style="margin-bottom:12px">Tell us what happened. We will review it.</p><div class="chips">${['Abusive behaviour','Suspicious request','Off-platform payment request','Safety concern','Other'].map(x=>chip(x,S.form.rep===x,`data-a="rep" data-v="${x}"`)).join('')}</div><button class="btn primary" style="margin-top:16px" data-a="repSimple">Send report</button>`;
-  return `<h2 style="margin-top:0">Report a problem</h2><div class="stack" style="margin-bottom:12px">${REP_REQ.map(x=>chip(x,S.form.rep===x,`data-a="rep" data-v="${x}"`)).join(' ')}</div>
-  <textarea data-in="repText" placeholder="Describe what happened (optional)" style="min-height:80px">${esc(S.form.repText||'')}</textarea>
-  <p class="muted small" style="margin:6px 0">The agreement, messages and photos are attached automatically. <button class="chip" style="width:auto" data-a="sheet" data-v="disputes">How disputes work</button></p><button class="btn primary" data-a="repSubmit">Submit report</button>`;
+  const onJob=S.task&&S.stack[S.stack.length-1]&&S.stack[S.stack.length-1].n==='task'&&!['POSTED','OFFERS_RECEIVED','Open','Draft','UNDER_REVIEW'].includes(S.task.status);
+  const reasons=onJob?REP_REQ:REP_CHAT;
+  return `<h2 style="margin-top:0">Report a problem</h2><p class="muted">Tell us what happened. This demo stores the report on this phone.</p><div class="stack" style="margin:12px 0">${reasons.map(reasonButton).join('')}</div>
+  ${onJob?`<textarea data-in="repText" placeholder="Describe what happened (optional)" style="min-height:80px">${esc(S.form.repText||'')}</textarea><p class="muted small" style="margin:6px 0">The agreement, messages and photos are attached automatically. <button class="chip" style="width:auto" data-a="sheet" data-v="disputes">How disputes work</button></p><button class="btn primary" data-a="repSubmit">Submit report</button>`:`<button class="btn primary" data-a="repSimple">Send report</button>`}`;
 },
 block(){return `<h2 style="margin-top:0">Block ${esc(S.thread?chosen().name:'this user')}?</h2><p class="muted">They will not be able to message you or see your tasks. You can undo this in Settings.</p><button class="btn danger" style="margin-top:14px" data-a="blockOk">Block user</button><button class="btn ghost" data-a="close">Not now</button>`},
 cancel(){
@@ -1697,6 +1734,7 @@ disputes(){
 },
 policy(){
   return `<h2 style="margin-top:0">Cancellation and no-show policy</h2><div class="stack">
+  <div class="card"><b>Keep it on TaskSpeck</b><p class="muted small">Keep it on TaskSpeck: payments, contact and rebooking stay in the app so ratings, SOS and the no-show rule protect you.</p></div>
   <div class="card"><b>You cancel</b><p class="muted small">More than 24 hours before the start: full refund. Within 24 hours: the Tasker receives a call-out fee of 20% of the task price and the rest is refunded.</p></div>
   <div class="card"><b>Tasker cancels or does not arrive</b><p class="muted small">You pay nothing. The job is recorded on the Tasker's cancellation rate. You can book someone else.</p></div>
   <div class="card"><b>A problem with the work</b><p class="muted small">Tell us within 48 hours of completion. One free fix per job, for the agreed scope only; extras are a new paid task. Your payment stays on hold while the Tasker has 48 hours to put it right, and the Tasker can respond with their own photos. If it is not fixed or the request is disputed, we review both sides and decide: full payment, part payment or a refund. See How disputes work.</p></div>
@@ -1874,6 +1912,7 @@ const A={
        if(o.regError){restore();notify(o.regError);return}
        const data=await TaskAPI.acceptBid(t.listingId,{bidId:o.bidId,fee:o.fee,taskerName:o.name});
        if(!data||data.error){restore();notify((data&&data.error)||'Could not accept this offer. Nothing was booked.');return}
+       if(data.task){if(data.task.bid&&data.task.bid.taskerName)o.name=data.task.bid.taskerName;t.phones=data.task.phones||null;if(data.task.address)t._address=data.task.address;if(data.task.requesterName)t.requesterName=data.task.requesterName}
        const f=calcFee(o.fee);
        S.payment={gross:o.fee,fee:f,tasker:Math.round((o.fee-f)*100)/100,status:'AUTHORISED'};
        S.agreement={version:1,fee:o.fee,start:fmtTime(o.start),dur:S.task.duration?S.task.duration.label:'Not stated',history:[{v:1,note:'Original agreement'}]};
@@ -1889,7 +1928,9 @@ const A={
  openThread(){go('thread')},
  payments(){go('payments')},
  quick(v){sendMsg(["I'm on my way.","I've arrived.","I'm running 10 minutes late.","Can you confirm where I should park?","I'm finished."][+v])},
- send(){const t=(S.form.msg||'').trim();if(t){S.form.msg='';sendMsg(t)}},
+ send(){considerSend(S.form.msg||'','thread')},
+ chatEdit(){if(S.chatHold)S.form.msg=S.chatHold.original;S.chatHold=null;render();const i=$('#msgin');if(i){i.focus();const n=i.value.length;try{i.setSelectionRange(n,n)}catch(e){}}},
+ chatSendSafe(){const h=S.chatHold;if(!h)return;S.chatHold=null;S.form.msg='';if(h.kind==='ask')sendAsk(h.redacted);else sendMsg(h.redacted)},
  async demo(v){
    const o=chosen(),f=S.flags;
    if(v==='onway'){if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'on-the-way');if(d&&d.error){notify(d.error);return}applyRide(d.task)}f.onway=true;setStatus('ON_THE_WAY');ev(o.name+' is on the way');notify(`${o.name} is on the way.`);saveBundleSoon()}
@@ -1947,6 +1988,7 @@ const A={
  samplePostPhoto(){S.draft.photos=S.draft.photos||[];if(S.draft.photos.length<5)S.draft.photos.push(SAMPLE_ITEM);render()},
  rmPostPhoto(v){(S.draft.photos||[]).splice(+v,1);render()},
  bookAgain(){if(!S.task)return;openSheet('repeat')},
+ bookAgainFor(v){const job=completedWith(v);if(!job){notify('Finish a job with this Tasker before booking again.');return}activateTask(job);openSheet('repeat')},
  async repeatBook(v){
    const t=S.task;if(!t||!t.listingId){notify('Open a completed job first.');return}
    const d=await TaskAPI.sync(t.listingId,'repeat',{cadence:v});
@@ -2005,9 +2047,10 @@ const A={
  sosBack(){S.sosView='ask';render()},
  sosSend(){const text=String(S.form.sosWhat||'').trim();if(!text){notify('Say what happened.');return}saveSosReport({kind:'Problem report',when:clock(),task:S.task?S.task.title:'',who:meName(),note:text});S.form.sosWhat='';S.sosView='done';S.sosDemoMsg='';render()},
  rep(v){S.form.rep=v;render()},
- repSimple(){if(!S.form.rep){notify('Choose what happened.');return}S.form.rep=null;S.sheet=null;render();notify('Report sent. We will review it.')},
+ async repSimple(){if(!S.form.rep){notify('Choose what happened.');return}await storeReport(S.form.rep)},
  async repSubmit(){
    if(!S.form.rep){notify('Choose what happened.');return}
+   if(KEEP_REPORT.has(S.form.rep)){await storeReport(S.form.rep);return}
    if(S.form.rep==='Tasker did not arrive'){S.form.rep=null;S.sheet=null;A.noshow();return}
    if(['Task not completed','Partially completed'].includes(S.form.rep)&&!S.task.fixUsed){const t=S.task,o=chosen();if(t.listingId){const d=await TaskAPI.sync(t.listingId,'fix',{what:S.form.rep,text:S.form.repText||''});if(d&&d.error){notify(d.error);return}}t.fixUsed=true;S.fix={what:S.form.rep,text:(S.form.repText||'').trim(),proofBefore:S.proof.length};(t.fixLog=t.fixLog||[]).push({what:S.form.rep,text:S.fix.text,raised:fmtDate(new Date())});S.claims.unshift({kind:'Problem reported: finish the job',task:t.title,ts:Date.now(),outcome:null});setStatus('FIX_REQUESTED');ev('Asked '+o.name+' to finish the job: '+S.form.rep);S.form.rep=null;S.form.repText='';S.sheet=null;saveBundleSoon();render();notify(o.name+' has 48 hours to finish the job. Your payment stays on hold.');return}
    if(S.task&&S.task.listingId){const d=await TaskAPI.sync(S.task.listingId,'dispute',{reason:S.form.rep,text:S.form.repText||''});if(d&&d.error){notify(d.error);return}}
@@ -2128,7 +2171,7 @@ const A={
  askOffer(){const o=chosen();if(!o||!S.task)return;openAsk({listingId:S.task.listingId,withName:o.name,title:S.task.title})},
  askAbout(){const t=getFindTask(S.findId);if(!t)return;openAsk({listingId:t.fromApi?t.id:null,withName:t.req.name,title:t.title,localId:t.id})},
  openAsk(v){const th=S.askThreads[+v];if(!th)return;S.ask=th;go('ask')},
- async askSend(){await sendAsk(S.form.msg||'')},
+ async askSend(){considerSend(S.form.msg||'','ask')},
  async saveSearch(){
    const data=await TaskAPI.saveSearch({q:S.find.q||'',cat:S.find.cat||'all',km:S.find.km,sort:S.find.sort||'closest',alert:true});
    if(data.error){notify(data.error);return}
@@ -2172,6 +2215,40 @@ const A={
  resetDemo(){if(!window.confirm('Reset this phone to the sample demo? Tasks added on this phone will be removed.'))return;if(window.taskspeckResetDemo)window.taskspeckResetDemo();else location.reload()}
 };
 const OFFPLAT=/\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|don'?t worry about the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me|text me/i;
+function chatWarnBox(){
+  const h=S.chatHold,cur=S.stack[S.stack.length-1];
+  if(!h||!cur)return '';
+  if(h.kind==='ask'&&cur.n!=='ask')return '';
+  if(h.kind==='thread'&&cur.n!=='thread')return '';
+  return `<div class="notice" data-chat-warn="1" style="margin-top:10px"><b>Keep it in TaskSpeck</b>${esc(CHAT_WARNING)}<p class="small" style="margin:8px 0 0">We'll send: ${esc(h.redacted)}</p><button class="btn secondary" style="margin-top:10px" data-a="chatEdit">Edit message</button><button class="btn primary" data-a="chatSendSafe">Send message</button></div>`;
+}
+function reminderBox(messages){
+  if((messages||[]).filter(m=>m.warning&&m.from==='them').length<2)return '';
+  return `<div class="notice" data-reminder="1" style="margin-top:10px">${esc(RULE_REMINDER)}</div>`;
+}
+async function storeReport(reason){
+  const cur=S.stack[S.stack.length-1];
+  let id=null;
+  if(cur&&cur.n==='findTask')id=S.findId;
+  else if(cur&&cur.n==='ask'&&S.ask&&S.ask.listingId)id=S.ask.listingId;
+  else if(S.task&&S.task.listingId)id=S.task.listingId;
+  let reminder=false;
+  if(id){
+    const data=await api('/api/tasks/'+id+'/report',{method:'POST',body:{reason}});
+    if(data&&data.error){notify(data.error);return}
+    reminder=!!(data&&data.reminder);
+  }
+  S.form.rep=null;S.sheet=null;render();
+  notify(reminder?RULE_REMINDER:'Report saved. Thanks for letting us know.');
+}
+function considerSend(text,kind){
+  const body=String(text||'').trim();
+  if(!body)return;
+  const g=guardMessage(body,{phonesAllowed:phonesOpenClient(S.task)});
+  if(g.changed){S.chatHold={original:body,redacted:g.text,kind};S.form.msg=body;render();return}
+  S.chatHold=null;S.form.msg='';
+  if(kind==='ask')sendAsk(body);else sendMsg(body);
+}
 function openAsk(info){
   S.askThreads=S.askThreads||[];
   let th=S.askThreads.find(t=>(info.listingId&&t.listingId===info.listingId&&t.withName===info.withName)||(info.localId&&t.localId===info.localId&&t.withName===info.withName));
@@ -2179,26 +2256,33 @@ function openAsk(info){
   S.ask=th;go('ask');
 }
 async function sendAsk(text){
-  const body=String(text||'').trim();
-  if(!body||!S.ask)return;
+  const raw=String(text||'').trim();
+  if(!raw||!S.ask)return;
+  const g=guardMessage(raw,{phonesAllowed:phonesOpenClient(S.task)});
+  const body=g.text;
   S.form.msg='';
-  const warning=OFFPLAT.test(body);
-  S.ask.messages.push({from:'me',text:body,warning});
+  S.chatHold=null;
+  const row={from:'me',text:body,warning:g.changed||body.includes('[hidden until booking]')||OFFPLAT.test(body)};
+  S.ask.messages.push(row);
   if(S.ask.listingId){
     const data=await api('/api/tasks/'+S.ask.listingId+'/messages',{method:'POST',body:{text:body}});
     if(data.error){S.ask.messages.pop();notify(data.error);render();return}
-    if(data.warning)S.ask.messages[S.ask.messages.length-1].warning=true;
+    if(data.warning)row.warning=true;
+    if(data.message&&data.message.text)row.text=data.message.text;
   }
   render();const i=$('#msgin');if(i)i.focus();
 }
 function sendMsg(text){
-  S.thread.push({from:'me',text});
-  const off=OFFPLAT.test(text);
+  const g=guardMessage(String(text||''),{phonesAllowed:phonesOpenClient(S.task)});
+  const body=g.text;
+  S.thread=S.thread||[];
+  S.thread.push({from:'me',text:body,warning:g.changed||body.includes('[hidden until booking]')});
+  const off=OFFPLAT.test(body);
   if(off)S.thread.push({sys:true});
   render();const i=$('#msgin');if(i)i.focus();
-  if(!off)setTimeout(()=>{
+  if(!off&&!g.changed)setTimeout(()=>{
     S.thread.push({from:'them',text:['Sounds good, thanks!','Got it. See you then.','Great, thanks Alex.'][S.thread.length%3]});
-    if(S.stack[S.stack.length-1].n==='thread')render();
+    if(S.stack[S.stack.length-1]&&S.stack[S.stack.length-1].n==='thread')render();
   },1300);
 }
 document.addEventListener('click',e=>{
