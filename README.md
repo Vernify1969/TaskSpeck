@@ -18,6 +18,8 @@ The first time, GitHub has to be told to publish the page:
 
 After that, every update merged into `main` publishes the page. The first publish can take a minute. Then open the address above on a phone.
 
+Leave `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` unset on GitHub Pages. The public demo then stays the no-login sample. To use real email logins and one shared database, follow `SETUP-LIVE.md`.
+
 ## How to run the demo
 
 The demo fills the app with sample people, sample tasks around inner Melbourne, offers, messages, and one finished job with a review. Payments are pretend. Nothing is charged.

@@ -8,6 +8,12 @@ export const CHAT_WARNING =
 export const RULE_REMINDER =
   'A quick reminder: payments, contact and rebooking stay in TaskSpeck so ratings, SOS and the no-show rule protect you.';
 
+export const CONTACT_WARNING =
+  'Please don’t swap phone numbers or pay cash. TaskSpeck can only protect a job that stays in the app.';
+
+/** Cash and off-app payment talk. Phone numbers are handled by guardMessage. */
+export const CASH_PATTERN = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me on|text me/i;
+
 const WORD_DIGIT = {
   zero: '0',
   oh: '0',
