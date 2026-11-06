@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>TaskSpeck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -352,6 +352,11 @@ button.card:active:not([disabled]),button.tile:active,button.cat:active{transfor
   .top-actions{order:4}
   .subbar{padding:0 32px 12px}
   .auth-card{max-width:440px;margin:40px auto;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 16px 40px rgba(14,90,75,.08)}
+  .auth-ways{display:flex;gap:8px;margin:4px 0 14px}
+  .auth-ways .btn{flex:1;min-height:48px;margin:0;padding:8px;white-space:normal;line-height:1.2;text-align:center}
+  .auth-ways .btn+.btn{margin-top:0}
+  .auth-ways .btn[aria-pressed="true"]{border-color:var(--brand);background:var(--ok-bg)}
+  @media (max-width:480px){.auth-card{margin:16px auto;padding:20px}}
   .site-foot{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:22px 32px 28px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
   .site-foot b{color:var(--ink)}
 }
@@ -374,10 +379,16 @@ import { installLocalApi, resetDemoData } from './client/localApi.js';
 window.L = L;
 window.registeredWorkReason = registeredWorkReason;
 window.taskspeckResetDemo = resetDemoData;
-window.taskspeckReady = import.meta.env.VITE_LOCAL_API === '1' ? installLocalApi() : Promise.resolve();
+const liveUrl = import.meta.env.VITE_SUPABASE_URL;
+const liveKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+window.taskspeckLive = !!(liveUrl && liveKey);
+window.taskspeckReady = window.taskspeckLive
+  ? import('./client/data/installLive.js').then((m) => m.installLiveData())
+  : (import.meta.env.VITE_LOCAL_API === '1' ? installLocalApi() : Promise.resolve());
 </script>
 <script type="module">
 import { guardMessage, shortName, CHAT_WARNING, RULE_REMINDER } from './shared/chatGuard.js';
+import { searchSuburbs } from './shared/places.js';
 const PAGES = import.meta.env.VITE_LOCAL_API === '1';
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -657,7 +668,8 @@ function completedWith(name){return myTaskList().filter(t=>offerName(t)===name&&
 const SOS_KEY='taskspeck-sos-reports';
 function jobInProgress(t){return !!(t&&(t.status==='TASK_STARTED'||t.status==='Started'||t.status==='ON_THE_WAY'))}
 function offerName(t){const b=t&&t._bundle;if(!b||!Array.isArray(b.offers)||!b.offers.length)return '';const o=b.offers.find(x=>x.id===b.offerId)||b.offers[0];return o&&o.name?o.name:''}
-function viewerOnThisJob(t){if(!t||!S.user)return false;const me=meName();if(t.requesterId&&S.user.id&&Number(t.requesterId)===Number(S.user.id))return true;if(t.requesterName&&t.requesterName===me)return true;return offerName(t)===me}
+function sameId(a,b){return a!=null&&b!=null&&String(a)===String(b)}
+function viewerOnThisJob(t){if(!t||!S.user)return false;const me=meName();if(sameId(t.requesterId,S.user.id))return true;if(t.requesterName&&t.requesterName===me)return true;return offerName(t)===me}
 function showSos(){const cur=S.stack[S.stack.length-1];return !!(cur&&cur.n==='task'&&jobInProgress(S.task)&&viewerOnThisJob(S.task))}
 function loadSosReports(){try{const rows=JSON.parse(localStorage.getItem(SOS_KEY)||'[]');if(Array.isArray(rows))S.incidents=rows}catch(e){}}
 function saveSosReport(row){let rows=[];try{rows=JSON.parse(localStorage.getItem(SOS_KEY)||'[]')}catch(e){rows=[]}if(!Array.isArray(rows))rows=[];rows.unshift(row);try{localStorage.setItem(SOS_KEY,JSON.stringify(rows.slice(0,40)))}catch(e){}S.incidents=rows.slice(0,40)}
@@ -875,6 +887,78 @@ function navHtml(){
   const cur=S.stack[0].n;
   return items.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" ${cur===k?'aria-current="page"':''}>${ic(i)}${l}</button>`).join('');
 }
+function profileReady(u){
+  if(!window.taskspeckLive)return true;
+  const role=u&&u.role;
+  return !!(u&&String(u.name||'').trim().length>=2&&String(u.suburb||'').trim()&&(role==='requester'||role==='tasker'||role==='both'));
+}
+function renderLiveAuth(){
+  $('#nav').style.display='none';
+  $('#sheetHost').innerHTML='';$('#sheetHost').className='';
+  $('#top').innerHTML=`<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span></div>`;
+  const mode=S.authMode||'login';
+  const way=mode==='signup'?'signup':(mode==='magic'?'magic':(mode==='phone'||mode==='code'?'phone':'login'));
+  const ways=`<div class="auth-ways" role="group" aria-label="How to sign in">
+    <button class="btn secondary" data-a="authMode" data-v="login" aria-pressed="${way==='login'}">Password</button>
+    <button class="btn secondary" data-a="authMode" data-v="magic" aria-pressed="${way==='magic'}">Email link</button>
+    <button class="btn secondary" data-a="authMode" data-v="phone" aria-pressed="${way==='phone'}">Phone code</button>
+  </div>`;
+  let body='';
+  if(mode==='signup'){
+    body=`<h1 class="display" style="font-size:30px">Create your account</h1>
+      <p class="muted">One account can post jobs and offer to help. Licensed trades are not offered.</p>
+      <label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="name" autocomplete="name" value="${esc(S.form.name||'')}">
+      <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="username" value="${esc(S.form.email||'')}">
+      <label class="f" for="pw">Password</label><input id="pw" type="password" data-in="password" autocomplete="new-password">
+      <p class="muted small" style="margin-top:6px">At least 8 characters.</p>
+      <label class="f" for="ph">Phone (optional)</label><input id="ph" type="tel" data-in="phone" autocomplete="tel" placeholder="04xx xxx xxx" value="${esc(S.form.phone||'')}">
+      <button class="btn primary big" style="margin-top:16px" data-a="doSignup">Create account</button>
+      <button class="btn ghost" data-a="authMode" data-v="login">Already have an account? Log in</button>`;
+  }else if(mode==='magic'){
+    body=`<h1 class="display" style="font-size:30px">Email me a link</h1>
+      <p class="muted">We send a sign-in link. Open it on this phone.</p>
+      ${ways}
+      <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="email" value="${esc(S.form.email||'')}">
+      <button class="btn primary big" style="margin-top:16px" data-a="doMagic">Send link</button>
+      ${S.magicNote?`<div class="notice ok" style="margin-top:12px">${esc(S.magicNote)}</div>`:''}`;
+  }else if(mode==='phone'||mode==='code'){
+    body=`<h1 class="display" style="font-size:30px">Phone code</h1>
+      <p class="muted">Phone codes work once phone sign-in is switched on. Email works straight away.</p>
+      ${ways}
+      <label class="f" for="ph">Mobile number</label><input id="ph" type="tel" data-in="phone" autocomplete="tel" placeholder="04xx xxx xxx" value="${esc(S.form.phone||'')}">
+      ${mode==='code'?`<label class="f" for="cd">Code</label><input id="cd" type="text" inputmode="numeric" data-in="code" autocomplete="one-time-code" value="${esc(S.form.code||'')}"><button class="btn primary big" style="margin-top:16px" data-a="doVerifyPhone">Confirm code</button>`:`<button class="btn primary big" style="margin-top:16px" data-a="doPhone">Send code</button>`}`;
+  }else{
+    body=`<h1 class="display" style="font-size:30px">Welcome back</h1>
+      <p class="muted">Sign in to post a job or offer to help. Licensed trades are not offered.</p>
+      ${ways}
+      <label class="f" for="em">Email</label><input id="em" type="email" data-in="email" autocomplete="username" value="${esc(S.form.email||'')}">
+      <label class="f" for="pw">Password</label><input id="pw" type="password" data-in="password" autocomplete="current-password">
+      <button class="btn primary big" style="margin-top:16px" data-a="doLogin">Log in</button>
+      <button class="btn ghost" data-a="authMode" data-v="signup">Need an account? Sign up</button>`;
+  }
+  $('#view').innerHTML=`<div class="auth-card" data-live-auth="1">${body}</div>`;
+}
+function renderProfileSetup(){
+  $('#nav').style.display='none';
+  $('#sheetHost').innerHTML='';$('#sheetHost').className='';
+  $('#top').innerHTML=`<div class="top"><span class="logo">${ic('check',16)}</span><span class="wordmark">TaskSpeck</span></div>`;
+  if(S.form.profName==null)S.form.profName=(S.user&&S.user.name)||'';
+  if(S.form.profSuburb==null)S.form.profSuburb=(S.user&&S.user.suburb)||'';
+  if(!S.form.role)S.form.role=(S.user&&S.user.role)||'both';
+  const suburbs=searchSuburbs('').map(s=>`<option value="${esc(s.name)}"></option>`).join('');
+  const roleBtn=(v,label)=>`<button class="btn secondary" data-a="pickRole" data-v="${v}" aria-pressed="${S.form.role===v}">${label}</button>`;
+  $('#view').innerHTML=`<div class="auth-card" data-live-setup="1">
+    <h1 class="display" style="font-size:30px">Set up your profile</h1>
+    <p class="muted">Your name and suburb show on jobs. Your phone stays private until a job is booked.</p>
+    <label class="f" for="nm">Your name</label><input id="nm" type="text" data-in="profName" autocomplete="name" value="${esc(S.form.profName||'')}">
+    <label class="f" for="ps">Suburb</label><input id="ps" type="text" data-in="profSuburb" list="live-suburbs" placeholder="North Melbourne" value="${esc(S.form.profSuburb||'')}">
+    <datalist id="live-suburbs">${suburbs}</datalist>
+    <p style="font-weight:700;margin:14px 0 8px">I want to</p>
+    <div class="auth-ways" role="group" aria-label="I want to">${roleBtn('requester','Requester')}${roleBtn('tasker','Tasker')}${roleBtn('both','Both')}</div>
+    <button class="btn primary big" data-a="saveLiveProfile">Save and continue</button>
+    <button class="btn ghost" data-a="logout">Log out</button>
+  </div>`;
+}
 function renderAuth(){
   $('#nav').style.display='none';
   $('#sheetHost').innerHTML='';$('#sheetHost').className='';
@@ -906,7 +990,8 @@ function renderShare(){
 }
 function render(){
   if(S.shareView){renderShare();return}
-  if(!S.user){renderAuth();return}
+  if(!S.user){if(window.taskspeckLive)renderLiveAuth();else renderAuth();return}
+  if(window.taskspeckLive&&!profileReady(S.user)){renderProfileSetup();return}
   if(S._map){try{S._map.remove()}catch(e){}S._map=null}
   const cur=S.stack[S.stack.length-1];
   const def=SCREENS[cur.n](cur.a||{});
@@ -1324,7 +1409,7 @@ profile(){
    <button class="card" data-a="sheet" data-v="trusted">Trusted contact</button>
    <button class="card" data-a="sheet" data-v="notif">Notifications</button>
    <button class="card" data-a="sheet" data-v="help">Help and support</button>
-   <button class="card" data-a="demoToggle">Demo mode <span class="pill ${S.demoMode?'warn':''}" style="float:right">${S.demoMode?'On':'Off'}</span></button>
+   ${window.taskspeckLive?'':`<button class="card" data-a="demoToggle">Demo mode <span class="pill ${S.demoMode?'warn':''}" style="float:right">${S.demoMode?'On':'Off'}</span></button>`}
    <button class="card" data-a="savedSearches">Saved searches<span class="pill" style="float:right">${(S.savedSearches||[]).length}</span></button>
    <button class="card" data-a="account">Edit profile</button>
    ${PAGES?`<button class="card" data-a="resetDemo">Reset demo data</button>`:''}
@@ -2147,9 +2232,45 @@ const A={
    if(me.error){notify(me.error);return}
    applyWorkspace(me);S.stack=[{n:'home'}];render();refreshApiListings();notify('You are logged in.');
  },
+ async doMagic(){
+   const data=await api('/api/auth/magic',{method:'POST',body:{email:S.form.email||''}});
+   if(data.error){notify(data.error);return}
+   S.magicNote=data.message||'Check your email for a sign-in link.';
+   render();
+ },
+ async doPhone(){
+   const data=await api('/api/auth/phone',{method:'POST',body:{phone:S.form.phone||''}});
+   if(data.error){notify(data.error);return}
+   S.authMode='code';
+   render();
+   notify(data.message||'If phone sign-in is on, the code is on its way.');
+ },
+ async doVerifyPhone(){
+   const data=await api('/api/auth/phone/verify',{method:'POST',body:{phone:S.form.phone||'',token:S.form.code||''}});
+   if(data.error){notify(data.error);return}
+   const me=await api('/api/auth/me');
+   if(me.user)applyWorkspace(me);
+   if(me.user&&me.user.role==='tasker')S.mode='tasker';
+   S.stack=[{n:'home'}];
+   render();
+   if(S.user&&profileReady(S.user))refreshApiListings();
+ },
+ pickRole(v){S.form.role=v;render()},
+ async saveLiveProfile(){
+   const data=await api('/api/auth/profile',{method:'PATCH',body:{name:S.form.profName||'',suburb:S.form.profSuburb||'',role:S.form.role||'both',phone:S.form.profPhone||undefined}});
+   if(data.error){notify(data.error);return}
+   if(data.user)S.user=data.user;
+   if(data.user&&data.user.role==='tasker')S.mode='tasker';
+   if(data.user&&data.user.role==='requester')S.mode='requester';
+   S.stack=[{n:'home'}];
+   render();
+   if(profileReady(S.user))refreshApiListings();
+   notify('Profile saved.');
+ },
  async doSignup(){
    const data=await api('/api/auth/signup',{method:'POST',body:{name:S.form.name||'',email:S.form.email||'',password:S.form.password||'',phone:S.form.phone||''}});
    if(data.error){notify(data.error);return}
+   if(data.pending){S.form.password='';S.authMode='login';render();notify(data.message||'Check your email to confirm your account, then log in.');return}
    S.form.password='';
    const me=await api('/api/auth/me');
    if(me.error){notify(me.error);return}
@@ -2317,11 +2438,27 @@ document.addEventListener('keydown',e=>{
 async function boot(){
   if(window.taskspeckReady) await window.taskspeckReady;
   loadSosReports();
-  const share=new URLSearchParams(location.search).get('share');
+  const params=new URLSearchParams(location.search);
+  const share=params.get('share');
   if(share){
     S.shareView=share;
     try{const r=await fetch('/api/shares/'+encodeURIComponent(share));S.shareData=await r.json()}catch(e){S.shareData={error:'Could not load this record'}}
     render();return;
+  }
+  if(window.taskspeckLive){
+    if(params.get('preview')==='setup'){
+      S.user={id:'preview',name:'',email:'',suburb:'',role:''};
+      S.form.profName='';S.form.profSuburb='';S.form.role='both';
+      renderProfileSetup();
+      return;
+    }
+    try{
+      const r=await fetch('/api/auth/me',{credentials:'same-origin'});
+      if(r.ok){const data=await r.json();if(data.user){applyWorkspace(data);if(data.user.role==='tasker')S.mode='tasker';if(data.user.role==='requester')S.mode='requester'}}
+    }catch(e){}
+    render();
+    if(S.user&&profileReady(S.user))refreshApiListings();
+    return;
   }
   try{const demo=await fetch('/api/demo');if(demo.ok)S.demoInfo=await demo.json()}catch(e){}
   S.serverDemo=!!(S.demoInfo&&S.demoInfo.enabled);

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-live/
+.env
 data/store.json
 data/tasks.json
 data/notifications.log

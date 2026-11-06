@@ -2,9 +2,7 @@ import './process-global.js';
 import { BROWSER_STORE_KEY } from '../server/persist.js';
 import { seedDemo } from '../server/seedDemo.js';
 import * as db from '../server/db.js';
-import { dispatch } from '../server/apiDispatch.js';
-
-const TOKEN_KEY = 'taskspeck-demo-token';
+import { TOKEN_KEY, createLocalData } from './data/localData.js';
 
 function requestUrl(input) {
   if (typeof input === 'string') return input;
@@ -29,6 +27,7 @@ export async function installLocalApi() {
   } catch (err) {
     console.error(err);
   }
+  const data = createLocalData();
   const orig = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const raw = requestUrl(input);
@@ -39,10 +38,7 @@ export async function installLocalApi() {
     if (init.body) {
       try { body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body; } catch { body = {}; }
     }
-    const token = localStorage.getItem(TOKEN_KEY) || '';
-    const result = await dispatch({ method, path: parsed.pathname, query: parsed.searchParams, body, token });
-    if (result.tokenSet) localStorage.setItem(TOKEN_KEY, result.tokenSet);
-    if (result.tokenClear) localStorage.removeItem(TOKEN_KEY);
+    const result = await data.request({ method, path: parsed.pathname, query: parsed.searchParams, body });
     if (result.csv != null) {
       return new Response(result.csv, {
         status: result.status || 200,

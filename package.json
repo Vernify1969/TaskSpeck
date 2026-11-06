@@ -9,10 +9,11 @@
     "build:pages": "TASKSPECK_PAGES=1 VITE_LOCAL_API=1 vite build",
     "preview": "vite preview",
     "preview:pages": "TASKSPECK_PAGES=1 vite preview --host 127.0.0.1 --port 5199 --strictPort",
-    "test": "node --test --test-concurrency=1 shared/chatGuard.test.js server/api.test.js server/pagesDemo.test.js",
+    "test": "node --test --test-concurrency=1 shared/chatGuard.test.js server/api.test.js server/pagesDemo.test.js client/data/localData.test.js client/data/supabaseData.test.js",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.81.1",
     "leaflet": "^1.9.4"
   },
   "devDependencies": {

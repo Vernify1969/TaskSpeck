@@ -3,7 +3,8 @@ import { hashPassword, verifyPassword, newSessionToken, hashToken } from './auth
 import { deliver } from './notify.js';
 import { prohibitedReason, highRiskAnswer } from './safety.js';
 import { registeredWorkReason } from '../shared/registeredWork.js';
-import { CHAT_WARNING, HIDDEN, RULE_REMINDER, guardMessage, shortName } from '../shared/chatGuard.js';
+import { CASH_PATTERN, CHAT_WARNING, CONTACT_WARNING, HIDDEN, RULE_REMINDER, guardMessage, shortName } from '../shared/chatGuard.js';
+export { CONTACT_WARNING };
 import {
   resolveSuburb as resolveKnownSuburb,
   searchSuburbs,
@@ -52,8 +53,7 @@ function migrateCat(cat, text) {
   return next;
 }
 const DEMO_TASKERS = new Set(['Jordan', 'Sam', 'Priya', 'Marco']);
-const CONTACT_OR_CASH = /\bcash\b|bank transfer|\bbsb\b|pay ?id|paypal|venmo|osko|outside (of )?the app|off the app|pay me direct|whatsapp|my number|phone number|\b04\d{8}\b|\+61|call me on|text me/i;
-export const CONTACT_WARNING = 'Please don’t swap phone numbers or pay cash. TaskSpeck can only protect a job that stays in the app.';
+const CONTACT_OR_CASH = CASH_PATTERN;
 
 const BOOKED_STAGES = new Set([
   'ACCEPTED', 'PAYMENT_CONFIRMED', 'UPCOMING', 'ON_THE_WAY', 'TASK_STARTED', 'TASKER_COMPLETED',
